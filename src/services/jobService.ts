@@ -1,0 +1,1310 @@
+import api from "./api";
+
+// Interface for paginated responses
+interface PaginatedResponse<T> {
+  count: number;
+  next: string | null;
+  previous: string | null;
+  results: T[];
+}
+
+// Types matching our backend models
+export interface Job {
+  id: number;
+  title: string;
+  description: string;
+  site_id?: number; // Add direct site_id property
+  site:
+    | number
+    | {
+        // Site can be a direct number ID or an object
+        site_id: number;
+        site_name: string;
+        postcode: string;
+        panel_size?: string;
+        fco?: string;
+        install_date?: string;
+      };
+  client: string;
+  address: string;
+  priority: "low" | "medium" | "high";
+  status: {
+    id: number;
+    name: string;
+    color: string;
+  };
+  queue: {
+    id: number;
+    name: string;
+    description: string;
+  };
+  type?: {
+    id: number;
+    name: string;
+  };
+  category?: {
+    id: number;
+    name: string;
+  };
+  tags?: {
+    id: number;
+    name: string;
+  }[];
+  due_date: string;
+  completed_date?: string;
+  estimated_duration?: number;
+  assigned_to?: {
+    id: number;
+    user: {
+      id: number;
+      first_name: string;
+      last_name: string;
+      username: string;
+    };
+    avatar?: string;
+    specialization?: string;
+  };
+  created_at: string;
+  updated_at: string;
+  created_by?: {
+    id: number;
+    first_name: string;
+    last_name: string;
+    username: string;
+  };
+  last_updated_by?: {
+    id: number;
+    first_name: string;
+    last_name: string;
+    username: string;
+  };
+}
+
+export interface JobTask {
+  id: number;
+  job: number;
+  template: {
+    id: number;
+    name: string;
+    description: string;
+  };
+  name: string;
+  status:
+    | "pending"
+    | "in_progress"
+    | "completed"
+    | "blocked"
+    | "skipped"
+    | "cancelled";
+  current_step: number;
+  started_at?: string;
+  completed_at?: string;
+  created_at: string;
+  updated_at: string;
+  assigned_to?: {
+    id: number;
+    user: {
+      id: number;
+      first_name: string;
+      last_name: string;
+    };
+  };
+  task_order: number;
+  completion_percentage: number;
+  step_instances?: TaskStepInstance[]; // Array of step instances for this task
+}
+
+export interface TaskStepInstance {
+  id: number;
+  job_task: number;
+  template_step: {
+    id: number;
+    name: string;
+    description: string;
+    action_type: string;
+    is_conditional: boolean;
+  };
+  name: string;
+  description: string;
+  instructions: string;
+  action_type: string;
+  status: "pending" | "in_progress" | "completed" | "failed" | "skipped";
+  step_order: number;
+  next_step?: number;
+  started_at?: string;
+  completed_at?: string;
+  fields: TaskStepField[];
+  is_conditional?: boolean;
+  success_record_type?: string;
+  success_options?: {
+    id: string;
+    label: string;
+    action: string;
+    next_step?: number;
+  }[];
+  conditionalBranches?: {
+    id: number;
+    condition_name: string;
+    target_step_order: number;
+    description: string;
+  }[];
+}
+
+export interface TaskStep {
+  id: number;
+  job_task: number;
+  template_step: {
+    id: number;
+    name: string;
+    description: string;
+    action_type: string;
+    is_conditional: boolean;
+  };
+  name: string;
+  description: string;
+  instructions: string;
+  action_type: string;
+  status: "pending" | "in_progress" | "completed" | "failed" | "skipped";
+  step_order: number;
+  next_step?: number;
+  started_at?: string;
+  completed_at?: string;
+  fields: TaskStepField[];
+  conditionalBranches?: {
+    id: number;
+    condition_name: string;
+    target_step_order: number;
+    description: string;
+  }[];
+}
+
+export interface TaskStepField {
+  id: number;
+  name: string;
+  label: string;
+  field_type: string;
+  options?: string[];
+  placeholder?: string;
+  help_text?: string;
+  is_required: boolean;
+  validation_regex?: string;
+}
+
+export interface StepFieldValue {
+  id: number;
+  step_instance: number;
+  field: number;
+  field_name: string;
+  field_type: string;
+  text_value?: string;
+  number_value?: number;
+  date_value?: string;
+  time_value?: string;
+  boolean_value?: boolean;
+  file_value?: string;
+}
+
+export interface JobNote {
+  id: number;
+  job: number;
+  content: string;
+  created_at: string;
+  created_by: {
+    id: number;
+    first_name: string;
+    last_name: string;
+    username: string;
+  };
+}
+
+export interface JobAttachment {
+  id: number;
+  job: number;
+  file: string;
+  filename: string;
+  file_type: string;
+  uploaded_at: string;
+  uploaded_by: {
+    id: number;
+    first_name: string;
+    last_name: string;
+    username: string;
+  };
+}
+
+export interface JobLink {
+  id: number;
+  source_job: number;
+  target_job: number;
+  link_type: "parent_child" | "related" | "duplicate" | "sequential";
+  sync_notes: boolean;
+  sync_status: boolean;
+  sync_assignments: boolean;
+  sync_attachments: boolean;
+  sync_completion: boolean;
+  created_at: string;
+  description?: string;
+}
+
+export interface Technician {
+  id: number;
+  user: {
+    id: number;
+    first_name: string;
+    last_name: string;
+    username: string;
+  };
+  avatar?: string;
+  phone_number?: string;
+  specialization?: string;
+  is_active: boolean;
+  full_name?: string;
+}
+
+export interface TaskTemplate {
+  id: number;
+  name: string;
+  description: string;
+  job_type: {
+    id: number;
+    name: string;
+  };
+  queue?: {
+    id: number;
+    name: string;
+  };
+  is_active: boolean;
+  display_order: number;
+  steps: {
+    id: number;
+    name: string;
+    description: string;
+    step_order: number;
+    action_type: string;
+    instructions?: string;
+    is_required?: boolean;
+    estimated_time_minutes?: number;
+    is_conditional?: boolean;
+    next_step?: number;
+    success_record_type?: string;
+    success_options?: {
+      id: string;
+      label: string;
+      action: string;
+      next_step?: number;
+    }[];
+  }[];
+}
+
+// Define filter types for better type safety
+export interface JobFilters {
+  site_id?: number;
+  status?: string[];
+  priority?: string[];
+  queue?: string[];
+  technician_id?: string | number;
+  search?: string;
+  assignedTo?: number[];
+}
+
+export interface StepStatusData {
+  status: string;
+  notes?: string;
+  completion_time?: string;
+  [key: string]: unknown;
+}
+
+export interface FieldValues {
+  [fieldId: string]: string | number | boolean | null;
+}
+
+export interface TaskTemplateFilters {
+  site_id?: number;
+  job_type_id?: number;
+  is_active?: boolean;
+}
+
+export interface JobStatus {
+  id: number;
+  name: string;
+  description?: string;
+  color: string;
+  site: number;
+  is_default: boolean;
+}
+
+export interface JobQueue {
+  id: number;
+  name: string;
+  description: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface JobType {
+  id: number;
+  name: string;
+  queue?: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface JobTag {
+  id: number;
+  name: string;
+  queue?: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface JobCategory {
+  id: number;
+  name: string;
+  queue?: number;
+  created_at: string;
+  updated_at: string;
+}
+
+// Add a new interface for job creation that matches what the API expects
+export interface JobCreate {
+  title: string;
+  description: string;
+  site_id: number; // Changed from site to site_id
+  client: string;
+  address: string;
+  priority: "low" | "medium" | "high";
+  status_id: number; // Changed from status to status_id
+  queue_id: number; // Changed from queue to queue_id
+  type_id?: number | null; // Changed from type to type_id
+  category_id?: number | null; // Changed from category to category_id
+  due_date: string;
+}
+
+// Add a cache for jobs with no tasks
+const jobsWithNoTasks = new Set<number>();
+
+// API functions
+const jobService = {
+  // Jobs
+  async getJobs(filters: JobFilters = {}): Promise<PaginatedResponse<Job>> {
+    try {
+      const params = new URLSearchParams();
+
+      // Add search parameter if provided
+      if (filters.search) {
+        params.append("search", filters.search);
+      }
+
+      // Add other filter parameters
+      if (filters.status?.length) {
+        filters.status.forEach((status) => params.append("status", status));
+      }
+      if (filters.priority?.length) {
+        filters.priority.forEach((priority) =>
+          params.append("priority", priority)
+        );
+      }
+      if (filters.assignedTo?.length) {
+        filters.assignedTo.forEach((techId) =>
+          params.append("assigned_to", techId)
+        );
+      }
+      if (filters.queue?.length) {
+        filters.queue.forEach((queue) => params.append("queue", queue));
+      }
+
+      // Add site_id filter if provided
+      if (filters.site_id) {
+        params.append("site_id", filters.site_id.toString());
+      }
+
+      const response = await api.get<PaginatedResponse<Job>>(
+        `/jobs/?${params.toString()}`
+      );
+      return response.data;
+    } catch (error) {
+      console.error("Error fetching jobs:", error);
+      throw error;
+    }
+  },
+
+  /**
+   * Gets jobs for a specific site
+   * @param siteId The ID of the site
+   * @param excludeJobId Optional ID of job to exclude (typically the current job)
+   * @param status Optional status to filter by
+   * @returns Paginated response of jobs
+   */
+  async getJobsBySite(
+    siteId: number,
+    excludeJobId?: string | number,
+    status?: string
+  ): Promise<PaginatedResponse<Job>> {
+    try {
+      const params = new URLSearchParams();
+      params.append("site_id", siteId.toString());
+
+      if (excludeJobId) {
+        params.append("exclude_job", excludeJobId.toString());
+      }
+
+      if (status) {
+        params.append("status", status);
+      }
+
+      const response = await api.get<PaginatedResponse<Job>>(
+        `/jobs/?${params.toString()}`
+      );
+      return response.data;
+    } catch (error) {
+      console.error(`Error fetching jobs for site ${siteId}:`, error);
+      throw error;
+    }
+  },
+
+  async getJob(id: string | number): Promise<Job> {
+    try {
+      const response = await api.get(`/jobs/${id}/`);
+      return response.data;
+    } catch (error: unknown) {
+      console.error(`Error fetching job ${id}:`, error);
+      if (error && typeof error === 'object' && 'response' in error) {
+        const axiosError = error as { response?: { status?: number } };
+        if (axiosError.response?.status === 401) {
+          // Let the component handle the 401 error
+          throw error;
+        }
+      }
+      // For other errors, return null
+      return null;
+    }
+  },
+
+  async createJob(jobData: JobCreate): Promise<Job> {
+    try {
+      // Log detailed job data for debugging
+      console.log("Creating job with data:", JSON.stringify(jobData, null, 2));
+
+      const response = await api.post(`/jobs/`, jobData);
+      return response.data;
+    } catch (error: unknown) {
+      console.error("Error creating job", error);
+      // Log more details about the error response if available
+      if (error && typeof error === "object" && "response" in error) {
+        const axiosError = error as {
+          response?: { data?: any; status?: number; headers?: any };
+        };
+        console.error("Error response data:", axiosError.response?.data);
+        console.error("Error response status:", axiosError.response?.status);
+        console.error("Error response headers:", axiosError.response?.headers);
+      }
+      throw error;
+    }
+  },
+
+  async updateJob(id: string | number, jobData: Partial<Job>): Promise<Job> {
+    try {
+      const response = await api.patch(`/jobs/${id}/`, jobData);
+      return response.data;
+    } catch (error) {
+      console.error(`Error updating job ${id}`, error);
+      throw error;
+    }
+  },
+
+  async deleteJob(id: string | number): Promise<void> {
+    try {
+      await api.delete(`/jobs/${id}/`);
+    } catch (error) {
+      console.error(`Error deleting job ${id}`, error);
+      throw error;
+    }
+  },
+
+  async bulkAssignJobs(
+    jobIds: string[],
+    technicianId: number | null
+  ): Promise<void> {
+    try {
+      await api.post(`/jobs/bulk-assign/`, {
+        job_ids: jobIds,
+        technician_id: technicianId,
+      });
+    } catch (error) {
+      console.error("Error bulk assigning jobs:", error);
+      throw error;
+    }
+  },
+
+  async bulkDeleteJobs(jobIds: string[]): Promise<void> {
+    try {
+      await api.delete(`/jobs/bulk-delete/`, {
+        data: {
+          job_ids: jobIds,
+        },
+      });
+    } catch (error) {
+      console.error("Error bulk deleting jobs:", error);
+      throw error;
+    }
+  },
+
+  async bulkUpdateJobs(
+    jobIds: string[],
+    updates: {
+      assignedTo?: number | null;
+      dueDate?: string | null;
+      queue?: number | null;
+      priority?: string | null;
+      status?: number | null;
+    }
+  ): Promise<void> {
+    try {
+      // Prepare the update data
+      const updateData: Record<string, any> = {
+        job_ids: jobIds,
+      };
+
+      // Only include fields that have actual values (not null or undefined)
+      if (updates.assignedTo !== undefined && updates.assignedTo !== null) {
+        updateData.assigned_to = updates.assignedTo;
+      }
+
+      if (updates.dueDate !== undefined && updates.dueDate !== null) {
+        updateData.due_date = updates.dueDate;
+      }
+
+      if (updates.queue !== undefined && updates.queue !== null) {
+        updateData.queue_id = updates.queue;
+      }
+
+      if (updates.priority !== undefined && updates.priority !== null) {
+        updateData.priority = updates.priority;
+      }
+
+      if (updates.status !== undefined && updates.status !== null) {
+        updateData.status_id = updates.status;
+      }
+
+      await api.patch(`/jobs/bulk-update/`, updateData);
+    } catch (error) {
+      console.error("Error bulk updating jobs:", error);
+      throw error;
+    }
+  },
+
+  // Job Tasks
+  async getJobTasks(jobId: number): Promise<JobTask[]> {
+    // If we know this job has no tasks, return an empty array immediately
+    if (jobsWithNoTasks.has(jobId)) {
+      console.log(`Job ${jobId} has no tasks (cached). Returning empty array.`);
+      return [];
+    }
+
+    try {
+      const response = await api.get(`/jobs/${jobId}/tasks/`);
+
+      // Check if the response is paginated
+      if (response.data && "results" in response.data) {
+        const paginatedData = response.data as PaginatedResponse<JobTask>;
+        return paginatedData.results;
+      }
+
+      return response.data;
+    } catch (error: any) {
+      console.error(`Error fetching tasks for job ${jobId}:`, error);
+      // If it's a 404, the job simply doesn't have tasks yet, return empty array
+      if (error?.response?.status === 404) {
+        console.warn(`No tasks found for job ${jobId}`);
+        // Remember this job has no tasks to avoid future API calls
+        jobsWithNoTasks.add(jobId);
+        return [];
+      }
+      // For other errors, also return empty array for consistency
+      return [];
+    }
+  },
+
+  async getJobTask(taskId: string | number): Promise<JobTask> {
+    try {
+      const response = await api.get(`/job-tasks/${taskId}/`);
+      return response.data;
+    } catch (error) {
+      console.error(`Error fetching task ${taskId}`, error);
+      throw error;
+    }
+  },
+
+  // Add function to clear the no-tasks cache for a job
+  async clearJobTasksCache(jobId: number): Promise<void> {
+    if (jobsWithNoTasks.has(jobId)) {
+      console.log(`Clearing no-tasks cache for job ${jobId}`);
+      jobsWithNoTasks.delete(jobId);
+    }
+  },
+
+  async assignTaskTemplate(
+    jobId: string | number,
+    templateId: string | number
+  ): Promise<JobTask> {
+    try {
+      // If this is a number ID, remove it from the no-tasks cache
+      if (typeof jobId === "number") {
+        jobsWithNoTasks.delete(jobId);
+      } else {
+        // Try to parse string as number and remove from cache
+        const numId = parseInt(jobId, 10);
+        if (!isNaN(numId)) {
+          jobsWithNoTasks.delete(numId);
+        }
+      }
+
+      const response = await api.post(`/jobs/${jobId}/assign-template/`, {
+        template_id: templateId,
+      });
+      return response.data;
+    } catch (error) {
+      console.error(`Error assigning template to job ${jobId}`, error);
+      throw error;
+    }
+  },
+
+  // Task Steps
+  async getTaskSteps(taskId: string | number): Promise<TaskStep[]> {
+    try {
+      const response = await api.get(`/tasks/${taskId}/steps/`);
+      return response.data;
+    } catch (error) {
+      console.error(`Error fetching steps for task ${taskId}`, error);
+      throw error;
+    }
+  },
+
+  async updateStepStatus(
+    stepId: string | number,
+    status: string,
+    data?: StepStatusData
+  ): Promise<TaskStep> {
+    try {
+      const response = await api.patch(`/steps/${stepId}/`, {
+        status,
+        ...data,
+      });
+      return response.data;
+    } catch (error) {
+      console.error(`Error updating step ${stepId}`, error);
+      throw error;
+    }
+  },
+
+  // Step Field Values
+  async submitStepFieldValues(
+    stepId: string | number,
+    values: FieldValues
+  ): Promise<TaskStep> {
+    try {
+      const response = await api.post(
+        `/steps/${stepId}/submit-values/`,
+        values
+      );
+      return response.data;
+    } catch (error) {
+      console.error(`Error submitting values for step ${stepId}`, error);
+      throw error;
+    }
+  },
+
+  // Job Notes
+  async getJobNotes(jobId: string | number): Promise<JobNote[]> {
+    try {
+      const response = await api.get(`/jobs/${jobId}/notes/`);
+      return response.data;
+    } catch (error) {
+      console.error(`Error fetching notes for job ${jobId}`, error);
+      throw error;
+    }
+  },
+
+  /**
+   * Fetches notes that were created during step completion
+   * @param jobId The ID of the job
+   * @returns Array of step notes
+   */
+  async getJobStepNotes(jobId: string | number): Promise<any[]> {
+    try {
+      const response = await api.get(`/jobs/${jobId}/step-notes/`);
+      return response.data;
+    } catch (error) {
+      console.error(`Error fetching step notes for job ${jobId}:`, error);
+      return [];
+    }
+  },
+
+  /**
+   * Fetches all notes for a job's site (from any source)
+   * @param jobId The ID of the job
+   * @returns Array of all site notes
+   */
+  async getAllSiteNotes(jobId: string | number): Promise<any[]> {
+    try {
+      const response = await api.get(`/jobs/${jobId}/all-notes/`);
+      return response.data;
+    } catch (error) {
+      console.error(`Error fetching all site notes for job ${jobId}:`, error);
+      return [];
+    }
+  },
+
+  /**
+   * Fetches notes associated with a site
+   * @param siteId The ID of the site
+   * @returns Array of site notes
+   */
+  async getSiteNotes(siteId: number): Promise<any[]> {
+    try {
+      const response = await api.get(`/sites/${siteId}/notes/`);
+      return response.data;
+    } catch (error) {
+      console.error(`Error fetching site notes for site ${siteId}:`, error);
+      return [];
+    }
+  },
+
+  /**
+   * Fetches notes from all historical jobs for a site
+   * @param siteId The ID of the site
+   * @param excludeJobId Optional job ID to exclude from results (current job)
+   * @returns Array of notes from historical jobs
+   */
+  async getHistoricalJobNotes(
+    siteId: number,
+    excludeJobId?: string | number
+  ): Promise<any[]> {
+    try {
+      const params = new URLSearchParams();
+      params.append("site_id", siteId.toString());
+      if (excludeJobId) {
+        params.append("exclude_job_id", excludeJobId.toString());
+      }
+
+      const response = await api.get(
+        `/sites/${siteId}/historical-job-notes/?${params.toString()}`
+      );
+      return response.data;
+    } catch (error) {
+      console.error(
+        `Error fetching historical job notes for site ${siteId}:`,
+        error
+      );
+      return [];
+    }
+  },
+
+  async addJobNote(jobId: string | number, content: string): Promise<JobNote> {
+    try {
+      const response = await api.post(`/jobs/${jobId}/notes/`, { content });
+      return response.data;
+    } catch (error) {
+      console.error(`Error adding note to job ${jobId}`, error);
+      throw error;
+    }
+  },
+
+  // Job Attachments
+  async getJobAttachments(jobId: string | number): Promise<JobAttachment[]> {
+    try {
+      const response = await api.get(`/jobs/${jobId}/attachments/`);
+      return response.data;
+    } catch (error) {
+      console.error(`Error fetching attachments for job ${jobId}`, error);
+      throw error;
+    }
+  },
+
+  async uploadJobAttachment(
+    jobId: string | number,
+    file: File
+  ): Promise<JobAttachment> {
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+      formData.append("job", String(jobId));
+      formData.append("filename", file.name);
+
+      const response = await api.post(`/jobs/${jobId}/attachments/`, formData, {
+        headers: {
+          "Content-Type": "multipart/form-data",
+        },
+      });
+      return response.data;
+    } catch (error) {
+      console.error(`Error uploading attachment to job ${jobId}`, error);
+      throw error;
+    }
+  },
+
+  // Job Links
+  async getJobLinks(jobId: string | number): Promise<{
+    outgoing: JobLink[];
+    incoming: JobLink[];
+  }> {
+    try {
+      const response = await api.get(`/jobs/${jobId}/links/`);
+      return response.data;
+    } catch (error) {
+      console.error(`Error fetching links for job ${jobId}`, error);
+      throw error;
+    }
+  },
+
+  async createJobLink(
+    sourceJobId: string | number,
+    targetJobId: string | number,
+    data: Partial<JobLink>
+  ): Promise<JobLink> {
+    try {
+      const response = await api.post(`/job-links/`, {
+        source_job: sourceJobId,
+        target_job: targetJobId,
+        ...data,
+      });
+      return response.data;
+    } catch (error) {
+      console.error(
+        `Error linking jobs ${sourceJobId} and ${targetJobId}`,
+        error
+      );
+      throw error;
+    }
+  },
+
+  async removeJobLink(linkId: string | number): Promise<void> {
+    try {
+      await api.delete(`/job-links/${linkId}/`);
+    } catch (error) {
+      console.error(`Error removing job link ${linkId}`, error);
+      throw error;
+    }
+  },
+
+  // Templates
+  async getTaskTemplates(
+    filters?: TaskTemplateFilters
+  ): Promise<TaskTemplate[]> {
+    try {
+      // Build query params
+      const params = new URLSearchParams();
+      if (filters?.site_id)
+        params.append("site_id", filters.site_id.toString());
+      if (filters?.job_type_id)
+        params.append("job_type", filters.job_type_id.toString());
+      if (filters?.is_active !== undefined)
+        params.append("is_active", filters.is_active.toString());
+
+      const queryString = params.toString() ? `?${params.toString()}` : "";
+      const response = await api.get(`/task-templates/${queryString}`);
+
+      // Check if the response is paginated
+      if (response.data && "results" in response.data) {
+        const paginatedData = response.data as PaginatedResponse<TaskTemplate>;
+        return paginatedData.results;
+      }
+
+      return response.data;
+    } catch (error: unknown) {
+      console.error("Error fetching task templates:", error);
+      if (error && typeof error === 'object' && 'response' in error) {
+        const axiosError = error as { response?: { status?: number } };
+        if (axiosError.response?.status === 401) {
+          // Let the component handle the 401 error
+          throw error;
+        }
+      }
+      // For other errors, return empty array
+      return [];
+    }
+  },
+
+  async getTaskTemplate(id: string | number): Promise<TaskTemplate> {
+    try {
+      const response = await api.get(`/task-templates/${id}/`);
+      return response.data;
+    } catch (error) {
+      console.error(`Error fetching task template ${id}`, error);
+      throw error;
+    }
+  },
+
+  // Technicians
+  async getTechnicians(): Promise<Technician[]> {
+    try {
+      console.log("Fetching technicians...");
+      const response = await api.get("/technicians/");
+      console.log("Technicians response:", response.data);
+
+      // Check if the response is paginated
+      if (response.data && "results" in response.data) {
+        const paginatedData = response.data as PaginatedResponse<Technician>;
+        console.log("Paginated technicians data:", paginatedData.results);
+        return paginatedData.results;
+      }
+
+      return response.data;
+    } catch (error: unknown) {
+      console.error("Error fetching technicians:", error);
+      if (error && typeof error === 'object' && 'response' in error) {
+        const axiosError = error as { response?: { status?: number } };
+        if (axiosError.response?.status === 401) {
+          // Let the component handle the 401 error
+          throw error;
+        }
+      }
+      // For other errors, return empty array
+      return [];
+    }
+  },
+
+  // Statuses and Queues
+  async getJobStatuses(): Promise<JobStatus[]> {
+    try {
+      const response = await api.get(`/job-statuses/`);
+
+      // Check if the response is paginated
+      if (response.data && "results" in response.data) {
+        const paginatedData = response.data as PaginatedResponse<JobStatus>;
+        return paginatedData.results;
+      }
+
+      return response.data;
+    } catch (error: unknown) {
+      console.error("Error fetching job statuses:", error);
+      if (error && typeof error === 'object' && 'response' in error) {
+        const axiosError = error as { response?: { status?: number } };
+        if (axiosError.response?.status === 401) {
+          // Let the component handle the 401 error
+          throw error;
+        }
+      }
+      // For other errors, return empty array
+      return [];
+    }
+  },
+
+  async getJobQueues(): Promise<JobQueue[]> {
+    try {
+      const response = await api.get(`/job-queues/`);
+
+      // Check if the response is paginated
+      if (response.data && "results" in response.data) {
+        const paginatedData = response.data as PaginatedResponse<JobQueue>;
+        return paginatedData.results;
+      }
+
+      return response.data;
+    } catch (error: unknown) {
+      console.error("Error fetching job queues:", error);
+      if (error && typeof error === 'object' && 'response' in error) {
+        const axiosError = error as { response?: { status?: number } };
+        if (axiosError.response?.status === 401) {
+          // Let the component handle the 401 error
+          throw error;
+        }
+      }
+      // For other errors, return empty array
+      return [];
+    }
+  },
+
+  async getJobTypes(): Promise<JobType[]> {
+    try {
+      const response = await api.get(`/job-types/`);
+
+      // Check if the response is paginated
+      if (response.data && "results" in response.data) {
+        const paginatedData = response.data as PaginatedResponse<JobType>;
+        return paginatedData.results;
+      }
+
+      return response.data;
+    } catch (error: unknown) {
+      console.error("Error fetching job types:", error);
+      if (error && typeof error === 'object' && 'response' in error) {
+        const axiosError = error as { response?: { status?: number } };
+        if (axiosError.response?.status === 401) {
+          // Let the component handle the 401 error
+          throw error;
+        }
+      }
+      // For other errors, return empty array
+      return [];
+    }
+  },
+
+  async createJobType(data: {
+    name: string;
+    queue?: number | null;
+  }): Promise<JobType> {
+    try {
+      const response = await api.post(`/job-types/`, data);
+      return response.data;
+    } catch (error) {
+      console.error("Error creating job type:", error);
+      throw error;
+    }
+  },
+
+  async deleteJobType(id: number): Promise<void> {
+    try {
+      await api.delete(`/job-types/${id}/`);
+    } catch (error) {
+      console.error("Error deleting job type:", error);
+      throw error;
+    }
+  },
+
+  // Update the order of a task step
+  async updateStepOrder(stepId: number, newOrder: number): Promise<any> {
+    try {
+      const response = await api.patch(`/task-steps/${stepId}/`, {
+        step_order: newOrder,
+      });
+      return response.data;
+    } catch (error) {
+      console.error(`Error updating step order for step ${stepId}`, error);
+      throw error;
+    }
+  },
+
+  async getJobCategories(): Promise<JobCategory[]> {
+    try {
+      const response = await api.get(`/job-categories/`);
+
+      // Check if the response is paginated
+      if (response.data && "results" in response.data) {
+        const paginatedData = response.data as PaginatedResponse<JobCategory>;
+        return paginatedData.results;
+      }
+
+      return response.data;
+    } catch (error: unknown) {
+      console.error("Error fetching job categories:", error);
+      if (error && typeof error === 'object' && 'response' in error) {
+        const axiosError = error as { response?: { status?: number } };
+        if (axiosError.response?.status === 401) {
+          // Let the component handle the 401 error
+          throw error;
+        }
+      }
+      // For other errors, return empty array
+      return [];
+    }
+  },
+
+  async getJobTags(): Promise<JobTag[]> {
+    try {
+      const response = await api.get(`/job-tags/`);
+
+      // Check if the response is paginated
+      if (response.data && "results" in response.data) {
+        const paginatedData = response.data as PaginatedResponse<JobTag>;
+        return paginatedData.results;
+      }
+
+      return response.data;
+    } catch (error: unknown) {
+      console.error("Error fetching job tags:", error);
+      if (error && typeof error === 'object' && 'response' in error) {
+        const axiosError = error as { response?: { status?: number } };
+        if (axiosError.response?.status === 401) {
+          // Let the component handle the 401 error
+          throw error;
+        }
+      }
+      // For other errors, return empty array
+      return [];
+    }
+  },
+
+  // Add the completeTaskStep method to jobService
+
+  /**
+   * Completes a task step with the provided data
+   * @param taskId The ID of the task
+   * @param stepId The ID of the step to complete
+   * @param data The completion data including notes and any conditional options
+   * @returns The API response including potential next step information
+   */
+  async completeTaskStep(
+    taskId: number,
+    stepId: number,
+    data: Record<string, unknown>
+  ): Promise<any> {
+    try {
+      console.log(
+        `Completing step ${stepId} for task ${taskId} with data:`,
+        data
+      );
+
+      // The correct endpoint URL based on the REST API design
+      const response = await api.post(
+        `/job-tasks/${taskId}/steps/${stepId}/complete/`,
+        data
+      );
+
+      console.log("Step completion response:", response.data);
+      return response.data;
+    } catch (error: any) {
+      console.error(
+        `Error completing step ${stepId} for task ${taskId}:`,
+        error
+      );
+      throw error;
+    }
+  },
+
+  // Add additional task-related methods for workflow functionality
+
+  /**
+   * Fetches details for a specific task
+   * @param taskId The ID of the task
+   * @returns Task object with steps
+   */
+  async getTaskDetails(taskId: number): Promise<any> {
+    try {
+      const response = await api.get(`/job-tasks/${taskId.toString()}/`);
+      return response.data;
+    } catch (error) {
+      console.error("Error fetching task details:", error);
+      return null;
+    }
+  },
+
+  /**
+   * Fetches current active step for a task
+   * @param taskId The ID of the task
+   * @returns The active step object or null
+   */
+  async getActiveStep(taskId: number): Promise<any> {
+    try {
+      // According to the backend implementation, there might not be a dedicated endpoint
+      // for active step. Let's get the task details and extract the current step.
+      const taskDetails = await this.getTaskDetails(taskId);
+      if (taskDetails && taskDetails.current_step) {
+        return taskDetails.current_step;
+      }
+      return null;
+    } catch (error) {
+      console.error("Error fetching active step:", error);
+      return null;
+    }
+  },
+
+  /**
+   * Updates the status of a task
+   * @param taskId The ID of the task
+   * @param status The new status
+   * @returns Updated task object
+   */
+  async updateTaskStatus(taskId: number, status: string): Promise<any> {
+    try {
+      const response = await api.patch(`/tasks/${taskId}`, { status });
+      return response.data;
+    } catch (error) {
+      console.error("Error updating task status:", error);
+      throw error;
+    }
+  },
+
+  // Job Queue Management
+  async createJobQueue(data: { name: string; description: string }): Promise<JobQueue> {
+    try {
+      const response = await api.post(`/job-queues/`, data);
+      return response.data;
+    } catch (error) {
+      console.error("Error creating job queue:", error);
+      throw error;
+    }
+  },
+
+  async deleteJobQueue(id: number): Promise<void> {
+    try {
+      await api.delete(`/job-queues/${id}/`);
+    } catch (error) {
+      console.error("Error deleting job queue:", error);
+      throw error;
+    }
+  },
+
+  // Job Tag Management
+  async createJobTag(data: { name: string; queue?: number | null }): Promise<JobTag> {
+    try {
+      const response = await api.post(`/job-tags/`, data);
+      return response.data;
+    } catch (error) {
+      console.error("Error creating job tag:", error);
+      throw error;
+    }
+  },
+
+  async deleteJobTag(id: number): Promise<void> {
+    try {
+      await api.delete(`/job-tags/${id}/`);
+    } catch (error) {
+      console.error("Error deleting job tag:", error);
+      throw error;
+    }
+  },
+
+  // Job Category Management
+  async createJobCategory(data: { name: string; queue?: number | null }): Promise<JobCategory> {
+    try {
+      const response = await api.post(`/job-categories/`, data);
+      return response.data;
+    } catch (error) {
+      console.error("Error creating job category:", error);
+      throw error;
+    }
+  },
+
+  async deleteJobCategory(id: number): Promise<void> {
+    try {
+      await api.delete(`/job-categories/${id}/`);
+    } catch (error) {
+      console.error("Error deleting job category:", error);
+      throw error;
+    }
+  },
+
+  // Site details
+  async getSite(siteId: number): Promise<any> {
+    try {
+      // Log the request for debugging
+      console.log(`Fetching site details for site ID: ${siteId}`);
+
+      // Use the exact URL format from the example that works
+      const url = `http://127.0.0.1:8000/api/v1/sites/${siteId}/`;
+      console.log("Making request to URL:", url);
+
+      // Use a direct fetch to avoid baseURL issues
+      const response = await fetch(url, {
+        headers: {
+          Accept: "application/json",
+          Authorization: `Token ${localStorage.getItem("access_token")}`,
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error: ${response.status}`);
+      }
+
+      const data = await response.json();
+      console.log("Site details response:", data);
+      return data;
+    } catch (error: any) {
+      console.error(`Error fetching site ${siteId}:`, error);
+      throw error;
+    }
+  },
+};
+
+export default jobService;
