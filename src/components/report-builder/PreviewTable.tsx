@@ -16,14 +16,14 @@ const PreviewTable: React.FC<PreviewTableProps> = ({
   if (loading) {
     return (
       <div className="flex justify-center items-center h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-700"></div>
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-700 dark:border-green-500"></div>
       </div>
     );
   }
   
   if (!data || data.length === 0) {
     return (
-      <div className="text-center py-12 text-gray-500">
+      <div className="text-center py-12 text-gray-500 dark:text-gray-400">
         <p>No data to preview. Select tables and columns, then click "Preview Results".</p>
       </div>
     );
@@ -55,8 +55,8 @@ const PreviewTable: React.FC<PreviewTableProps> = ({
   
   return (
     <div className="overflow-x-auto">
-      <table className="min-w-full divide-y divide-gray-200">
-        <thead className="bg-gray-50">
+      <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+        <thead className="bg-gray-50 dark:bg-gray-700">
           <tr>
             {headers.map(header => {
               // Find the full column path for this header
@@ -65,7 +65,7 @@ const PreviewTable: React.FC<PreviewTableProps> = ({
               return (
                 <th
                   key={header}
-                  className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                  className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider"
                 >
                   {columnLabels[fullColumnPath] || header}
                 </th>
@@ -73,13 +73,13 @@ const PreviewTable: React.FC<PreviewTableProps> = ({
             })}
           </tr>
         </thead>
-        <tbody className="bg-white divide-y divide-gray-200">
+        <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
           {data.map((row, rowIndex) => (
-            <tr key={rowIndex} className={rowIndex % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
+            <tr key={rowIndex} className={rowIndex % 2 === 0 ? 'bg-white dark:bg-gray-800' : 'bg-gray-50 dark:bg-gray-700'}>
               {headers.map(header => (
                 <td
                   key={`${rowIndex}-${header}`}
-                  className="px-6 py-4 whitespace-nowrap text-sm text-gray-500"
+                  className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400"
                 >
                   {formatValue(row[header])}
                 </td>

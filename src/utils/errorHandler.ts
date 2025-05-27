@@ -30,11 +30,11 @@ export const handleApiError = (error: any): ErrorResponse => {
   }
 
   // Log error for debugging
-  console.error('API Error:', {
-    ...errorResponse,
-    originalError: error,
-    timestamp: new Date().toISOString()
-  });
+  // console.error('API Error:', {
+  //   ...errorResponse,
+  //   originalError: error,
+  //   timestamp: new Date().toISOString()
+  // });
 
   return errorResponse;
 };

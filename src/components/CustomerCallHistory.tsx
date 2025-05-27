@@ -27,12 +27,10 @@ const CustomerCallHistory: React.FC<CustomerCallHistoryProps> = ({ siteId }) => 
         if (Array.isArray(data)) {
           setCalls(data);
         } else {
-          console.error('API did not return an array for customer calls:', data);
           setCalls([]);
           setError('Invalid data format received from server');
         }
       } catch (err) {
-        console.error('Error loading customer calls:', err);
         setError('Failed to load call history');
         setCalls([]);
       } finally {

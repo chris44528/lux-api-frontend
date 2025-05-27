@@ -59,7 +59,6 @@ export const Widget: React.FC<WidgetProps> = ({
       // Auto-save after removing widget
       setTimeout(() => {
         saveDashboard().catch(error => {
-          console.error("Failed to auto-save after removing widget:", error);
         });
       }, 500);
     }
@@ -74,7 +73,6 @@ export const Widget: React.FC<WidgetProps> = ({
       // Auto-save after resizing widget
       setTimeout(() => {
         saveDashboard().catch(error => {
-          console.error("Failed to auto-save after resizing widget:", error);
         });
       }, 500);
     }
@@ -117,85 +115,87 @@ export const Widget: React.FC<WidgetProps> = ({
   return (
     <Card
       className={cn(
-        "transition-all duration-200 ease-in-out overflow-hidden rounded-lg border border-gray-100 h-full",
+        "transition-all duration-200 ease-in-out overflow-hidden rounded-lg border border-gray-100 dark:border-gray-700 h-full",
         sizeToGridClass[config.size],
-        isEditing ? "shadow-md hover:shadow-lg" : "shadow-sm",
+        isEditing ? "shadow-md hover:shadow-lg dark:shadow-gray-900/50" : "shadow-sm dark:shadow-gray-900/30",
         className
       )}
       onMouseEnter={() => setIsHovering(true)}
       onMouseLeave={() => setIsHovering(false)}
     >
-      <CardHeader className="flex flex-row items-center justify-between space-y-0 py-3 px-4 bg-gray-50 border-b border-gray-100">
+      <CardHeader className="flex flex-row items-center justify-between space-y-0 py-3 px-4 bg-gray-50 dark:bg-gray-800 border-b border-gray-100 dark:border-gray-700">
         <div className="flex items-center gap-2">
           {isEditing && (
             <div {...dragHandleProps}>
-              <GripVertical className="h-4 w-4 text-gray-400 cursor-grab active:cursor-grabbing" />
+              <GripVertical className="h-4 w-4 text-gray-400 dark:text-gray-500 cursor-grab active:cursor-grabbing" />
             </div>
           )}
-          <h3 className="text-sm font-medium text-gray-700">{config.title}</h3>
+          <h3 className="text-sm font-medium text-gray-700 dark:text-gray-200">{config.title}</h3>
         </div>
         <div className="flex items-center space-x-1">
           {isEditing && (
             <>
               <button
                 onClick={toggleSize}
-                className="p-1 rounded-full hover:bg-gray-200 transition-colors"
+                className="p-1 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
                 title={config.size === "1x1" ? "Enlarge" : "Reduce"}
               >
                 {config.size === "1x1" ? (
-                  <Maximize2 className="h-4 w-4 text-gray-500" />
+                  <Maximize2 className="h-4 w-4 text-gray-500 dark:text-gray-400" />
                 ) : (
-                  <Minimize2 className="h-4 w-4 text-gray-500" />
+                  <Minimize2 className="h-4 w-4 text-gray-500 dark:text-gray-400" />
                 )}
               </button>
               <button
                 onClick={handleRemove}
-                className="p-1 rounded-full hover:bg-red-100 hover:text-red-500 transition-colors"
+                className="p-1 rounded-full hover:bg-red-100 dark:hover:bg-red-900/20 hover:text-red-500 dark:hover:text-red-400 transition-colors"
                 title="Remove widget"
               >
-                <X className="h-4 w-4 text-gray-500" />
+                <X className="h-4 w-4 text-gray-500 dark:text-gray-400" />
               </button>
             </>
           )}
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <button className="p-1 rounded-full hover:bg-gray-200 transition-colors">
-                <MoreHorizontal className="h-4 w-4 text-gray-500" />
-              </button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-40">
-              {onEdit && (
-                <DropdownMenuItem onClick={() => onEdit(config)}>
-                  Edit
+          {isEditing && (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button className="p-1 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors">
+                  <MoreHorizontal className="h-4 w-4 text-gray-500 dark:text-gray-400" />
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-40">
+                {onEdit && (
+                  <DropdownMenuItem onClick={() => onEdit(config)}>
+                    Edit
+                  </DropdownMenuItem>
+                )}
+                <DropdownMenuItem onClick={() => handleResize("1x1")}>
+                  Small (1x1)
                 </DropdownMenuItem>
-              )}
-              <DropdownMenuItem onClick={() => handleResize("1x1")}>
-                Small (1x1)
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => handleResize("2x1")}>
-                Wide (2x1)
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => handleResize("1x2")}>
-                Tall (1x2)
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => handleResize("2x2")}>
-                Large (2x2)
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={handleRemove} className="text-red-500">
-                Remove
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+                <DropdownMenuItem onClick={() => handleResize("2x1")}>
+                  Wide (2x1)
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => handleResize("1x2")}>
+                  Tall (1x2)
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => handleResize("2x2")}>
+                  Large (2x2)
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={handleRemove} className="text-red-500 dark:text-red-400">
+                  Remove
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          )}
         </div>
       </CardHeader>
-      <CardContent className="p-4 h-[calc(100%-3rem)] overflow-auto">
+      <CardContent className="p-4 h-[calc(100%-3rem)] overflow-auto dark:bg-gray-900">
         {isLoading ? (
           <div className="flex justify-center items-center h-full">
-            <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-500"></div>
+            <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-500 dark:border-blue-400"></div>
           </div>
         ) : error ? (
-          <div className="p-3 bg-red-50 text-red-600 rounded-md text-sm">{error}</div>
+          <div className="p-3 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 rounded-md text-sm">{error}</div>
         ) : typeof children === "function" ? (
           children(renderProps)
         ) : (

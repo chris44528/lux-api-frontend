@@ -5,6 +5,5 @@
 import React from "react";
 
 export const DashboardHeader: React.FC = () => {
-  console.warn("DashboardHeader component is deprecated. Please remove it from your imports.");
   return null;
 }; 

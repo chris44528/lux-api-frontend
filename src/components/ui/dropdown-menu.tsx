@@ -88,7 +88,7 @@ export const DropdownMenuContent = React.forwardRef<HTMLDivElement, DropdownMenu
       <div
         ref={contentRef}
         className={clsx(
-          "absolute z-10 mt-2 w-56 rounded-md bg-white shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none",
+          "absolute z-10 mt-2 w-56 rounded-md bg-white dark:bg-gray-800 shadow-lg ring-1 ring-black dark:ring-gray-700 ring-opacity-5 dark:ring-opacity-100 focus:outline-none border border-gray-200 dark:border-gray-700",
           alignmentClasses[align],
           className
         )}
@@ -114,7 +114,7 @@ export const DropdownMenuItem = React.forwardRef<HTMLButtonElement, DropdownMenu
       <button
         ref={ref}
         className={clsx(
-          "text-left w-full block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 hover:text-gray-900",
+          "text-left w-full block px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-gray-900 dark:hover:text-gray-100 focus:bg-gray-100 dark:focus:bg-gray-700 focus:text-gray-900 dark:focus:text-gray-100 focus:outline-none disabled:opacity-50 disabled:pointer-events-none transition-colors",
           className
         )}
         {...props}
@@ -139,7 +139,7 @@ export const DropdownMenuLabel = React.forwardRef<HTMLDivElement, DropdownMenuLa
       <div
         ref={ref}
         className={clsx(
-          "px-4 py-2 text-sm font-medium text-gray-700",
+          "px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300",
           className
         )}
         {...props}
@@ -163,7 +163,7 @@ export const DropdownMenuSeparator = React.forwardRef<HTMLDivElement, DropdownMe
       <div
         ref={ref}
         className={clsx(
-          "my-1 h-px bg-gray-200",
+          "my-1 h-px bg-gray-200 dark:bg-gray-700",
           className
         )}
         {...props}

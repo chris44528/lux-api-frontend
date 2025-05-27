@@ -251,11 +251,9 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({
           return;
         } else {
           // If no dashboards returned from API, use the default state
-          console.log("No dashboards found from API, using default");
           await dashboardService.saveDashboards(initialState.dashboards);
         }
       } catch (error) {
-        console.error("Failed to load dashboards from API:", error);
       }
     };
 
@@ -301,7 +299,6 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({
         await dashboardService.saveDashboards(state.dashboards);
         return Promise.resolve();
       } catch (error) {
-        console.error("Failed to save dashboards to API:", error);
         // Still save to local storage as fallback
         localStorage.setItem("dashboards", JSON.stringify(state.dashboards));
         return Promise.resolve();

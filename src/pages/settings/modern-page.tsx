@@ -1,10 +1,9 @@
-import React, { useState, useEffect } from "react";
+import { useState } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Search, Settings2, Users, Shield, Filter, MessageSquare, Building } from "lucide-react";
+import { Search, Settings2, Users, Shield, Filter, Building, Calendar, Palmtree } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 // Import existing components
@@ -12,11 +11,16 @@ import { GroupDataFilters } from "@/components/Settings/GroupDataFilters";
 import MenuPermissionsSettings from "@/components/Settings/MenuPermissionsSettings";
 import DepartmentsSettings from "@/components/Settings/departments";
 import CannedMessagesSettings from "@/components/Settings/CannedMessagesSettings";
-import { JobStatuses, JobTypes, JobCategories, JobTags, TaskTemplates } from "@/components/Settings";
+import { JobStatuses, JobTypes, JobCategories, JobTags, TaskTemplates, UserManagement, GroupManagement, PermissionsManagement, UIPermissionsManagement, EmailTemplatesSettings } from "@/components/Settings";
+import HolidayEntitlements from "@/components/Settings/HolidayEntitlements";
+import HolidayPolicies from "@/components/Settings/HolidayPolicies";
+import { TestPermissions } from "@/components/TestPermissions";
+import { TestBulkUpdate } from "@/components/TestBulkUpdate";
 
 const ModernSettingsPage = () => {
   const [searchQuery, setSearchQuery] = useState("");
-  const [activeTab, setActiveTab] = useState("overview");
+  const [activeCategory, setActiveCategory] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState<string | null>(null);
 
   // Mock data for overview stats - this should come from your API
   const overviewStats = [
@@ -46,13 +50,22 @@ const ModernSettingsPage = () => {
       tabs: ["job-statuses", "job-types", "job-categories", "job-tags", "templates"]
     },
     {
+      id: "holiday-management",
+      title: "Holiday Management",
+      description: "Manage holiday policies, entitlements, and blackouts",
+      icon: Palmtree,
+      color: "bg-teal-50 border-teal-200",
+      iconColor: "text-teal-600",
+      tabs: ["holiday-policies", "holiday-entitlements", "public-holidays", "blackout-periods"]
+    },
+    {
       id: "access-control",
       title: "Access Control",
       description: "Manage data filters and menu permissions",
       icon: Shield,
       color: "bg-purple-50 border-purple-200",
       iconColor: "text-purple-600",
-      tabs: ["data-filters", "menu-permissions"]
+      tabs: ["data-filters", "menu-permissions", "ui-permissions"]
     },
     {
       id: "system-config",
@@ -61,7 +74,7 @@ const ModernSettingsPage = () => {
       icon: Building,
       color: "bg-orange-50 border-orange-200",
       iconColor: "text-orange-600",
-      tabs: ["departments", "canned-messages"]
+      tabs: ["departments", "canned-messages", "email-templates"]
     }
   ];
 
@@ -75,29 +88,64 @@ const ModernSettingsPage = () => {
     { id: "users", label: "Users", category: "user-management" },
     { id: "groups", label: "Groups", category: "user-management" },
     { id: "permissions", label: "Permissions", category: "user-management" },
+    { id: "holiday-policies", label: "Holiday Policies", category: "holiday-management" },
+    { id: "holiday-entitlements", label: "Entitlements", category: "holiday-management" },
+    { id: "public-holidays", label: "Public Holidays", category: "holiday-management" },
+    { id: "blackout-periods", label: "Blackout Periods", category: "holiday-management" },
     { id: "data-filters", label: "Data Filters", category: "access-control" },
     { id: "menu-permissions", label: "Menu Permissions", category: "access-control" },
+    { id: "ui-permissions", label: "UI Permissions", category: "access-control" },
     { id: "departments", label: "Departments", category: "system-config" },
-    { id: "canned-messages", label: "Canned Messages", category: "system-config" },
+    { id: "canned-messages", label: "Canned Text Messages", category: "system-config" },
+    { id: "email-templates", label: "Email Templates", category: "system-config" },
   ];
 
-  const filteredTabs = tabs.filter(tab => 
-    tab.label.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const handleCategoryClick = (categoryId: string, firstTab: string) => {
+    setActiveCategory(categoryId);
+    setActiveTab(firstTab);
+  };
+
+  const handleBackToOverview = () => {
+    setActiveCategory(null);
+    setActiveTab(null);
+  };
+
+  const getCurrentCategoryTabs = () => {
+    if (!activeCategory) return [];
+    const category = settingsCategories.find(c => c.id === activeCategory);
+    if (!category) return [];
+    return tabs.filter(tab => tab.category === activeCategory);
+  };
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
       {/* Header */}
-      <div className="bg-white border-b border-gray-200">
+      <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center py-6">
-            <div>
-              <h1 className="text-3xl font-bold text-gray-900">Settings</h1>
-              <p className="text-gray-600 mt-1">Configure your system preferences and permissions</p>
+            <div className="flex items-center space-x-4">
+              {activeCategory && (
+                <button
+                  onClick={handleBackToOverview}
+                  className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+                >
+                  <svg className="h-5 w-5 text-gray-600 dark:text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                  </svg>
+                </button>
+              )}
+              <div>
+                <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
+                  {activeCategory ? settingsCategories.find(c => c.id === activeCategory)?.title : 'Settings'}
+                </h1>
+                <p className="text-gray-600 dark:text-gray-400 mt-1">
+                  {activeCategory ? settingsCategories.find(c => c.id === activeCategory)?.description : 'Configure your system preferences and permissions'}
+                </p>
+              </div>
             </div>
             <div className="flex items-center space-x-4">
               <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 dark:text-gray-500 h-4 w-4" />
                 <Input
                   placeholder="Search settings..."
                   value={searchQuery}
@@ -111,38 +159,18 @@ const ModernSettingsPage = () => {
       </div>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          {/* Tab Navigation */}
-          <div className="bg-white rounded-lg border border-gray-200 p-1">
-            <TabsList className="grid grid-cols-1 md:grid-cols-6 lg:grid-cols-13 gap-1 h-auto bg-transparent">
-              {filteredTabs.map((tab) => (
-                <TabsTrigger
-                  key={tab.id}
-                  value={tab.id}
-                  className={cn(
-                    "data-[state=active]:bg-blue-100 data-[state=active]:text-blue-700",
-                    "hover:bg-gray-100 transition-colors",
-                    "text-sm font-medium px-3 py-2 rounded-md"
-                  )}
-                >
-                  {tab.icon && <tab.icon className="h-4 w-4 mr-2" />}
-                  {tab.label}
-                </TabsTrigger>
-              ))}
-            </TabsList>
-          </div>
-
-          {/* Overview Tab */}
-          <TabsContent value="overview" className="space-y-6">
+        {/* Show overview or category content */}
+        {!activeCategory ? (
+          <div className="space-y-6">
             {/* Stats Grid */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
               {overviewStats.map((stat, index) => (
-                <Card key={index} className="border-0 shadow-sm hover:shadow-md transition-shadow">
+                <Card key={index} className="border-0 shadow-sm hover:shadow-md transition-shadow bg-white dark:bg-gray-800">
                   <CardContent className="p-6">
                     <div className="flex items-center justify-between">
                       <div>
-                        <p className="text-sm font-medium text-gray-600">{stat.label}</p>
-                        <p className="text-3xl font-bold text-gray-900">{stat.value}</p>
+                        <p className="text-sm font-medium text-gray-600 dark:text-gray-400">{stat.label}</p>
+                        <p className="text-3xl font-bold text-gray-900 dark:text-white">{stat.value}</p>
                       </div>
                       <div className={cn("p-3 rounded-full", stat.color)}>
                         <stat.icon className="h-6 w-6 text-white" />
@@ -160,9 +188,10 @@ const ModernSettingsPage = () => {
                   key={category.id} 
                   className={cn(
                     "border-2 hover:shadow-lg transition-all duration-200 cursor-pointer",
-                    category.color
+                    category.color,
+                    "dark:bg-gray-800 dark:border-gray-700"
                   )}
-                  onClick={() => setActiveTab(category.tabs[0])}
+                  onClick={() => handleCategoryClick(category.id, category.tabs[0])}
                 >
                   <CardHeader className="pb-3">
                     <div className="flex items-center space-x-3">
@@ -190,14 +219,35 @@ const ModernSettingsPage = () => {
                 </Card>
               ))}
             </div>
-          </TabsContent>
+          </div>
+        ) : (
+          <Tabs value={activeTab || ''} onValueChange={setActiveTab} className="space-y-6">
+            {/* Category-specific tab navigation */}
+            <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-1">
+              <TabsList className="flex flex-wrap gap-1 h-auto bg-transparent dark:bg-transparent p-1">
+                {getCurrentCategoryTabs().map((tab) => (
+                  <TabsTrigger
+                    key={tab.id}
+                    value={tab.id}
+                    className={cn(
+                      "data-[state=active]:bg-blue-100 dark:data-[state=active]:bg-blue-900/30 data-[state=active]:text-blue-700 dark:data-[state=active]:text-blue-400",
+                      "hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors",
+                      "text-sm font-medium px-3 py-2 rounded-md text-gray-700 dark:text-gray-300 whitespace-nowrap flex items-center"
+                    )}
+                  >
+                    {tab.icon && <tab.icon className="h-4 w-4 mr-2" />}
+                    {tab.label}
+                  </TabsTrigger>
+                ))}
+              </TabsList>
+            </div>
 
           {/* Job Settings Tabs */}
           <TabsContent value="job-statuses">
-            <Card>
+            <Card className="bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700">
               <CardHeader>
-                <CardTitle>Job Statuses</CardTitle>
-                <CardDescription>Manage job status configurations</CardDescription>
+                <CardTitle className="text-gray-900 dark:text-white">Job Statuses</CardTitle>
+                <CardDescription className="text-gray-600 dark:text-gray-400">Manage job status configurations</CardDescription>
               </CardHeader>
               <CardContent>
                 <JobStatuses jobStatuses={[]} jobQueues={[]} />
@@ -206,10 +256,10 @@ const ModernSettingsPage = () => {
           </TabsContent>
 
           <TabsContent value="job-types">
-            <Card>
+            <Card className="bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700">
               <CardHeader>
-                <CardTitle>Job Types</CardTitle>
-                <CardDescription>Configure different types of jobs</CardDescription>
+                <CardTitle className="text-gray-900 dark:text-white">Job Types</CardTitle>
+                <CardDescription className="text-gray-600 dark:text-gray-400">Configure different types of jobs</CardDescription>
               </CardHeader>
               <CardContent>
                 <JobTypes jobTypes={[]} jobQueues={[]} />
@@ -218,10 +268,10 @@ const ModernSettingsPage = () => {
           </TabsContent>
 
           <TabsContent value="job-categories">
-            <Card>
+            <Card className="bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700">
               <CardHeader>
-                <CardTitle>Job Categories</CardTitle>
-                <CardDescription>Organize jobs by categories</CardDescription>
+                <CardTitle className="text-gray-900 dark:text-white">Job Categories</CardTitle>
+                <CardDescription className="text-gray-600 dark:text-gray-400">Organize jobs by categories</CardDescription>
               </CardHeader>
               <CardContent>
                 <JobCategories jobCategories={[]} jobQueues={[]} />
@@ -230,10 +280,10 @@ const ModernSettingsPage = () => {
           </TabsContent>
 
           <TabsContent value="job-tags">
-            <Card>
+            <Card className="bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700">
               <CardHeader>
-                <CardTitle>Job Tags</CardTitle>
-                <CardDescription>Create tags for job classification</CardDescription>
+                <CardTitle className="text-gray-900 dark:text-white">Job Tags</CardTitle>
+                <CardDescription className="text-gray-600 dark:text-gray-400">Create tags for job classification</CardDescription>
               </CardHeader>
               <CardContent>
                 <JobTags jobTags={[]} jobQueues={[]} />
@@ -242,10 +292,10 @@ const ModernSettingsPage = () => {
           </TabsContent>
 
           <TabsContent value="templates">
-            <Card>
+            <Card className="bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700">
               <CardHeader>
-                <CardTitle>Task Templates</CardTitle>
-                <CardDescription>Manage reusable task templates</CardDescription>
+                <CardTitle className="text-gray-900 dark:text-white">Task Templates</CardTitle>
+                <CardDescription className="text-gray-600 dark:text-gray-400">Manage reusable task templates</CardDescription>
               </CardHeader>
               <CardContent>
                 <TaskTemplates jobTypes={[]} queues={[]} />
@@ -255,48 +305,15 @@ const ModernSettingsPage = () => {
 
           {/* User Management Tabs */}
           <TabsContent value="users">
-            <Card>
-              <CardHeader>
-                <CardTitle>User Management</CardTitle>
-                <CardDescription>Manage user accounts and profiles</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="text-center py-8">
-                  <Users className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                  <p className="text-gray-600">User management interface will be implemented here</p>
-                </div>
-              </CardContent>
-            </Card>
+            <UserManagement />
           </TabsContent>
 
           <TabsContent value="groups">
-            <Card>
-              <CardHeader>
-                <CardTitle>Group Management</CardTitle>
-                <CardDescription>Manage user groups and memberships</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="text-center py-8">
-                  <Shield className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                  <p className="text-gray-600">Group management interface will be implemented here</p>
-                </div>
-              </CardContent>
-            </Card>
+            <GroupManagement />
           </TabsContent>
 
           <TabsContent value="permissions">
-            <Card>
-              <CardHeader>
-                <CardTitle>Permission Management</CardTitle>
-                <CardDescription>Configure user permissions and access levels</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="text-center py-8">
-                  <Shield className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                  <p className="text-gray-600">Permission management interface will be implemented here</p>
-                </div>
-              </CardContent>
-            </Card>
+            <PermissionsManagement />
           </TabsContent>
 
           {/* Access Control Tabs */}
@@ -305,10 +322,10 @@ const ModernSettingsPage = () => {
           </TabsContent>
 
           <TabsContent value="menu-permissions">
-            <Card>
+            <Card className="bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700">
               <CardHeader>
-                <CardTitle>Menu Permissions</CardTitle>
-                <CardDescription>Control menu visibility for different user groups</CardDescription>
+                <CardTitle className="text-gray-900 dark:text-white">Menu Permissions</CardTitle>
+                <CardDescription className="text-gray-600 dark:text-gray-400">Control menu visibility for different user groups</CardDescription>
               </CardHeader>
               <CardContent>
                 <MenuPermissionsSettings groups={[]} />
@@ -316,12 +333,23 @@ const ModernSettingsPage = () => {
             </Card>
           </TabsContent>
 
+          <TabsContent value="ui-permissions">
+            <UIPermissionsManagement />
+            {/* Temporary test components - remove after debugging */}
+            {import.meta.env.DEV && (
+              <div className="mt-8 space-y-8">
+                <TestPermissions />
+                <TestBulkUpdate />
+              </div>
+            )}
+          </TabsContent>
+
           {/* System Configuration Tabs */}
           <TabsContent value="departments">
-            <Card>
+            <Card className="bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700">
               <CardHeader>
-                <CardTitle>Department Management</CardTitle>
-                <CardDescription>Manage organizational departments</CardDescription>
+                <CardTitle className="text-gray-900 dark:text-white">Department Management</CardTitle>
+                <CardDescription className="text-gray-600 dark:text-gray-400">Manage organizational departments</CardDescription>
               </CardHeader>
               <CardContent>
                 <DepartmentsSettings />
@@ -330,17 +358,69 @@ const ModernSettingsPage = () => {
           </TabsContent>
 
           <TabsContent value="canned-messages">
-            <Card>
+            <Card className="bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700">
               <CardHeader>
-                <CardTitle>Canned Messages</CardTitle>
-                <CardDescription>Manage pre-defined message templates</CardDescription>
+                <CardTitle className="text-gray-900 dark:text-white">Canned Text Messages</CardTitle>
+                <CardDescription className="text-gray-600 dark:text-gray-400">Manage pre-defined SMS and text message templates</CardDescription>
               </CardHeader>
               <CardContent>
                 <CannedMessagesSettings />
               </CardContent>
             </Card>
           </TabsContent>
+
+          <TabsContent value="email-templates">
+            <Card className="bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700">
+              <CardHeader>
+                <CardTitle className="text-gray-900 dark:text-white">Email Templates</CardTitle>
+                <CardDescription className="text-gray-600 dark:text-gray-400">Create and manage email templates with dynamic variables</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <EmailTemplatesSettings />
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* Holiday Management Tabs */}
+          <TabsContent value="holiday-policies">
+            <HolidayPolicies />
+          </TabsContent>
+
+          <TabsContent value="holiday-entitlements">
+            <HolidayEntitlements />
+          </TabsContent>
+
+          <TabsContent value="public-holidays">
+            <Card className="bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700">
+              <CardHeader>
+                <CardTitle className="text-gray-900 dark:text-white">Public Holidays</CardTitle>
+                <CardDescription className="text-gray-600 dark:text-gray-400">Manage public holidays for your organization</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="text-center py-8">
+                  <Calendar className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                  <p className="text-gray-600 dark:text-gray-400">Public holiday management will be implemented here</p>
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="blackout-periods">
+            <Card className="bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700">
+              <CardHeader>
+                <CardTitle className="text-gray-900 dark:text-white">Blackout Periods</CardTitle>
+                <CardDescription className="text-gray-600 dark:text-gray-400">Define periods when holidays cannot be taken</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="text-center py-8">
+                  <Shield className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                  <p className="text-gray-600 dark:text-gray-400">Blackout period management will be implemented here</p>
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
         </Tabs>
+        )}
       </div>
     </div>
   );

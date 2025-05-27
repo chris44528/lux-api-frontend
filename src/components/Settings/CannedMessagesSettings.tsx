@@ -69,7 +69,7 @@ const CannedMessagesSettings: React.FC = () => {
     if (!window.confirm('Delete this canned message?')) return;
     setDeletingId(id);
     try {
-      await api.delete(`/sms-canned-messages/${id}/`);
+      await api.delete(`/api/v1/sms-canned-messages/${id}/`);
       fetchMessages();
     } catch {
       setError('Failed to delete message');

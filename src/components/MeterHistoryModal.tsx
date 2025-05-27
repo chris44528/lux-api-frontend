@@ -75,7 +75,6 @@ const MeterHistoryModal: React.FC<MeterHistoryModalProps> = ({
       const data = await getMeterHistory(siteId);
       setMeterHistory(data);
     } catch (err) {
-      console.error('Error loading meter history:', err);
       setError('Failed to load meter history. Please try again.');
     } finally {
       setLoading(false);
@@ -112,7 +111,6 @@ const MeterHistoryModal: React.FC<MeterHistoryModalProps> = ({
         await deleteMeterHistory(id);
         setMeterHistory(prevHistory => prevHistory.filter(item => item.id !== id));
       } catch (err) {
-        console.error('Error deleting meter history:', err);
         setError('Failed to delete meter history. Please try again.');
       }
     }
@@ -137,7 +135,6 @@ const MeterHistoryModal: React.FC<MeterHistoryModalProps> = ({
       setMeterHistory(prevHistory => [newItem, ...prevHistory]);
       setIsAddModalOpen(false);
     } catch (err) {
-      console.error('Error adding meter history:', err);
       setError('Failed to add meter history. Please try again.');
     }
   };
@@ -159,7 +156,6 @@ const MeterHistoryModal: React.FC<MeterHistoryModalProps> = ({
       );
       setIsEditModalOpen(false);
     } catch (err) {
-      console.error('Error updating meter history:', err);
       setError('Failed to update meter history. Please try again.');
     }
   };
@@ -188,9 +184,9 @@ const MeterHistoryModal: React.FC<MeterHistoryModalProps> = ({
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-lg shadow-lg w-full max-w-6xl max-h-[90vh] flex flex-col">
-        <div className="flex justify-between items-center p-4 border-b">
-          <h2 className="text-xl font-bold">Meter History</h2>
+      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg w-full max-w-6xl max-h-[90vh] flex flex-col">
+        <div className="flex justify-between items-center p-4 border-b dark:border-gray-700">
+          <h2 className="text-xl font-bold dark:text-white">Meter History</h2>
           <div className="flex items-center space-x-2">
             <button
               onClick={handleAddNew}
@@ -200,7 +196,7 @@ const MeterHistoryModal: React.FC<MeterHistoryModalProps> = ({
             </button>
             <button
               onClick={onClose}
-              className="text-gray-500 hover:text-gray-700"
+              className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
             >
               <X size={24} />
             </button>
@@ -209,68 +205,68 @@ const MeterHistoryModal: React.FC<MeterHistoryModalProps> = ({
 
         <div className="p-4 overflow-auto flex-grow">
           {error && (
-            <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
+            <div className="bg-red-100 dark:bg-red-900/50 border border-red-400 dark:border-red-600 text-red-700 dark:text-red-300 px-4 py-3 rounded mb-4">
               {error}
             </div>
           )}
 
           {loading ? (
             <div className="flex justify-center items-center h-64">
-              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-700"></div>
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-700 dark:border-green-400"></div>
             </div>
           ) : (
             <div className="overflow-x-auto">
-              <table className="min-w-full divide-y divide-gray-200">
-                <thead className="bg-gray-50">
+              <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                <thead className="bg-gray-50 dark:bg-gray-700">
                   <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                       Site Reference
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                       FCO
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                       Old Meter Serial
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                       Closing Reading
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                       Change Date
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                       New Meter Serial
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                       Opening Reading
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                       Actions
                     </th>
                   </tr>
                 </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
+                <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
                   {meterHistory.length > 0 ? (
                     meterHistory.map((item) => (
                       <tr key={item.id}>
-                        <td className="px-6 py-4 whitespace-nowrap">{siteName}</td>
-                        <td className="px-6 py-4 whitespace-nowrap">{siteReference}</td>
-                        <td className="px-6 py-4 whitespace-nowrap">{item.old_meter_serial}</td>
-                        <td className="px-6 py-4 whitespace-nowrap">{item.closing_reading}</td>
-                        <td className="px-6 py-4 whitespace-nowrap">{formatDate(item.change_date)}</td>
-                        <td className="px-6 py-4 whitespace-nowrap">{item.New_MeterSerial}</td>
-                        <td className="px-6 py-4 whitespace-nowrap">{item.new_meter_opening_reading}</td>
+                        <td className="px-6 py-4 whitespace-nowrap dark:text-gray-100">{siteName}</td>
+                        <td className="px-6 py-4 whitespace-nowrap dark:text-gray-100">{siteReference}</td>
+                        <td className="px-6 py-4 whitespace-nowrap dark:text-gray-100">{item.old_meter_serial}</td>
+                        <td className="px-6 py-4 whitespace-nowrap dark:text-gray-100">{item.closing_reading}</td>
+                        <td className="px-6 py-4 whitespace-nowrap dark:text-gray-100">{formatDate(item.change_date)}</td>
+                        <td className="px-6 py-4 whitespace-nowrap dark:text-gray-100">{item.New_MeterSerial}</td>
+                        <td className="px-6 py-4 whitespace-nowrap dark:text-gray-100">{item.new_meter_opening_reading}</td>
                         <td className="px-6 py-4 whitespace-nowrap">
                           <div className="flex space-x-2">
                             <button
                               onClick={() => handleEdit(item)}
-                              className="text-blue-600 hover:text-blue-800"
+                              className="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300"
                             >
                               <Edit size={16} />
                             </button>
                             <button
                               onClick={() => handleDelete(item.id)}
-                              className="text-red-600 hover:text-red-800"
+                              className="text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-300"
                             >
                               <Trash2 size={16} />
                             </button>
@@ -280,7 +276,7 @@ const MeterHistoryModal: React.FC<MeterHistoryModalProps> = ({
                     ))
                   ) : (
                     <tr>
-                      <td colSpan={8} className="px-6 py-4 text-center text-gray-500">
+                      <td colSpan={8} className="px-6 py-4 text-center text-gray-500 dark:text-gray-400">
                         No meter history records found
                       </td>
                     </tr>
@@ -291,7 +287,7 @@ const MeterHistoryModal: React.FC<MeterHistoryModalProps> = ({
           )}
         </div>
 
-        <div className="p-4 border-t">
+        <div className="p-4 border-t dark:border-gray-700">
           <button
             onClick={onClose}
             className="bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded"
@@ -304,12 +300,12 @@ const MeterHistoryModal: React.FC<MeterHistoryModalProps> = ({
       {/* Add New Meter Change Modal */}
       {isAddModalOpen && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg shadow-lg w-full max-w-md">
-            <div className="flex justify-between items-center p-4 border-b">
-              <h3 className="text-lg font-medium">Add New Meter Change</h3>
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg w-full max-w-md">
+            <div className="flex justify-between items-center p-4 border-b dark:border-gray-700">
+              <h3 className="text-lg font-medium dark:text-white">Add New Meter Change</h3>
               <button
                 onClick={() => setIsAddModalOpen(false)}
-                className="text-gray-500 hover:text-gray-700"
+                className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
               >
                 <X size={20} />
               </button>

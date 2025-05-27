@@ -57,7 +57,6 @@ const SiteReadingReportModal: React.FC<SiteReadingReportModalProps> = ({
       alert(response.message || 'Report generation started. You will receive an email when it\'s ready.');
       onClose();
     } catch (err) {
-      console.error('Error requesting report:', err);
       const errorMessage = err instanceof Error 
         ? err.message 
         : 'An error occurred while requesting the report';
@@ -84,20 +83,20 @@ const SiteReadingReportModal: React.FC<SiteReadingReportModalProps> = ({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
-      <div className="bg-white rounded-lg shadow-lg w-full max-w-md">
-        <div className="p-4 border-b">
-          <h2 className="text-xl font-semibold">Generate Site Reading Report</h2>
+      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg w-full max-w-md">
+        <div className="p-4 border-b dark:border-gray-700">
+          <h2 className="text-xl font-semibold dark:text-white">Generate Site Reading Report</h2>
           {siteName && (
-            <p className="text-sm text-gray-600 mt-1">
+            <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
               {siteName} {siteReference ? `(${siteReference})` : ''}
             </p>
           )}
         </div>
         <form onSubmit={handleSubmit}>
           <div className="p-4 space-y-4">
-            <div className="bg-blue-50 border border-blue-200 text-blue-700 px-4 py-3 rounded">
+            <div className="bg-blue-50 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-700 text-blue-700 dark:text-blue-300 px-4 py-3 rounded">
               <div className="flex">
-                <svg className="h-5 w-5 text-blue-400 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <svg className="h-5 w-5 text-blue-400 dark:text-blue-500 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
                 <p>The report will be generated in the background and sent to your email address when ready.</p>
@@ -105,13 +104,13 @@ const SiteReadingReportModal: React.FC<SiteReadingReportModalProps> = ({
             </div>
             
             {error && (
-              <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
+              <div className="bg-red-100 dark:bg-red-900/50 border border-red-400 dark:border-red-600 text-red-700 dark:text-red-300 px-4 py-3 rounded">
                 {error}
               </div>
             )}
             
             <div>
-              <label htmlFor="startDate" className="block text-sm font-medium text-gray-700 mb-1">
+              <label htmlFor="startDate" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                 Start Date
               </label>
               <input
@@ -119,13 +118,13 @@ const SiteReadingReportModal: React.FC<SiteReadingReportModalProps> = ({
                 id="startDate"
                 value={startDate}
                 onChange={(e) => setStartDate(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-blue-500 dark:focus:border-blue-400"
                 required
               />
             </div>
             
             <div>
-              <label htmlFor="endDate" className="block text-sm font-medium text-gray-700 mb-1">
+              <label htmlFor="endDate" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                 End Date
               </label>
               <input
@@ -133,21 +132,21 @@ const SiteReadingReportModal: React.FC<SiteReadingReportModalProps> = ({
                 id="endDate"
                 value={endDate}
                 onChange={handleEndDateChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-blue-500 dark:focus:border-blue-400"
                 required
               />
             </div>
 
             {generationMeters.length > 0 && (
               <div>
-                <label htmlFor="meterSelect" className="block text-sm font-medium text-gray-700 mb-1">
+                <label htmlFor="meterSelect" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                   Meter
                 </label>
                 <select
                   id="meterSelect"
                   value={selectedMeter}
                   onChange={(e) => setSelectedMeter(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-blue-500 dark:focus:border-blue-400"
                 >
                   <option value="all">All Meters</option>
                   {generationMeters.map(meter => (
@@ -160,18 +159,18 @@ const SiteReadingReportModal: React.FC<SiteReadingReportModalProps> = ({
             )}
           </div>
           
-          <div className="p-4 border-t flex justify-end space-x-2">
+          <div className="p-4 border-t dark:border-gray-700 flex justify-end space-x-2">
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2 bg-gray-200 text-gray-800 rounded hover:bg-gray-300"
+              className="px-4 py-2 bg-gray-200 dark:bg-gray-600 text-gray-800 dark:text-gray-200 rounded hover:bg-gray-300 dark:hover:bg-gray-500"
               disabled={isSubmitting}
             >
               Cancel
             </button>
             <button
               type="submit"
-              className="px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600 disabled:opacity-50 flex items-center"
+              className="px-4 py-2 bg-green-500 dark:bg-green-600 text-white rounded hover:bg-green-600 dark:hover:bg-green-700 disabled:opacity-50 flex items-center"
               disabled={isSubmitting}
             >
               {isSubmitting ? (

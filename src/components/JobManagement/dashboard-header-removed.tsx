@@ -219,33 +219,12 @@ export function DashboardHeader() {
   );
   const email = localStorage.getItem("email") || "";
 
-  // Debug log to check what's in the permissions object
-  console.log("Menu permissions from hook:", permissions);
-  console.log("Analysis permission value:", permissions.analysis);
-  console.log("Permission loading state:", loading);
-
-  // Add additional debugging to check the type of each permission value
-  Object.entries(permissions).forEach(([key, value]) => {
-    console.log(
-      `Permission ${key} type: ${typeof value}, value: ${value}, stringified: ${JSON.stringify(
-        value
-      )}`
-    );
-  });
-
   // Check if all permissions are set to false except for dashboard and bio-mass
   const visibleCount = Object.values(permissions).filter(Boolean).length;
   const expectedCount = Object.keys(permissions).length;
 
-  console.log(
-    `Total permissions: ${expectedCount}, Visible permissions: ${visibleCount}`
-  );
-
   if (visibleCount <= 2 && !loading) {
     // If we have very few permissions, it might be a permissions issue
-    console.warn(
-      "Warning: Very few menu items are visible. This may indicate a permissions issue."
-    );
   }
 
   useEffect(() => {

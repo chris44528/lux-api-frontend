@@ -7,7 +7,6 @@ export const getUsers = async (page: number = 1): Promise<PaginatedResponse<User
     const response = await api.get(`/users/users/?page=${page}`);
     return response.data;
   } catch (error) {
-    console.error('Error fetching users:', error);
     throw error;
   }
 };
@@ -17,7 +16,6 @@ export const getUser = async (id: number): Promise<User> => {
     const response = await api.get(`/users/users/${id}/`);
     return response.data;
   } catch (error) {
-    console.error('Error fetching user:', error);
     throw error;
   }
 };
@@ -27,7 +25,6 @@ export const createUser = async (userData: UserFormData): Promise<User> => {
     const response = await api.post(`/users/users/`, userData);
     return response.data;
   } catch (error) {
-    console.error('Error creating user:', error);
     throw error;
   }
 };
@@ -37,7 +34,6 @@ export const updateUser = async (id: number, userData: UserFormData): Promise<Us
     const response = await api.patch(`/users/users/${id}/`, userData);
     return response.data;
   } catch (error) {
-    console.error('Error updating user:', error);
     throw error;
   }
 };
@@ -46,7 +42,6 @@ export const deleteUser = async (id: number): Promise<void> => {
   try {
     await api.delete(`/users/users/${id}/`);
   } catch (error) {
-    console.error('Error deleting user:', error);
     throw error;
   }
 };
@@ -56,7 +51,6 @@ export const activateUser = async (id: number): Promise<User> => {
     const response = await api.patch(`/users/users/${id}/`, { is_active: true });
     return response.data;
   } catch (error) {
-    console.error('Error activating user:', error);
     throw error;
   }
 };
@@ -66,7 +60,6 @@ export const deactivateUser = async (id: number): Promise<User> => {
     const response = await api.patch(`/users/users/${id}/`, { is_active: false });
     return response.data;
   } catch (error) {
-    console.error('Error deactivating user:', error);
     throw error;
   }
 };
@@ -75,7 +68,6 @@ export const resetPassword = async (email: string): Promise<void> => {
   try {
     await api.post(`/users/password-reset/`, { email });
   } catch (error) {
-    console.error('Error resetting password:', error);
     throw error;
   }
 };
@@ -84,31 +76,25 @@ export const resetPassword = async (email: string): Promise<void> => {
 export const getGroups = async (): Promise<UserGroup[]> => {
   try {
     const response = await api.get(`/groups/`);
-    console.log('Groups response:', response.data);
     
     // Handle paginated response format
     if (response.data && typeof response.data === 'object') {
       // Check if it's a paginated response with a results array
       if (Array.isArray(response.data.results)) {
-        console.log('Returning paginated results array');
         return response.data.results;
       } 
       // Check if it's directly an array
       else if (Array.isArray(response.data)) {
-        console.log('Response is directly an array');
         return response.data;
       }
       // Not in expected format
       else {
-        console.error('Groups response is in unexpected format:', response.data);
         return [];
       }
     } else {
-      console.error('Groups response is not an object:', response.data);
       return [];
     }
   } catch (error) {
-    console.error('Error fetching groups:', error);
     // Return empty array instead of throwing to prevent infinite retries
     return [];
   }
@@ -118,17 +104,15 @@ export const getUserGroups = async (): Promise<UserGroup[]> => {
   try {
     return getGroups();
   } catch (error) {
-    console.error('Error fetching user groups:', error);
     throw error;
   }
 };
 
 export const getUsersInGroup = async (groupId: number): Promise<User[]> => {
   try {
-    const response = await api.get(`/users/groups/${groupId}/users/`);
+    const response = await api.get(`/groups/${groupId}/users/`);
     return response.data;
   } catch (error) {
-    console.error('Error fetching users in group:', error);
     throw error;
   }
 };
@@ -140,7 +124,6 @@ export const addUserToGroup = async (userId: number, groupId: number): Promise<U
     });
     return response.data;
   } catch (error) {
-    console.error('Error adding user to group:', error);
     throw error;
   }
 };
@@ -150,84 +133,57 @@ export const removeUserFromGroup = async (userId: number, groupId: number): Prom
     const response = await api.delete(`/users/users/${userId}/groups/${groupId}/`);
     return response.data;
   } catch (error) {
-    console.error('Error removing user from group:', error);
     throw error;
   }
 };
 
 export const createGroup = async (name: string, description?: string): Promise<UserGroup> => {
   try {
-    const response = await api.post(`/users/groups/`, { name, description });
+    const response = await api.post(`/groups/`, { name, description });
     return response.data;
   } catch (error) {
-    console.error('Error creating group:', error);
     throw error;
   }
 };
 
 export const updateGroup = async (id: number, groupData: Partial<UserGroup>): Promise<UserGroup> => {
   try {
-    const response = await api.patch(`/users/groups/${id}/`, groupData);
+    const response = await api.patch(`/groups/${id}/`, groupData);
     return response.data;
   } catch (error) {
-    console.error('Error updating group:', error);
     throw error;
   }
 };
 
 export const deleteGroup = async (id: number): Promise<void> => {
   try {
-    await api.delete(`/users/groups/${id}/`);
+    await api.delete(`/groups/${id}/`);
   } catch (error) {
-    console.error('Error deleting group:', error);
     throw error;
   }
 };
 
 // Access Control related functions
+// Note: Direct access control endpoints don't exist in the backend
+// Access control is managed through menu permissions and data filters
 export const getGroupAccess = async (groupId: number): Promise<GroupAccess[]> => {
-  try {
-    const response = await api.get(`/users/groups/${groupId}/access/`);
-    return response.data;
-  } catch (error) {
-    console.error('Error fetching group access:', error);
-    throw error;
-  }
+  // This functionality is handled through menu permissions and data filters
+  return [];
 };
 
 export const addGroupAccess = async (groupId: number, resourceType: string, resourceId: number, accessLevel: string): Promise<GroupAccess> => {
-  try {
-    const response = await api.post(`/users/groups/${groupId}/access/`, {
-      resource_type: resourceType,
-      resource_id: resourceId,
-      access_level: accessLevel
-    });
-    return response.data;
-  } catch (error) {
-    console.error('Error adding group access:', error);
-    throw error;
-  }
+  // This functionality is handled through menu permissions and data filters
+  throw new Error('Direct access control is not supported. Use menu permissions and data filters instead.');
 };
 
 export const updateGroupAccess = async (accessId: number, accessLevel: string): Promise<GroupAccess> => {
-  try {
-    const response = await api.patch(`/access/${accessId}/`, {
-      access_level: accessLevel
-    });
-    return response.data;
-  } catch (error) {
-    console.error('Error updating group access:', error);
-    throw error;
-  }
+  // This functionality is handled through menu permissions and data filters
+  throw new Error('Direct access control is not supported. Use menu permissions and data filters instead.');
 };
 
 export const removeGroupAccess = async (accessId: number): Promise<void> => {
-  try {
-    await api.delete(`/access/${accessId}/`);
-  } catch (error) {
-    console.error('Error removing group access:', error);
-    throw error;
-  }
+  // This functionality is handled through menu permissions and data filters
+  throw new Error('Direct access control is not supported. Use menu permissions and data filters instead.');
 };
 
 // Permission related functions
@@ -236,29 +192,26 @@ export const getPermissions = async (): Promise<Permission[]> => {
     const response = await api.get(`/users/permissions/`);
     return response.data;
   } catch (error) {
-    console.error('Error fetching permissions:', error);
     throw error;
   }
 };
 
 export const getGroupPermissions = async (groupId: number): Promise<GroupPermission[]> => {
   try {
-    const response = await api.get(`/users/groups/${groupId}/permissions/`);
+    const response = await api.get(`/groups/${groupId}/permissions/`);
     return response.data;
   } catch (error) {
-    console.error('Error fetching group permissions:', error);
     throw error;
   }
 };
 
 export const addPermissionToGroup = async (groupId: number, permissionId: number): Promise<GroupPermission> => {
   try {
-    const response = await api.post(`/users/groups/${groupId}/permissions/`, {
+    const response = await api.post(`/groups/${groupId}/permissions/`, {
       permission: permissionId
     });
     return response.data;
   } catch (error) {
-    console.error('Error adding permission to group:', error);
     throw error;
   }
 };
@@ -267,7 +220,6 @@ export const removePermissionFromGroup = async (groupPermissionId: number): Prom
   try {
     await api.delete(`/users/group-permissions/${groupPermissionId}/`);
   } catch (error) {
-    console.error('Error removing permission from group:', error);
     throw error;
   }
 };
@@ -277,7 +229,6 @@ export const requestPasswordReset = async (email: string): Promise<void> => {
   try {
     await api.post('/users/password-reset/', { email });
   } catch (error) {
-    console.error('Error requesting password reset:', error);
     throw error;
   }
 };
@@ -288,7 +239,6 @@ export const confirmPasswordReset = async (uidb64: string, token: string, newPas
       new_password: newPassword
     });
   } catch (error) {
-    console.error('Error confirming password reset:', error);
     throw error;
   }
 };
@@ -297,9 +247,7 @@ export const confirmPasswordReset = async (uidb64: string, token: string, newPas
 export const setManualPermissionOverrides = (permissions: Record<string, boolean>): void => {
   try {
     localStorage.setItem('menu_permissions_override', JSON.stringify(permissions));
-    console.log('userService: Saved manual permission overrides:', permissions);
   } catch (error) {
-    console.error('userService: Error saving manual permission overrides:', error);
   }
 };
 
@@ -309,12 +257,10 @@ export const getManualPermissionOverrides = (): Record<string, boolean> | null =
     const overrides = localStorage.getItem('menu_permissions_override');
     if (overrides) {
       const parsedOverrides = JSON.parse(overrides) as Record<string, boolean>;
-      console.log('userService: Found manual permission overrides:', parsedOverrides);
       return parsedOverrides;
     }
     return null;
   } catch (error) {
-    console.error('userService: Error getting manual permission overrides:', error);
     return null;
   }
 };
@@ -322,7 +268,6 @@ export const getManualPermissionOverrides = (): Record<string, boolean> | null =
 // Clear manual permission overrides
 export const clearManualPermissionOverrides = (): void => {
   localStorage.removeItem('menu_permissions_override');
-  console.log('userService: Cleared manual permission overrides');
 };
 
 // Menu permissions with optional override support
@@ -330,12 +275,10 @@ export const getMenuPermissions = async (userId?: number): Promise<Record<string
   try {
     // Get the current username for debugging
     const username = localStorage.getItem('username');
-    console.log('userService: Current username from localStorage:', username);
     
     // Check for manual permission overrides first
     const overrides = getManualPermissionOverrides();
     if (overrides) {
-      console.log('userService: Using manual permission overrides:', overrides);
       return overrides;
     }
     
@@ -343,12 +286,10 @@ export const getMenuPermissions = async (userId?: number): Promise<Record<string
     let menuApiUrl = '/users/my-menu-permissions/';
     if (userId) {
       menuApiUrl += `?user_id=${userId}`;
-      console.log(`userService: Requesting permissions for user ID: ${userId}`);
     }
     
     // Call the menu permissions endpoint
     const menuResponse = await api.get(menuApiUrl);
-    console.log('userService: Menu permissions API response:', menuResponse.data);
     
     // Check if the response is already in the correct format (key-value pairs)
     if (menuResponse.data && typeof menuResponse.data === 'object' && 
@@ -362,7 +303,6 @@ export const getMenuPermissions = async (userId?: number): Promise<Record<string
       Object.entries(permissionsData).forEach(([key, value]) => {
         // Explicitly convert to boolean to handle string values like "true" or any other truthy/falsy values
         permissions[key] = value === true || value === "true" || value === 1 || value === "1";
-        console.log(`userService: Normalized permission ${key} from ${value} to ${permissions[key]}`);
       });
       
       // Add any missing default permissions
@@ -374,13 +314,11 @@ export const getMenuPermissions = async (userId?: number): Promise<Record<string
       if (permissions.settings === undefined) permissions.settings = false;
       if (permissions.analysis === undefined) permissions.analysis = false;
       
-      console.log('userService: Using direct response format (normalized):', permissions);
       return permissions;
     }
     
     // Handle paginated response format - this is now mainly used for admin views of all permissions
     if (menuResponse.data && menuResponse.data.results && Array.isArray(menuResponse.data.results)) {
-      console.log('userService: Converting paginated results to permissions object');
       
       // Create default permissions object (all false)
       const permissions: Record<string, boolean> = {
@@ -413,16 +351,13 @@ export const getMenuPermissions = async (userId?: number): Promise<Record<string
                            item.is_visible === "1";
           
           permissions[item.menu_item] = isVisible;
-          console.log(`userService: Normalized permission ${item.menu_item} from ${item.is_visible} to ${isVisible}`);
         }
       });
       
-      console.log('userService: Final processed permissions:', permissions);
       return permissions;
     }
     
     // Fallback to dashboard only if response is in unexpected format
-    console.error('userService: Unexpected response format from menu permissions API', menuResponse.data);
     return {
       'dashboard': true,
       'bio-mass': false,
@@ -433,7 +368,6 @@ export const getMenuPermissions = async (userId?: number): Promise<Record<string
       'analysis': false
     };
   } catch (error) {
-    console.error('userService: Error in getMenuPermissions:', error);
     
     // Return default permissions as fallback - dashboard only
     return {
@@ -454,7 +388,6 @@ export const getCurrentUser = async (): Promise<User | null> => {
     const response = await api.get('/users/current-user/');
     return response.data;
   } catch (error) {
-    console.error('Error fetching current user:', error);
     return null;
   }
 };
@@ -462,14 +395,12 @@ export const getCurrentUser = async (): Promise<User | null> => {
 // Get a specific user's group memberships
 export const getUserGroupMemberships = async (userId: number): Promise<UserGroup[]> => {
   try {
-    console.log(`Fetching group memberships for user ID: ${userId}`);
-    // Instead of direct GET request to /users/users/${userId}/groups/
+    // Instead of direct GET request to /users/users/${userId}/api/v1/groups/
     // which causes 405 Method Not Allowed, use getGroups()
     // This is a workaround until the backend API supports GET on that endpoint
     
     // Get all groups
     const allGroups = await getGroups();
-    console.log('All available groups:', allGroups);
     
     // In a real implementation, you would need a way to filter these
     // to only the ones the user belongs to. For now, returning all groups
@@ -477,7 +408,6 @@ export const getUserGroupMemberships = async (userId: number): Promise<UserGroup
     
     return allGroups;
   } catch (error) {
-    console.error('Error fetching user group memberships:', error);
     return [];
   }
 };
@@ -487,7 +417,6 @@ export const getUserViewType = async (): Promise<string> => {
   try {
     // Get the user view type from the API with proper prefix
     const response = await api.get('/users/view-type/');
-    console.log('userService: User view type response:', response.data);
     
     if (response.data && response.data.view_type) {
       return response.data.view_type;
@@ -496,7 +425,6 @@ export const getUserViewType = async (): Promise<string> => {
     // Default to staff view if there's an issue with the response
     return 'staff';
   } catch (error) {
-    console.error('userService: Error getting user view type:', error);
     // Default to staff view if there's an error
     return 'staff';
   }
@@ -516,7 +444,6 @@ export const getGroupViewTypes = async (): Promise<GroupViewTypeResponse[]> => {
     const response = await api.get('/users/group-view-types/');
     return response.data.results || [];
   } catch (error) {
-    console.error('userService: Error getting group view types:', error);
     return [];
   }
 };
@@ -534,7 +461,6 @@ export const getGroupViewType = async (groupId: number): Promise<GroupViewTypeRe
     
     return null;
   } catch (error) {
-    console.error(`userService: Error getting view type for group ${groupId}:`, error);
     return null;
   }
 };
@@ -560,7 +486,6 @@ export const setGroupViewType = async (groupId: number, viewType: string): Promi
       return response.data;
     }
   } catch (error) {
-    console.error(`userService: Error setting view type for group ${groupId}:`, error);
     throw error;
   }
 };

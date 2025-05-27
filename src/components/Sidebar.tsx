@@ -1,8 +1,9 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import useRestrictedNavigation from "../hooks/useRestrictedNavigation";
-import useMenuPermissions from "../hooks/use-menu-permissions";
-import { getNotifications } from "../services/api";
+import { useUIPermissionContext } from "../contexts/UIPermissionContext";
+import api, { getNotifications } from "../services/api";
+import { useTheme } from "../contexts/ThemeContext";
 import {
   Bell,
   LogOut,
@@ -19,6 +20,7 @@ import {
   CheckSquare,
   Menu,
   X,
+  Palmtree,
 } from "lucide-react";
 import { Avatar, AvatarFallback } from "./ui/avatar";
 
@@ -171,7 +173,7 @@ function UserSettingsModal({
               className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none ${
                 darkMode ? "bg-primary" : "bg-gray-300"
               }`}
-              onClick={() => onToggleDarkMode(!darkMode)}
+              onClick={onToggleDarkMode}
               aria-pressed={darkMode}
             >
               <span
@@ -187,6 +189,74 @@ function UserSettingsModal({
   );
 }
 
+// Notifications modal component
+function NotificationsModal({ open, onClose, notifications, onMarkAsRead }) {
+  if (!open) return null;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
+      <div className="bg-white dark:bg-gray-900 rounded-lg shadow-lg p-6 w-full max-w-lg max-h-[80vh] overflow-hidden flex flex-col relative">
+        <button
+          onClick={onClose}
+          className="absolute top-2 right-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"
+        >
+          ✕
+        </button>
+        <h2 className="text-xl font-bold mb-4 text-gray-900 dark:text-gray-100">
+          Notifications
+        </h2>
+        <div className="flex-1 overflow-y-auto">
+          {notifications.length === 0 ? (
+            <p className="text-gray-500 dark:text-gray-400 text-center py-8">
+              No notifications
+            </p>
+          ) : (
+            <div className="space-y-3">
+              {notifications.map((notification) => (
+                <div
+                  key={notification.id}
+                  className={`p-4 rounded-lg border ${
+                    notification.is_read
+                      ? "bg-gray-50 dark:bg-gray-800 border-gray-200 dark:border-gray-700"
+                      : "bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800"
+                  }`}
+                >
+                  <div className="flex justify-between items-start">
+                    <div className="flex-1">
+                      <p className="text-sm text-gray-900 dark:text-gray-100">
+                        {notification.message}
+                      </p>
+                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                        {new Date(notification.created_at).toLocaleString()}
+                      </p>
+                    </div>
+                    {!notification.is_read && (
+                      <button
+                        onClick={() => onMarkAsRead(notification.id)}
+                        className="ml-2 text-xs text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300"
+                      >
+                        Mark as read
+                      </button>
+                    )}
+                  </div>
+                  {notification.report_url && (
+                    <a
+                      href={notification.report_url}
+                      className="text-xs text-blue-600 hover:underline dark:text-blue-400 mt-2 inline-block"
+                    >
+                      View details →
+                    </a>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // Helper to get user initials
 function getInitials(name) {
   if (!name) return "";
@@ -195,26 +265,54 @@ function getInitials(name) {
   return (parts[0][0] + parts[1][0]).toUpperCase();
 }
 
+// Define permissions outside component to prevent recreating on every render
+const SIDEBAR_PERMISSIONS = [
+  'dashboard.module.root',
+  'sites.module.root', 
+  'bio.module.root',
+  'analysis.module.root',  // Fixed: was 'reports.analysis.view'
+  'jobs.module.root',
+  'reports.module.root',
+  'imports.module.root',
+  'holidays.module.root',
+  'holidays.entitlements.approve',
+  'holidays.policies.manage',
+  'settings.module.root'
+];
+
 const Sidebar = () => {
   const { navigationItems, loading: navLoading } = useRestrictedNavigation();
-  const { permissions, loading: permissionsLoading } = useMenuPermissions();
+  // Use the context directly to avoid re-fetching on navigation
+  const { permissions, isLoaded } = useUIPermissionContext();
   const location = useLocation();
   const navigate = useNavigate();
+  
+  // Create a stable permissions object
+  const uiPermissions = useMemo(() => {
+    const result: Record<string, boolean> = {};
+    if (isLoaded) {
+      SIDEBAR_PERMISSIONS.forEach(perm => {
+        result[perm] = permissions[perm] || false;
+      });
+    }
+    return result;
+  }, [permissions, isLoaded]);
 
   // State from dashboard header
   const [unreadCount, setUnreadCount] = useState(0);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [userSettingsOpen, setUserSettingsOpen] = useState(false);
-  const [darkMode, setDarkMode] = useState(
-    () => localStorage.getItem("theme") === "dark"
-  );
+  const [notificationsOpen, setNotificationsOpen] = useState(false);
+  const [notifications, setNotifications] = useState<any[]>([]);
+  const { darkMode, toggleDarkMode } = useTheme();
 
   // Track which submenus are expanded
   const [expandedMenus, setExpandedMenus] = useState<Record<string, boolean>>({
     jobs: false,
     reports: false,
     imports: false,
+    holidays: false,
   });
 
   // Function to toggle a submenu
@@ -234,9 +332,10 @@ const Sidebar = () => {
     const fetchNotifications = async () => {
       try {
         const data = await getNotifications();
+        setNotifications(data);
         setUnreadCount(data.filter((n) => !n.is_read).length);
-      } catch {
-        // Optionally handle error
+      } catch (error) {
+        console.error('Failed to fetch notifications:', error);
       }
     };
     fetchNotifications();
@@ -244,22 +343,27 @@ const Sidebar = () => {
     return () => clearInterval(interval);
   }, []);
 
-  // Apply dark mode
-  useEffect(() => {
-    if (darkMode) {
-      document.documentElement.classList.add("dark");
-      localStorage.setItem("theme", "dark");
-    } else {
-      document.documentElement.classList.remove("dark");
-      localStorage.setItem("theme", "light");
-    }
-  }, [darkMode]);
+  // Dark mode is now handled by ThemeContext
 
   // Handle logout
   const handleLogout = () => {
     localStorage.removeItem("access_token");
     localStorage.removeItem("username");
     navigate("/login");
+  };
+
+  // Handle mark notification as read
+  const handleMarkAsRead = async (notificationId: number) => {
+    try {
+      // TODO: Add API call to mark notification as read
+      // For now, just update local state
+      setNotifications(prev => 
+        prev.map(n => n.id === notificationId ? { ...n, is_read: true } : n)
+      );
+      setUnreadCount(prev => Math.max(0, prev - 1));
+    } catch (error) {
+      console.error('Failed to mark notification as read:', error);
+    }
   };
 
   // Get icon component for a navigation item
@@ -288,15 +392,15 @@ const Sidebar = () => {
     }
   };
 
-  // Loading state
-  if (navLoading || permissionsLoading) {
+  // Only show loading state on initial load
+  if (navLoading || !isLoaded) {
     return (
-      <div className="w-64 bg-white border-r border-gray-200 p-4 hidden md:block h-screen">
-        <div className="h-10 w-10 bg-gray-200 rounded-full animate-pulse mb-8"></div>
+      <div className="w-64 bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 p-4 hidden md:block h-screen">
+        <div className="h-10 w-10 bg-gray-200 dark:bg-gray-700 rounded-full animate-pulse mb-8"></div>
         {[1, 2, 3, 4, 5].map((i) => (
           <div
             key={i}
-            className="h-8 bg-gray-100 rounded mb-2 animate-pulse"
+            className="h-8 bg-gray-100 dark:bg-gray-700 rounded mb-2 animate-pulse"
           ></div>
         ))}
       </div>
@@ -308,8 +412,9 @@ const Sidebar = () => {
     // Build a combined navigation based on both sources
     return (
       <ul className="space-y-2">
-        {/* Dashboard - always show from navigationItems if available */}
-        {navigationItems?.some((item) => item.path === "/dashboard") ? (
+        {/* Dashboard */}
+        {(navigationItems?.some((item) => item.path === "/dashboard") || 
+          uiPermissions['dashboard.module.root']) && (
           <li>
             <Link
               to="/dashboard"
@@ -323,42 +428,28 @@ const Sidebar = () => {
               Dashboard
             </Link>
           </li>
-        ) : (
-          permissions.dashboard && (
-            <li>
-              <Link
-                to="/dashboard"
-                className={`flex items-center px-3 py-2 rounded-md text-sm transition-colors ${
-                  location.pathname === "/dashboard"
-                    ? "bg-green-50 text-green-700 font-medium"
-                    : "text-gray-700 hover:bg-gray-100"
-                }`}
-              >
-                <Home className="mr-2 h-5 w-5" />
-                Dashboard
-              </Link>
-            </li>
-          )
         )}
 
         {/* Sites */}
-        <li>
-          <Link
-            to="/sites"
-            className={`flex items-center px-3 py-2 rounded-md text-sm transition-colors ${
-              location.pathname === "/sites"
-                ? "bg-green-50 text-green-700 font-medium"
-                : "text-gray-700 hover:bg-gray-100"
-            }`}
-          >
-            <MapPin className="mr-2 h-5 w-5" />
-            Sites
-          </Link>
-        </li>
+        {uiPermissions['sites.module.root'] !== false && (
+          <li>
+            <Link
+              to="/sites"
+              className={`flex items-center px-3 py-2 rounded-md text-sm transition-colors ${
+                location.pathname === "/sites"
+                  ? "bg-green-50 text-green-700 font-medium"
+                  : "text-gray-700 hover:bg-gray-100"
+              }`}
+            >
+              <MapPin className="mr-2 h-5 w-5" />
+              Sites
+            </Link>
+          </li>
+        )}
 
         {/* Bio-mass */}
-        {navigationItems?.some((item) => item.path === "/bio-mass") ||
-        permissions["bio-mass"] ? (
+        {(navigationItems?.some((item) => item.path === "/bio-mass") ||
+        uiPermissions['bio.module.root']) && (
           <li>
             <Link
               to="/bio-mass"
@@ -372,11 +463,11 @@ const Sidebar = () => {
               Bio-mass
             </Link>
           </li>
-        ) : null}
+        )}
 
         {/* Analysis */}
-        {navigationItems?.some((item) => item.path === "/analysis") ||
-        Boolean(permissions.analysis) ? (
+        {(navigationItems?.some((item) => item.path === "/analysis") ||
+        uiPermissions['analysis.module.root']) && (
           <li>
             <Link
               to="/analysis"
@@ -390,10 +481,10 @@ const Sidebar = () => {
               Analysis
             </Link>
           </li>
-        ) : null}
+        )}
 
-        {/* Job Management - Always include dropdown if user has permission */}
-        {Boolean(permissions["job-management"]) && (
+        {/* Job Management */}
+        {uiPermissions['jobs.module.root'] && (
           <li>
             <div className="space-y-1">
               <button
@@ -462,8 +553,8 @@ const Sidebar = () => {
           </li>
         )}
 
-        {/* Reports - Always include dropdown if user has permission */}
-        {Boolean(permissions.reports) && (
+        {/* Reports */}
+        {uiPermissions['reports.module.root'] && (
           <li>
             <div className="space-y-1">
               <button
@@ -542,8 +633,8 @@ const Sidebar = () => {
           </li>
         )}
 
-        {/* Imports - Always include dropdown if user has permission */}
-        {Boolean(permissions.imports) && (
+        {/* Imports */}
+        {uiPermissions['imports.module.root'] && (
           <li>
             <div className="space-y-1">
               <button
@@ -592,6 +683,112 @@ const Sidebar = () => {
           </li>
         )}
 
+        {/* Holiday Management */}
+        {uiPermissions['holidays.module.root'] && (
+          <li>
+            <div className="space-y-1">
+              <button
+                onClick={() => toggleSubmenu("holidays")}
+                className={`flex items-center justify-between w-full px-3 py-2 rounded-md text-sm transition-colors ${
+                  location.pathname.startsWith("/holidays")
+                    ? "bg-green-50 text-green-700 font-medium"
+                    : "text-gray-700 hover:bg-gray-100"
+                }`}
+              >
+                <div className="flex items-center">
+                  <Palmtree className="mr-2 h-5 w-5" />
+                  Holidays
+                </div>
+                <ChevronDown
+                  className={`h-4 w-4 transition-transform ${
+                    expandedMenus.holidays ? "rotate-180" : ""
+                  }`}
+                />
+              </button>
+              {expandedMenus.holidays && (
+                <div className="ml-9 space-y-1">
+                  <Link
+                    to="/holidays/calendar"
+                    className={`block px-3 py-1 rounded-md text-sm ${
+                      location.pathname === "/holidays/calendar"
+                        ? "text-green-700 font-medium"
+                        : "text-gray-600 hover:text-gray-900"
+                    }`}
+                  >
+                    Holiday Calendar
+                  </Link>
+                  <Link
+                    to="/holidays/my-requests"
+                    className={`block px-3 py-1 rounded-md text-sm ${
+                      location.pathname === "/holidays/my-requests"
+                        ? "text-green-700 font-medium"
+                        : "text-gray-600 hover:text-gray-900"
+                    }`}
+                  >
+                    My Requests
+                  </Link>
+                  <Link
+                    to="/holidays/entitlements"
+                    className={`block px-3 py-1 rounded-md text-sm ${
+                      location.pathname === "/holidays/entitlements"
+                        ? "text-green-700 font-medium"
+                        : "text-gray-600 hover:text-gray-900"
+                    }`}
+                  >
+                    My Entitlements
+                  </Link>
+                  <Link
+                    to="/holidays/team"
+                    className={`block px-3 py-1 rounded-md text-sm ${
+                      location.pathname === "/holidays/team"
+                        ? "text-green-700 font-medium"
+                        : "text-gray-600 hover:text-gray-900"
+                    }`}
+                  >
+                    Team View
+                  </Link>
+                  {uiPermissions['holidays.entitlements.approve'] && (
+                    <Link
+                      to="/holidays/approvals"
+                      className={`block px-3 py-1 rounded-md text-sm ${
+                        location.pathname === "/holidays/approvals"
+                          ? "text-green-700 font-medium"
+                          : "text-gray-600 hover:text-gray-900"
+                      }`}
+                    >
+                      Approvals
+                    </Link>
+                  )}
+                  {uiPermissions['holidays.policies.manage'] && (
+                    <>
+                      <Link
+                        to="/holidays/policies"
+                        className={`block px-3 py-1 rounded-md text-sm ${
+                          location.pathname === "/holidays/policies"
+                            ? "text-green-700 font-medium"
+                            : "text-gray-600 hover:text-gray-900"
+                        }`}
+                      >
+                        HR Policies
+                      </Link>
+                      <Link
+                        to="/holidays/public"
+                        className={`block px-3 py-1 rounded-md text-sm ${
+                          location.pathname === "/holidays/public"
+                            ? "text-green-700 font-medium"
+                            : "text-gray-600 hover:text-gray-900"
+                        }`}
+                      >
+                        Public Holidays
+                      </Link>
+                    </>
+                  )}
+                </div>
+              )}
+            </div>
+          </li>
+        )}
+
         {/* Show any additional items from navigationItems not explicitly handled above */}
         {navigationItems
           ?.filter(
@@ -602,10 +799,12 @@ const Sidebar = () => {
                 "/analysis",
                 "/settings",
                 "/sites",
+                "/completed-jobs",  // Add this to exclude completed jobs from main menu
               ].includes(item.path) &&
               !item.path.startsWith("/job") &&
               !item.path.startsWith("/reports") &&
-              !item.path.startsWith("/imports")
+              !item.path.startsWith("/imports") &&
+              !item.path.startsWith("/holidays")
           )
           .map((item) => (
             <li key={item.path}>
@@ -623,9 +822,9 @@ const Sidebar = () => {
             </li>
           ))}
 
-        {/* Settings - moved to bottom of list */}
-        {navigationItems?.some((item) => item.path === "/settings") ||
-        Boolean(permissions.settings) ? (
+        {/* Settings */}
+        {(navigationItems?.some((item) => item.path === "/settings") ||
+        uiPermissions['settings.module.root']) && (
           <li>
             <Link
               to="/settings"
@@ -639,7 +838,7 @@ const Sidebar = () => {
               Settings
             </Link>
           </li>
-        ) : null}
+        )}
       </ul>
     );
   };
@@ -680,7 +879,10 @@ const Sidebar = () => {
       {/* Bottom actions section */}
       <div className="border-t p-4 space-y-2">
         {/* Notifications */}
-        <button className="flex items-center w-full px-3 py-2 text-sm text-gray-700 hover:bg-gray-100 rounded-md relative">
+        <button 
+          className="flex items-center w-full px-3 py-2 text-sm text-gray-700 hover:bg-gray-100 rounded-md relative"
+          onClick={() => setNotificationsOpen(true)}
+        >
           <Bell className="mr-2 h-5 w-5" />
           Notifications
           {unreadCount > 0 && (
@@ -714,7 +916,7 @@ const Sidebar = () => {
   // Mobile menu button for small screens
   const mobileMenuButton = (
     <button
-      className="fixed top-4 left-4 z-50 md:hidden flex items-center justify-center h-10 w-10 rounded-md bg-white shadow-md text-gray-600"
+      className="fixed top-4 left-4 z-50 md:hidden flex items-center justify-center h-10 w-10 rounded-md bg-white dark:bg-gray-800 shadow-md text-gray-600 dark:text-gray-300"
       onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
     >
       {mobileMenuOpen ? <X /> : <Menu />}
@@ -734,24 +936,16 @@ const Sidebar = () => {
       }}
       onChangePassword={async (currentPassword, newPassword) => {
         // Call backend change-password endpoint
-        const token = localStorage.getItem("access_token");
-        const res = await fetch("/api/v1/users/change-password/", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Token ${token}`,
-          },
-          body: JSON.stringify({
+        try {
+          await api.post("/users/change-password/", {
             current_password: currentPassword,
             new_password: newPassword,
-          }),
-        });
-        if (!res.ok) {
-          const data = await res.json();
-          throw new Error(data.error || "Failed to change password");
+          });
+        } catch (error) {
+          throw new Error(error.response?.data?.error || "Failed to change password");
         }
       }}
-      onToggleDarkMode={setDarkMode}
+      onToggleDarkMode={toggleDarkMode}
       darkMode={darkMode}
     />
   );
@@ -759,7 +953,7 @@ const Sidebar = () => {
   return (
     <>
       {/* Desktop Sidebar */}
-      <div className="w-64 bg-white border-r border-gray-200 flex flex-col h-screen hidden md:block">
+      <div className="w-64 bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 flex flex-col h-screen hidden md:block">
         {sidebarContent}
       </div>
 
@@ -776,7 +970,7 @@ const Sidebar = () => {
           ></div>
 
           {/* Sidebar panel */}
-          <div className="absolute inset-y-0 left-0 w-64 bg-white flex flex-col h-full">
+          <div className="absolute inset-y-0 left-0 w-64 bg-white dark:bg-gray-800 flex flex-col h-full">
             {sidebarContent}
           </div>
         </div>
@@ -784,8 +978,16 @@ const Sidebar = () => {
 
       {/* User Settings Modal */}
       {settingsModal}
+
+      {/* Notifications Modal */}
+      <NotificationsModal
+        open={notificationsOpen}
+        onClose={() => setNotificationsOpen(false)}
+        notifications={notifications}
+        onMarkAsRead={handleMarkAsRead}
+      />
     </>
   );
 };
 
-export default Sidebar;
+export default React.memo(Sidebar);

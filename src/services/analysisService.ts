@@ -93,7 +93,6 @@ export const getConnectionAnalysis = async (
     
     return response.data;
   } catch (error) {
-    console.error('Error fetching connection analysis data:', error);
     throw error;
   }
 };
@@ -106,7 +105,6 @@ export const getRegions = async (): Promise<string[]> => {
     const response = await api.get('/analysis/regions/');
     return response.data;
   } catch (error) {
-    console.error('Error fetching regions:', error);
     throw error;
   }
 };
@@ -119,7 +117,46 @@ export const getNetworks = async (): Promise<string[]> => {
     const response = await api.get('/analysis/networks/');
     return response.data;
   } catch (error) {
-    console.error('Error fetching networks:', error);
+    throw error;
+  }
+};
+
+export interface ReadingsAnalysisParams {
+  start_date?: string;
+  end_date?: string;
+  region?: string;
+  anomaly_threshold?: number;
+}
+
+/**
+ * Get readings analysis data from the API
+ */
+export const getReadingsAnalysis = async (
+  params: ReadingsAnalysisParams = {}
+): Promise<any> => {
+  try {
+    const response = await api.get('/analysis/readings/', { params });
+    return response.data;
+  } catch (error) {
+    throw error;
+  }
+};
+
+/**
+ * Get performance analysis data from the API
+ */
+export const getPerformanceAnalysis = async (
+  params: {
+    region?: string;
+    performance_threshold?: number;
+    start_date?: string;
+    end_date?: string;
+  } = {}
+): Promise<any> => {
+  try {
+    const response = await api.get('/analysis/performance/', { params });
+    return response.data;
+  } catch (error) {
     throw error;
   }
 }; 

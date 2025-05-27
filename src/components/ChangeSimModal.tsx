@@ -59,8 +59,17 @@ const ChangeSimModal: React.FC<ChangeSimModalProps> = ({
         setSearchResults(results);
       })
       .catch(err => {
-        console.error('Error searching SIMs:', err);
-        setError('Failed to search SIMs. Please try again.');
+        const errorMessage = err.response?.data?.message || 
+                            err.response?.data?.error || 
+                            err.response?.data?.detail ||
+                            err.response?.data ||
+                            'Failed to search SIMs. Please try again.';
+        
+        if (typeof err.response?.data === 'string') {
+          setError(err.response.data);
+        } else {
+          setError(errorMessage);
+        }
       })
       .finally(() => {
         setIsSearching(false);
@@ -93,9 +102,18 @@ const ChangeSimModal: React.FC<ChangeSimModalProps> = ({
       setShowSelectedSim(true);
       setSearchResults([]);
       setSearchTerm('');
-    } catch (err) {
-      console.error('Error getting SIM details:', err);
-      setError('Failed to get SIM details. Please try again.');
+    } catch (err: any) {
+      const errorMessage = err.response?.data?.message || 
+                          err.response?.data?.error || 
+                          err.response?.data?.detail ||
+                          err.response?.data ||
+                          'Failed to get SIM details. Please try again.';
+      
+      if (typeof err.response?.data === 'string') {
+        setError(err.response.data);
+      } else {
+        setError(errorMessage);
+      }
     } finally {
       setLoading(false);
     }
@@ -132,9 +150,20 @@ const ChangeSimModal: React.FC<ChangeSimModalProps> = ({
       
       // Reload the page to reflect changes
       window.location.reload();
-    } catch (err) {
-      console.error('Error changing SIM:', err);
-      setError('Failed to change SIM. Please try again.');
+    } catch (err: any) {
+      // Extract error message from the API response
+      const errorMessage = err.response?.data?.message || 
+                          err.response?.data?.error || 
+                          err.response?.data?.detail ||
+                          err.response?.data ||
+                          'Failed to change SIM. Please try again.';
+      
+      // If the response data is a string, use it directly
+      if (typeof err.response?.data === 'string') {
+        setError(err.response.data);
+      } else {
+        setError(errorMessage);
+      }
     } finally {
       setLoading(false);
     }
@@ -161,12 +190,12 @@ const ChangeSimModal: React.FC<ChangeSimModalProps> = ({
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-lg shadow-lg w-full max-w-2xl">
-        <div className="flex justify-between items-center p-4 border-b">
-          <h2 className="text-xl font-bold">Change SIM</h2>
+      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg w-full max-w-2xl">
+        <div className="flex justify-between items-center p-4 border-b dark:border-gray-700">
+          <h2 className="text-xl font-bold dark:text-white">Change SIM</h2>
           <button
             onClick={onClose}
-            className="text-gray-500 hover:text-gray-700"
+            className="text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300"
           >
             <X size={24} />
           </button>
@@ -174,14 +203,18 @@ const ChangeSimModal: React.FC<ChangeSimModalProps> = ({
 
         <div className="p-4">
           {error && (
-            <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
+            <div className="bg-red-100 dark:bg-red-900/20 border border-red-400 dark:border-red-800 text-red-700 dark:text-red-400 px-4 py-3 rounded mb-4">
               {error}
             </div>
           )}
 
-          <form>
+          <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 text-blue-700 dark:text-blue-300 px-4 py-3 rounded mb-4">
+            <p className="text-sm">Current SIM Number: <strong>{currentSimNum}</strong></p>
+          </div>
+
+          <form onSubmit={(e) => { e.preventDefault(); }}>
             <div className="mb-4">
-              <label className="block text-gray-700 text-sm font-bold mb-2">
+              <label className="block text-gray-700 dark:text-gray-300 text-sm font-bold mb-2">
                 Search <strong>New</strong> SIM by Number
               </label>
               <div className="relative">
@@ -190,7 +223,7 @@ const ChangeSimModal: React.FC<ChangeSimModalProps> = ({
                   value={searchTerm}
                   onChange={handleSearchChange}
                   placeholder="Enter New SIM number"
-                  className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+                  className="shadow appearance-none border dark:border-gray-600 rounded w-full py-2 px-3 text-gray-700 dark:text-white dark:bg-gray-700 leading-tight focus:outline-none focus:shadow-outline"
                 />
                 <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
                   <Search size={16} className="text-gray-400" />
@@ -204,14 +237,14 @@ const ChangeSimModal: React.FC<ChangeSimModalProps> = ({
               )}
               
               {searchResults.length > 0 && (
-                <div className="mt-2 max-h-40 overflow-y-auto border rounded shadow-sm">
+                <div className="mt-2 max-h-40 overflow-y-auto border dark:border-gray-600 rounded shadow-sm dark:bg-gray-700">
                   {searchResults.map((sim) => (
                     <div
                       key={sim.id}
                       onClick={() => handleSelectSim(sim)}
-                      className="p-2 hover:bg-gray-100 cursor-pointer"
+                      className="p-2 hover:bg-gray-100 dark:hover:bg-gray-600 cursor-pointer"
                     >
-                      <p><strong>{sim.sim_num}</strong> - {sim.ctn}</p>
+                      <p className="dark:text-gray-200"><strong>{sim.sim_num}</strong> - {sim.ctn}</p>
                     </div>
                   ))}
                 </div>
@@ -223,50 +256,50 @@ const ChangeSimModal: React.FC<ChangeSimModalProps> = ({
             {showSelectedSim && (
               <div className="space-y-4">
                 <div>
-                  <label className="block text-gray-700 text-sm font-bold mb-2">
+                  <label className="block text-gray-700 dark:text-gray-300 text-sm font-bold mb-2">
                     SIM Number
                   </label>
                   <input
                     type="text"
                     value={selectedSim.simNum}
                     readOnly
-                    className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 bg-gray-100 leading-tight"
+                    className="shadow appearance-none border dark:border-gray-600 rounded w-full py-2 px-3 text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 leading-tight"
                   />
                 </div>
                 
                 <div>
-                  <label className="block text-gray-700 text-sm font-bold mb-2">
+                  <label className="block text-gray-700 dark:text-gray-300 text-sm font-bold mb-2">
                     CTN
                   </label>
                   <input
                     type="text"
                     value={selectedSim.ctn}
                     readOnly
-                    className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 bg-gray-100 leading-tight"
+                    className="shadow appearance-none border dark:border-gray-600 rounded w-full py-2 px-3 text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 leading-tight"
                   />
                 </div>
                 
                 <div>
-                  <label className="block text-gray-700 text-sm font-bold mb-2">
+                  <label className="block text-gray-700 dark:text-gray-300 text-sm font-bold mb-2">
                     SIM IP
                   </label>
                   <input
                     type="text"
                     value={selectedSim.simIp}
                     readOnly
-                    className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 bg-gray-100 leading-tight"
+                    className="shadow appearance-none border dark:border-gray-600 rounded w-full py-2 px-3 text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 leading-tight"
                   />
                 </div>
                 
                 <div>
-                  <label className="block text-gray-700 text-sm font-bold mb-2">
+                  <label className="block text-gray-700 dark:text-gray-300 text-sm font-bold mb-2">
                     Assigned Date
                   </label>
                   <input
                     type="date"
                     value={selectedSim.assignedDate}
                     onChange={(e) => setSelectedSim({...selectedSim, assignedDate: e.target.value})}
-                    className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+                    className="shadow appearance-none border dark:border-gray-600 rounded w-full py-2 px-3 text-gray-700 dark:text-white dark:bg-gray-700 leading-tight focus:outline-none focus:shadow-outline"
                     required
                   />
                 </div>
@@ -275,17 +308,17 @@ const ChangeSimModal: React.FC<ChangeSimModalProps> = ({
           </form>
         </div>
 
-        <div className="flex justify-end p-4 border-t">
+        <div className="flex justify-end p-4 border-t dark:border-gray-700">
           <button
             onClick={onClose}
-            className="bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded mr-2"
+            className="bg-gray-500 dark:bg-gray-600 hover:bg-gray-600 dark:hover:bg-gray-700 text-white px-4 py-2 rounded mr-2"
             disabled={loading}
           >
             Cancel
           </button>
           <button
             onClick={handleSubmit}
-            className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded flex items-center"
+            className="bg-green-600 dark:bg-green-700 hover:bg-green-700 dark:hover:bg-green-800 text-white px-4 py-2 rounded flex items-center"
             disabled={loading || !showSelectedSim}
           >
             {loading ? (

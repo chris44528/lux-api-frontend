@@ -42,18 +42,15 @@ export default function MenuPermissionsSettings({ groups }: MenuPermissionsSetti
   // Ensure groups is an array
   const groupsArray = Array.isArray(groups) ? groups : [];
   
-  console.log('MenuPermissionsSettings rendered with groups:', groupsArray);
 
   useEffect(() => {
     if (groupsArray.length > 0 && !selectedGroup) {
-      console.log('Setting initial selected group to:', groupsArray[0]);
       setSelectedGroup(groupsArray[0].id);
     }
   }, [groupsArray, selectedGroup]);
 
   useEffect(() => {
     if (selectedGroup) {
-      console.log('Fetching menu permissions for group ID:', selectedGroup);
       fetchMenuPermissions(selectedGroup);
       fetchGroupViewType(selectedGroup);
     }
@@ -62,14 +59,12 @@ export default function MenuPermissionsSettings({ groups }: MenuPermissionsSetti
   const fetchMenuPermissions = async (groupId: number) => {
     try {
       setLoading(true);
-      console.log(`Fetching menu permissions for group ${groupId}`);
       
       // Using the group_id query parameter to filter permissions
       const response = await api.get(`/users/menu-permissions/`, {
         params: { group_id: groupId }
       });
       
-      console.log('Menu permissions response:', response.data);
       
       // Ensure we're setting an array
       if (Array.isArray(response.data)) {
@@ -81,7 +76,6 @@ export default function MenuPermissionsSettings({ groups }: MenuPermissionsSetti
         } 
         // Check if it's an object with menu item keys and boolean values
         else if (Object.values(response.data).every(val => typeof val === 'boolean')) {
-          console.log('Menu permissions is a menu item object, converting to array format');
           // Convert the format { dashboard: true, settings: false } to MenuPermission[] format
           const permissionsArray = Object.entries(response.data).map(([key, value], index) => ({
             id: index, // Use index as temporary id
@@ -93,18 +87,15 @@ export default function MenuPermissionsSettings({ groups }: MenuPermissionsSetti
           setMenuPermissions(permissionsArray);
         } else {
           // If it's a different object format, convert to array if possible
-          console.warn('Menu permissions is not an array, attempting to convert:', response.data);
           const permissionsArray = Object.values(response.data)
             .filter(item => typeof item === 'object' && item !== null)
             .map(item => item as MenuPermission);
           setMenuPermissions(permissionsArray.length > 0 ? permissionsArray : []);
         }
       } else {
-        console.error('Unexpected menu permissions format:', response.data);
         setMenuPermissions([]);
       }
     } catch (error) {
-      console.error('Error fetching menu permissions:', error);
       toast({
         title: 'Error',
         description: 'Failed to load menu permissions',
@@ -120,11 +111,9 @@ export default function MenuPermissionsSettings({ groups }: MenuPermissionsSetti
   const fetchGroupViewType = async (groupId: number) => {
     try {
       setViewTypeLoading(true);
-      console.log(`Fetching view type for group ${groupId}`);
       
       // Get the group view type
       const viewTypeData = await userService.getGroupViewType(groupId);
-      console.log('Group view type response:', viewTypeData);
       
       if (viewTypeData) {
         setGroupViewType(viewTypeData.view_type);
@@ -133,7 +122,6 @@ export default function MenuPermissionsSettings({ groups }: MenuPermissionsSetti
         setGroupViewType('staff');
       }
     } catch (error) {
-      console.error('Error fetching group view type:', error);
       toast({
         title: 'Error',
         description: 'Failed to load group view type',
@@ -162,14 +150,12 @@ export default function MenuPermissionsSettings({ groups }: MenuPermissionsSetti
         is_visible: !currentValue 
       };
       
-      console.log(`Updating menu permission ${menuPermission.id} from ${currentValue} to ${!currentValue}`);
       
       // Make the API call to update the permission
-      const response = await api.patch(`/users/menu-permissions/${menuPermission.id}/`, {
+      await api.patch(`/users/menu-permissions/${menuPermission.id}/`, {
         is_visible: updatedPermission.is_visible
       });
       
-      console.log('Update permission response:', response.data);
       
       // Immediately refetch the permissions to ensure we have the latest data
       if (selectedGroup) {
@@ -185,7 +171,6 @@ export default function MenuPermissionsSettings({ groups }: MenuPermissionsSetti
         type: 'success'
       });
     } catch (error: unknown) {
-      console.error('Error updating menu permission:', error);
       
       // Display more specific error message if available
       let errorMessage = 'Failed to update menu permission';
@@ -229,7 +214,6 @@ export default function MenuPermissionsSettings({ groups }: MenuPermissionsSetti
         type: 'success'
       });
     } catch (error) {
-      console.error('Error updating group view type:', error);
       toast({
         title: 'Error',
         description: 'Failed to update group view type',
@@ -244,7 +228,6 @@ export default function MenuPermissionsSettings({ groups }: MenuPermissionsSetti
 
   // If there are no groups, show a message
   if (groupsArray.length === 0) {
-    console.log('No groups available');
     return (
       <Card className="mt-6">
         <CardHeader>
@@ -331,7 +314,7 @@ export default function MenuPermissionsSettings({ groups }: MenuPermissionsSetti
       <CardContent>
         <div className="mb-4">
           <div className="flex justify-between items-center">
-            <label htmlFor="group-select" className="block text-sm font-medium text-gray-700 mb-1">
+            <label htmlFor="group-select" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
               Select Group
             </label>
             {selectedGroup && (
@@ -350,11 +333,10 @@ export default function MenuPermissionsSettings({ groups }: MenuPermissionsSetti
           </div>
           <select
             id="group-select"
-            className="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+            className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
             value={selectedGroup || ''}
             onChange={(e) => {
               const groupId = Number(e.target.value);
-              console.log('Selected group changed to:', groupId);
               setSelectedGroup(groupId);
             }}
           >
@@ -367,9 +349,9 @@ export default function MenuPermissionsSettings({ groups }: MenuPermissionsSetti
         </div>
 
         <Tabs defaultValue="menu-permissions" className="mt-6">
-          <TabsList className="w-full mb-6">
-            <TabsTrigger value="menu-permissions" className="flex-1">Menu Permissions</TabsTrigger>
-            <TabsTrigger value="view-type" className="flex-1">Default View</TabsTrigger>
+          <TabsList className="w-full mb-6 bg-gray-100 dark:bg-gray-700">
+            <TabsTrigger value="menu-permissions" className="flex-1 data-[state=active]:bg-white dark:data-[state=active]:bg-gray-800 text-gray-700 dark:text-gray-300 data-[state=active]:text-gray-900 dark:data-[state=active]:text-white">Menu Permissions</TabsTrigger>
+            <TabsTrigger value="view-type" className="flex-1 data-[state=active]:bg-white dark:data-[state=active]:bg-gray-800 text-gray-700 dark:text-gray-300 data-[state=active]:text-gray-900 dark:data-[state=active]:text-white">Default View</TabsTrigger>
           </TabsList>
           
           <TabsContent value="menu-permissions">
@@ -378,7 +360,7 @@ export default function MenuPermissionsSettings({ groups }: MenuPermissionsSetti
             ) : menuPermissions.length > 0 ? (
               <div className="space-y-4">
                 {menuPermissions.map((permission) => (
-                  <div key={permission.id} className="flex items-center justify-between p-2 border rounded-md">
+                  <div key={permission.id} className="flex items-center justify-between p-2 border rounded-md border-gray-200 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700">
                     <div className="flex items-center space-x-2">
                       <Checkbox
                         id={`permission-${permission.id}`}
@@ -388,7 +370,7 @@ export default function MenuPermissionsSettings({ groups }: MenuPermissionsSetti
                       />
                       <label
                         htmlFor={`permission-${permission.id}`}
-                        className="text-sm font-medium leading-none cursor-pointer"
+                        className="text-sm font-medium leading-none cursor-pointer text-gray-900 dark:text-white"
                       >
                         {permission.menu_item_display}
                       </label>
@@ -410,7 +392,7 @@ export default function MenuPermissionsSettings({ groups }: MenuPermissionsSetti
             ) : (
               <div className="space-y-6">
                 <div className="mb-4">
-                  <p className="text-sm text-gray-600 mb-4">
+                  <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
                     Select which view this group should see when accessing the application.
                   </p>
                 </div>
@@ -418,32 +400,32 @@ export default function MenuPermissionsSettings({ groups }: MenuPermissionsSetti
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div 
                     className={`border p-4 rounded-md cursor-pointer ${
-                      groupViewType === 'staff' ? 'border-blue-500 bg-blue-50' : 'hover:bg-gray-50'
+                      groupViewType === 'staff' ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20' : 'hover:bg-gray-50 dark:hover:bg-gray-700 border-gray-200 dark:border-gray-600'
                     }`}
                     onClick={() => handleViewTypeChange('staff')}
                   >
-                    <h3 className="font-medium text-lg mb-2">Staff View</h3>
-                    <p className="text-sm text-gray-600">
+                    <h3 className="font-medium text-lg mb-2 text-gray-900 dark:text-white">Staff View</h3>
+                    <p className="text-sm text-gray-600 dark:text-gray-400">
                       Full access to all staff features including reports, dashboards, and administrative tools.
                     </p>
                   </div>
                   
                   <div 
                     className={`border p-4 rounded-md cursor-pointer ${
-                      groupViewType === 'engineer' ? 'border-blue-500 bg-blue-50' : 'hover:bg-gray-50'
+                      groupViewType === 'engineer' ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20' : 'hover:bg-gray-50 dark:hover:bg-gray-700 border-gray-200 dark:border-gray-600'
                     }`}
                     onClick={() => handleViewTypeChange('engineer')}
                   >
-                    <h3 className="font-medium text-lg mb-2">Engineer View</h3>
-                    <p className="text-sm text-gray-600">
+                    <h3 className="font-medium text-lg mb-2 text-gray-900 dark:text-white">Engineer View</h3>
+                    <p className="text-sm text-gray-600 dark:text-gray-400">
                       Simplified view focused on field operations with essentials for engineers and technicians.
                     </p>
                   </div>
                 </div>
                 
-                <div className="mt-4 p-4 bg-gray-50 rounded-md">
-                  <h3 className="font-medium text-md mb-2">Current Setting</h3>
-                  <p className="text-sm">
+                <div className="mt-4 p-4 bg-gray-50 dark:bg-gray-700 rounded-md">
+                  <h3 className="font-medium text-md mb-2 text-gray-900 dark:text-white">Current Setting</h3>
+                  <p className="text-sm text-gray-700 dark:text-gray-300">
                     Group <strong>{groupsArray.find(g => g.id === selectedGroup)?.name}</strong> is 
                     set to use the <strong>{groupViewType === 'staff' ? 'Staff View' : 'Engineer View'}</strong>.
                   </p>

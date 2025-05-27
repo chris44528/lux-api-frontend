@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Users } from "lucide-react"
 import useEcotricityUser from "../../hooks/useEcotricityUser"
+import { searchSites } from "@/services/api"
 
 interface DashboardState {
   isLoading: boolean
@@ -24,24 +25,22 @@ export default function DashboardPage() {
       if (userLoading) return; // Wait until we know if user is Ecotricity or not
       
       try {
-        // Create URL with appropriate filters
-        let url = '/api/sites/';
-        if (isEcotricityUser) {
-          url += '?account=ecotricity';
-        }
+        // Use authenticated API service to fetch sites
+        const data = await searchSites(
+          "", // empty search term
+          1,  // page 1
+          10, // pageSize (we only need the count)
+          isEcotricityUser, // pass the ecotricity user flag
+          "all", // filter
+          "-Site_id" // default ordering
+        )
         
-        const response = await fetch(url)
-        if (!response.ok) {
-          throw new Error('Failed to fetch dashboard data')
-        }
-        const data = await response.json()
         setState(prev => ({
           ...prev,
           isLoading: false,
           sitesCount: data.count
         }))
       } catch (error) {
-        console.error('Error fetching dashboard data:', error)
         setState(prev => ({
           ...prev,
           isLoading: false

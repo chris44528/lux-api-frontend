@@ -58,6 +58,9 @@ const ConnectionAnalysis: React.FC = () => {
   const [startDate, setStartDate] = useState<Date | null>(null);
   const [endDate, setEndDate] = useState<Date | null>(null);
   const [viewMode, setViewMode] = useState<'site' | 'region'>('site');
+  const [drillDownLevel, setDrillDownLevel] = useState<'all' | 'region' | 'subregion' | 'site'>('all');
+  const [selectedDrillDownRegion, setSelectedDrillDownRegion] = useState<string>('');
+  const [selectedSubRegion, setSelectedSubRegion] = useState<string>('');
   
   // UI states
   const [expandedSections, setExpandedSections] = useState({
@@ -91,22 +94,17 @@ const ConnectionAnalysis: React.FC = () => {
         filters.network = selectedNetwork;
       }
       
-      console.log("Fetching connection analysis with filters:", filters);
       const result = await getConnectionAnalysis(filters);
-      console.log("Connection analysis response:", result);
       
       // Check if the result has the expected structure
       if (!result || !result.summary || !result.site_data || !result.region_data) {
-        console.warn("Analysis API returned incomplete data structure:", result);
         setError('The analysis data is incomplete. Please check the server logs for more information.');
       } else if (result.site_data.length === 0 && result.region_data.length === 0) {
-        console.warn("Analysis API returned empty datasets:", result);
         setError('No data available for analysis. This could be because there are no meter readings in the system or the selected filters return no results.');
       } else {
         setData(result);
       }
     } catch (err) {
-      console.error('Error fetching connection analysis data:', err);
       setError('Failed to load analysis data. Please try again.');
     } finally {
       setLoading(false);
@@ -116,25 +114,19 @@ const ConnectionAnalysis: React.FC = () => {
   // Load regions and networks for filtering
   const loadFilterOptions = async () => {
     try {
-      console.log("Fetching regions and networks for filters");
       
       try {
         const regionsList = await getRegions();
-        console.log("Regions API response:", regionsList);
         setRegions(regionsList || []);
       } catch (regionErr) {
-        console.error('Error fetching regions:', regionErr);
       }
       
       try {
         const networksList = await getNetworks();
-        console.log("Networks API response:", networksList);
         setNetworks(networksList || []);
       } catch (networkErr) {
-        console.error('Error fetching networks:', networkErr);
       }
     } catch (err) {
-      console.error('Error loading filter options:', err);
     }
   };
   
@@ -328,27 +320,54 @@ const ConnectionAnalysis: React.FC = () => {
         </div>
         
         {expandedSections.overview && (
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-            <div className="bg-blue-50 p-4 rounded-lg">
-              <div className="text-sm text-blue-700">Total Readings</div>
-              <div className="text-2xl font-bold">{totalReadings}</div>
+          <>
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+              <div className="bg-blue-50 p-4 rounded-lg">
+                <div className="text-sm text-blue-700">Total Readings</div>
+                <div className="text-2xl font-bold">{totalReadings}</div>
+              </div>
+              
+              <div className="bg-green-50 p-4 rounded-lg">
+                <div className="text-sm text-green-700">Avg Signal Level</div>
+                <div className="text-2xl font-bold">{avgSignalLevel}</div>
+              </div>
+              
+              <div className="bg-yellow-50 p-4 rounded-lg">
+                <div className="text-sm text-yellow-700">Networks</div>
+                <div className="text-2xl font-bold">{data.network_distribution.length}</div>
+              </div>
+              
+              <div className="bg-purple-50 p-4 rounded-lg">
+                <div className="text-sm text-purple-700">Sites</div>
+                <div className="text-2xl font-bold">{data.site_data.length}</div>
+              </div>
             </div>
             
-            <div className="bg-green-50 p-4 rounded-lg">
-              <div className="text-sm text-green-700">Avg Signal Level</div>
-              <div className="text-2xl font-bold">{avgSignalLevel}</div>
+            {/* Performance Insights */}
+            <div className="mt-4 p-4 bg-gray-50 rounded-lg">
+              <h3 className="text-sm font-semibold text-gray-700 mb-2">Key Insights</h3>
+              <div className="space-y-2 text-sm">
+                <div className="flex items-center justify-between">
+                  <span className="text-gray-600">Sites with Poor Signal:</span>
+                  <span className="font-medium text-red-600">
+                    {data.signal_distribution.Poor || 0} ({((data.signal_distribution.Poor || 0) / totalReadings * 100).toFixed(1)}%)
+                  </span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-gray-600">Best Performing Network:</span>
+                  <span className="font-medium text-green-600">
+                    {data.network_distribution.length > 0 
+                      ? data.network_distribution.reduce((a, b) => a.count > b.count ? a : b).network_connection 
+                      : 'N/A'}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-gray-600">Regions Analyzed:</span>
+                  <span className="font-medium">{data.region_data.length}</span>
+                </div>
+              </div>
             </div>
-            
-            <div className="bg-yellow-50 p-4 rounded-lg">
-              <div className="text-sm text-yellow-700">Networks</div>
-              <div className="text-2xl font-bold">{data.network_distribution.length}</div>
-            </div>
-            
-            <div className="bg-purple-50 p-4 rounded-lg">
-              <div className="text-sm text-purple-700">Sites</div>
-              <div className="text-2xl font-bold">{data.site_data.length}</div>
-            </div>
-          </div>
+          </>
         )}
       </div>
       
@@ -433,7 +452,7 @@ const ConnectionAnalysis: React.FC = () => {
                     <Tooltip 
                       cursor={{ strokeDasharray: '3 3' }}
                       formatter={(value, name) => {
-                        if (name === 'meter_reading') return [value.toFixed(2), 'Meter Reading'];
+                        if (name === 'meter_reading' && typeof value === 'number') return [value.toFixed(2), 'Meter Reading'];
                         if (name === 'signal_level') return [value, 'Signal Level'];
                         return [value, name];
                       }}
@@ -602,13 +621,61 @@ const ConnectionAnalysis: React.FC = () => {
               </div>
             ) : (
               <div className="grid grid-cols-1 gap-6">
+                {/* Breadcrumb navigation for drill-down */}
+                {drillDownLevel !== 'all' && (
+                  <div className="flex items-center space-x-2 text-sm">
+                    <button
+                      onClick={() => {
+                        setDrillDownLevel('all');
+                        setSelectedDrillDownRegion('');
+                        setSelectedSubRegion('');
+                      }}
+                      className="text-blue-600 hover:text-blue-800"
+                    >
+                      All Regions
+                    </button>
+                    {selectedDrillDownRegion && (
+                      <>
+                        <span className="text-gray-500">›</span>
+                        <button
+                          onClick={() => {
+                            setDrillDownLevel('region');
+                            setSelectedSubRegion('');
+                          }}
+                          className={drillDownLevel === 'region' ? 'text-gray-800 font-medium' : 'text-blue-600 hover:text-blue-800'}
+                        >
+                          {selectedDrillDownRegion}
+                        </button>
+                      </>
+                    )}
+                    {selectedSubRegion && (
+                      <>
+                        <span className="text-gray-500">›</span>
+                        <span className="text-gray-800 font-medium">{selectedSubRegion}</span>
+                      </>
+                    )}
+                  </div>
+                )}
+                
                 <div>
-                  <h3 className="text-md font-medium mb-3">Region Signal Levels</h3>
+                  <h3 className="text-md font-medium mb-3">
+                    {drillDownLevel === 'all' && 'Region Signal Levels'}
+                    {drillDownLevel === 'region' && `${selectedDrillDownRegion} - Sub-regions`}
+                    {drillDownLevel === 'subregion' && `${selectedDrillDownRegion} > ${selectedSubRegion} - Cities/Towns`}
+                    {drillDownLevel === 'site' && `Sites in ${selectedSubRegion}`}
+                  </h3>
                   <div className="h-64">
                     <ResponsiveContainer width="100%" height="100%">
                       <BarChart
                         data={regionSignalData}
                         margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
+                        onClick={(data) => {
+                          if (data && data.activeLabel && drillDownLevel === 'all') {
+                            setSelectedDrillDownRegion(data.activeLabel);
+                            setDrillDownLevel('region');
+                            // Here you would filter data for the selected region
+                          }
+                        }}
                       >
                         <CartesianGrid strokeDasharray="3 3" />
                         <XAxis dataKey="name" />
@@ -619,6 +686,7 @@ const ConnectionAnalysis: React.FC = () => {
                           dataKey="value" 
                           name="Avg Signal Level" 
                           fill="#8884d8"
+                          cursor={drillDownLevel === 'all' ? 'pointer' : 'default'}
                         >
                           {regionSignalData.map((entry, index) => (
                             <Cell key={`cell-${index}`} fill={entry.color} />
@@ -627,7 +695,74 @@ const ConnectionAnalysis: React.FC = () => {
                       </BarChart>
                     </ResponsiveContainer>
                   </div>
+                  {drillDownLevel === 'all' && (
+                    <div className="text-xs text-gray-500 mt-2 text-center">
+                      Click on a region to drill down into sub-regions
+                    </div>
+                  )}
                 </div>
+                
+                {/* Detailed table for drill-down data */}
+                {drillDownLevel !== 'all' && (
+                  <div className="mt-6">
+                    <h3 className="text-md font-medium mb-3">Detailed View</h3>
+                    <div className="overflow-x-auto">
+                      <table className="min-w-full divide-y divide-gray-200">
+                        <thead className="bg-gray-50">
+                          <tr>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                              {drillDownLevel === 'site' ? 'Site Name' : 'Location'}
+                            </th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                              Average Signal
+                            </th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                              Signal Quality
+                            </th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                              Reading Count
+                            </th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                              Networks
+                            </th>
+                          </tr>
+                        </thead>
+                        <tbody className="bg-white divide-y divide-gray-200">
+                          {/* This would be populated with filtered data based on drill-down level */}
+                          {drillDownLevel === 'site' && data.site_data
+                            .filter(site => site.region === selectedDrillDownRegion)
+                            .slice(0, 10)
+                            .map((site, index) => (
+                              <tr key={index} className="hover:bg-gray-50">
+                                <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                                  {site.site_name}
+                                </td>
+                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                  {site.avg_signal_level.toFixed(1)}
+                                </td>
+                                <td className="px-6 py-4 whitespace-nowrap">
+                                  <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
+                                    site.signal_quality === 'Excellent' ? 'bg-blue-100 text-blue-800' :
+                                    site.signal_quality === 'Good' ? 'bg-green-100 text-green-800' :
+                                    site.signal_quality === 'Average' ? 'bg-yellow-100 text-yellow-800' :
+                                    'bg-red-100 text-red-800'
+                                  }`}>
+                                    {site.signal_quality}
+                                  </span>
+                                </td>
+                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                  {site.reading_count}
+                                </td>
+                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                  {site.networks.join(', ')}
+                                </td>
+                              </tr>
+                            ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                )}
               </div>
             )}
           </>

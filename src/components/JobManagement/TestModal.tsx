@@ -8,8 +8,6 @@ interface TestModalProps {
 }
 
 export function TestModal({ isOpen, onClose }: TestModalProps) {
-  console.log("TestModal rendering with isOpen:", isOpen);
-  
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent>

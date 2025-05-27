@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react"
 import { SiteCard } from "./SiteCard"
 import useEcotricityUser from "../hooks/useEcotricityUser"
+import { searchSites } from "../services/api"
 
 interface Site {
   Site_id: number
@@ -10,13 +11,6 @@ interface Site {
   last_reading: string
   last_updated: string
   account?: string
-}
-
-interface ApiResponse {
-  count: number
-  next: string | null
-  previous: string | null
-  results: Site[]
 }
 
 export function SiteList() {
@@ -30,26 +24,16 @@ export function SiteList() {
       if (userLoading) return; // Wait until we know if user is Ecotricity or not
       
       try {
-        const params = new URLSearchParams({
-          search: '',
-          filter: 'all',
-          page: '1',
-          ordering: '-Site_id'
-        })
-        
-        // Add account filter for Ecotricity users
-        if (isEcotricityUser) {
-          params.append('account', 'ecotricity');
-        }
-        
-        const response = await fetch(`/api/sites/?${params}`)
-        if (!response.ok) {
-          throw new Error('Failed to fetch sites')
-        }
-        const data: ApiResponse = await response.json()
+        const data = await searchSites(
+          '', // searchTerm
+          1, // page
+          10, // pageSize
+          isEcotricityUser, // isEcotricityUser
+          'all', // filter
+          '-Site_id' // ordering
+        )
         setSites(data.results)
       } catch (err) {
-        console.error('Error fetching sites:', err) // Debug log
         setError(err instanceof Error ? err.message : 'An error occurred')
       } finally {
         setLoading(false)
@@ -60,15 +44,15 @@ export function SiteList() {
   }, [isEcotricityUser, userLoading])
 
   if (loading || userLoading) {
-    return <div>Loading sites...</div>
+    return <div className="text-gray-900 dark:text-gray-100">Loading sites...</div>
   }
 
   if (error) {
-    return <div>Error: {error}</div>
+    return <div className="text-red-600 dark:text-red-400">Error: {error}</div>
   }
 
   if (!sites.length) {
-    return <div>No sites found</div>
+    return <div className="text-gray-500 dark:text-gray-400">No sites found</div>
   }
 
   return (

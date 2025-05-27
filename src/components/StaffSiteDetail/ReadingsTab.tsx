@@ -77,25 +77,25 @@ const ReadingsTab: React.FC<ReadingsTabProps> = ({ readings = [], meterTests = [
   return (
     <div className="flex flex-col lg:flex-row gap-6">
       {/* Meter Test History */}
-      <div className={`bg-white rounded shadow p-4 w-full lg:w-1/2 ${expanded ? 'hidden lg:block' : ''}`}>
-        <h3 className="font-semibold mb-2">Meter Test History</h3>
+      <div className={`bg-white dark:bg-gray-800 rounded shadow dark:shadow-gray-700 p-4 w-full lg:w-1/2 ${expanded ? 'hidden lg:block' : ''}`}>
+        <h3 className="font-semibold mb-2 text-gray-900 dark:text-gray-100">Meter Test History</h3>
         <table className="w-full text-sm">
           <thead>
-            <tr className="border-b">
-              <th className="py-1 text-left">Meter Reading</th>
-              <th className="py-1 text-left">Test Date</th>
-              <th className="py-1 text-left">Signal Level</th>
+            <tr className="border-b dark:border-gray-700">
+              <th className="py-1 text-left text-gray-700 dark:text-gray-300">Meter Reading</th>
+              <th className="py-1 text-left text-gray-700 dark:text-gray-300">Test Date</th>
+              <th className="py-1 text-left text-gray-700 dark:text-gray-300">Signal Level</th>
             </tr>
           </thead>
           <tbody>
             {meterTests.length > 0 ? meterTests.map((test, idx) => (
-              <tr key={test.id || idx} className="border-b last:border-0">
-                <td className="py-1">{
+              <tr key={test.id || idx} className="border-b dark:border-gray-700 last:border-0">
+                <td className="py-1 text-gray-900 dark:text-gray-100">{
                   test.test_reading
                     ? `${(parseFloat(test.test_reading)).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} kWh`
                     : ''
                 }</td>
-                <td className="py-1">{
+                <td className="py-1 text-gray-900 dark:text-gray-100">{
                   test.test_date
                     ? (() => {
                         const d = new Date(test.test_date);
@@ -105,17 +105,17 @@ const ReadingsTab: React.FC<ReadingsTabProps> = ({ readings = [], meterTests = [
                       })()
                     : ''
                 }</td>
-                <td className="py-1">{test.signal_level || ''}</td>
+                <td className="py-1 text-gray-900 dark:text-gray-100">{test.signal_level || ''}</td>
               </tr>
             )) : (
-              <tr><td colSpan={3} className="text-center text-gray-400 py-2">No meter tests</td></tr>
+              <tr><td colSpan={3} className="text-center text-gray-400 dark:text-gray-500 py-2">No meter tests</td></tr>
             )}
           </tbody>
         </table>
       </div>
       {/* All Readings */}
       <div
-        className={`bg-white rounded shadow p-4 w-full lg:w-1/2 transition-all ${expanded ? 'lg:w-full' : ''}`}
+        className={`bg-white dark:bg-gray-800 rounded shadow dark:shadow-gray-700 p-4 w-full lg:w-1/2 transition-all ${expanded ? 'lg:w-full' : ''}`}
         style={expanded ? { height: '90vh', cursor: 'pointer' } : { height: 600, cursor: 'pointer' }}
         onClick={() => {
           // Only expand/collapse if not selecting text or clicking on an input
@@ -124,48 +124,48 @@ const ReadingsTab: React.FC<ReadingsTabProps> = ({ readings = [], meterTests = [
         }}
       >
         <div className="flex items-center justify-between mb-2">
-          <h3 className="font-semibold">All Readings</h3>
+          <h3 className="font-semibold text-gray-900 dark:text-gray-100">All Readings</h3>
           <div className="flex items-center gap-2">
-            <span className="text-xs">End of Day</span>
+            <span className="text-xs text-gray-700 dark:text-gray-300">End of Day</span>
             <input type="checkbox" checked={endOfDay} onChange={() => setEndOfDay((v) => !v)} />
           </div>
         </div>
         <div
-          className={`border rounded overflow-auto`}
+          className={`border dark:border-gray-700 rounded overflow-auto`}
           style={{ height: expanded ? 'calc(90vh - 60px)' : 500 }}
           ref={readingsContainerRef}
         >
           <table className="w-full text-sm">
             <thead>
-              <tr className="border-b">
-                <th className="py-1 px-4 text-left">Date</th>
-                <th className="py-1 text-left">Meter Reading</th>
-                <th className="py-1 text-left">Daily Gen</th>
+              <tr className="border-b dark:border-gray-700">
+                <th className="py-1 px-4 text-left text-gray-700 dark:text-gray-300">Date</th>
+                <th className="py-1 text-left text-gray-700 dark:text-gray-300">Meter Reading</th>
+                <th className="py-1 text-left text-gray-700 dark:text-gray-300">Daily Gen</th>
               </tr>
             </thead>
             <tbody>
               {displayedReadings.length > 0 ? displayedReadings.map((r: Reading, i) => (
-                <tr key={r.date + i} className="border-b last:border-0">
-                  <td className="py-1 px-4">{r.date}</td>
-                  <td className="py-1">{r.meter_reading || ''}</td>
+                <tr key={r.date + i} className="border-b dark:border-gray-700 last:border-0">
+                  <td className="py-1 px-4 text-gray-900 dark:text-gray-100">{r.date}</td>
+                  <td className="py-1 text-gray-900 dark:text-gray-100">{r.meter_reading || ''}</td>
                   <td className={`py-1 ${
                     r.daily_gen_status === 'no_comms' || r.daily_gen_status === 'zero'
-                      ? 'text-red-600'
+                      ? 'text-red-600 dark:text-red-400'
                       : r.daily_gen_status === 'amber'
-                        ? 'text-amber-500'
+                        ? 'text-amber-500 dark:text-amber-400'
                         : r.daily_gen_status === 'green'
-                          ? 'text-green-600'
-                          : ''
+                          ? 'text-green-600 dark:text-green-400'
+                          : 'text-gray-900 dark:text-gray-100'
                   }`}>
                     {r.daily_gen || ''}
                   </td>
                 </tr>
               )) : (
-                <tr><td colSpan={3} className="text-center text-gray-400 py-2">No readings</td></tr>
+                <tr><td colSpan={3} className="text-center text-gray-400 dark:text-gray-500 py-2">No readings</td></tr>
               )}
             </tbody>
           </table>
-          {loadingMore && <div className="text-center py-2 text-xs text-gray-400">Loading more...</div>}
+          {loadingMore && <div className="text-center py-2 text-xs text-gray-400 dark:text-gray-500">Loading more...</div>}
         </div>
         <div className="flex justify-end mt-2">
           {/* Expand/Collapse button removed */}

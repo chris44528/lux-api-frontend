@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { Search, Gauge, WifiOff, Bell } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import api from "../services/api";
+import { api } from "../services/api";
 import { DashboardResponse, SiteData } from "../types/api";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
@@ -45,7 +45,6 @@ const SitesView = () => {
   const fetchSites = useCallback(
     async (term = "", page = 1) => {
       setIsLoading(true);
-      console.log("Fetching sites with term:", term);
       try {
         const params = {
           search: term,
@@ -53,18 +52,12 @@ const SitesView = () => {
           page: page.toString(),
           ordering: "-Site_id",
         };
-        console.log("API request params:", params);
         const response = await api.get("/sites/", { params });
-
-        console.log("Search response data:", response.data);
 
         if (response.data) {
           // Transform the API response data into our expected format
           const transformedSites: SiteData[] = response.data.results.map(
             (site: ApiSiteResponse) => {
-              // Log each site to debug the structure
-              console.log("Processing site:", site);
-
               return {
                 site: {
                   site_id: site.site_id?.toString() || "",
@@ -102,14 +95,11 @@ const SitesView = () => {
             metrics_last_updated: new Date().toISOString(),
           };
 
-          console.log("Transformed data:", transformedData);
           setData(transformedData);
           setCurrentPage(page);
         } else {
-          console.warn("No data in response");
         }
       } catch (err) {
-        console.error("Error fetching sites:", err);
         if (
           (err as { response?: { status: number } })?.response?.status === 401
         ) {
@@ -126,7 +116,6 @@ const SitesView = () => {
   useEffect(() => {
     const timer = setTimeout(() => {
       if (searchTerm) {
-        console.log("Debounced search triggered with term:", searchTerm);
         fetchSites(searchTerm, 1);
       }
     }, 300);
@@ -135,80 +124,70 @@ const SitesView = () => {
   }, [searchTerm, fetchSites]);
 
   useEffect(() => {
-    console.log("Sites page mounted, checking token...");
     const token = localStorage.getItem("access_token");
     if (!token) {
-      console.log("No token found, redirecting to login");
       navigate("/login");
       return;
     }
-    console.log("Token found, fetching sites...");
     fetchSites();
   }, [fetchSites, navigate]);
 
-  console.log("Sites page rendering with state:", {
-    isLoading,
-    sitesCount: data?.filtered_sites?.length,
-    currentPage,
-  });
-
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
-    console.log("Search input changed:", value);
     setSearchTerm(value);
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <h1 className="text-2xl font-bold text-gray-900 mb-6">Solar Sites</h1>
+        <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-6">Solar Sites</h1>
 
         <div className="mb-8">
           <div className="relative">
             <input
               type="text"
               placeholder="Enter Site Name/Address/PostCode"
-              className="w-full pl-10 pr-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400"
               value={searchTerm}
               onChange={handleSearchChange}
             />
-            <Search className="absolute left-3 top-2.5 h-5 w-5 text-gray-400" />
+            <Search className="absolute left-3 top-2.5 h-5 w-5 text-gray-400 dark:text-gray-500" />
           </div>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-          <Card>
+          <Card className="bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Total Reads</CardTitle>
-              <Gauge className="h-4 w-4 text-muted-foreground" />
+              <CardTitle className="text-sm font-medium text-gray-700 dark:text-gray-300">Total Reads</CardTitle>
+              <Gauge className="h-4 w-4 text-muted-foreground dark:text-gray-400" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{data?.total_reads || 0}</div>
-              <p className="text-xs text-muted-foreground">
+              <div className="text-2xl font-bold text-gray-900 dark:text-gray-100">{data?.total_reads || 0}</div>
+              <p className="text-xs text-muted-foreground dark:text-gray-400">
                 Total site readings
               </p>
             </CardContent>
           </Card>
-          <Card>
+          <Card className="bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">No Comms</CardTitle>
-              <WifiOff className="h-4 w-4 text-muted-foreground" />
+              <CardTitle className="text-sm font-medium text-gray-700 dark:text-gray-300">No Comms</CardTitle>
+              <WifiOff className="h-4 w-4 text-muted-foreground dark:text-gray-400" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{data?.no_comms || 0}</div>
-              <p className="text-xs text-muted-foreground">
+              <div className="text-2xl font-bold text-gray-900 dark:text-gray-100">{data?.no_comms || 0}</div>
+              <p className="text-xs text-muted-foreground dark:text-gray-400">
                 Sites with no communication
               </p>
             </CardContent>
           </Card>
-          <Card>
+          <Card className="bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Zero Reads</CardTitle>
-              <Bell className="h-4 w-4 text-muted-foreground" />
+              <CardTitle className="text-sm font-medium text-gray-700 dark:text-gray-300">Zero Reads</CardTitle>
+              <Bell className="h-4 w-4 text-muted-foreground dark:text-gray-400" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{data?.zero_reads || 0}</div>
-              <p className="text-xs text-muted-foreground">
+              <div className="text-2xl font-bold text-gray-900 dark:text-gray-100">{data?.zero_reads || 0}</div>
+              <p className="text-xs text-muted-foreground dark:text-gray-400">
                 Sites with no readings
               </p>
             </CardContent>
@@ -217,41 +196,41 @@ const SitesView = () => {
 
         {isLoading ? (
           <div className="flex justify-center items-center h-64">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 dark:border-blue-400"></div>
           </div>
         ) : data?.filtered_sites && data.filtered_sites.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
             {data.filtered_sites.map((siteData, index) => (
               <div
                 key={`site-${siteData.site.site_id}-${index}`}
-                className="bg-white rounded-lg shadow hover:shadow-md transition-shadow duration-200"
+                className="bg-white dark:bg-gray-800 rounded-lg shadow dark:shadow-gray-900 hover:shadow-md dark:hover:shadow-lg transition-shadow duration-200 border border-gray-200 dark:border-gray-700"
               >
                 <div className="p-4">
                   <div className="mb-4">
-                    <h3 className="text-lg font-semibold text-gray-900">
+                    <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
                       {siteData.site.site_name}
                     </h3>
-                    <p className="text-gray-600">{siteData.site.address}</p>
-                    <p className="text-gray-500">{siteData.site.postcode}</p>
+                    <p className="text-gray-600 dark:text-gray-400">{siteData.site.address}</p>
+                    <p className="text-gray-500 dark:text-gray-500">{siteData.site.postcode}</p>
                   </div>
                   <div className="mb-4">
-                    <p className="text-sm text-gray-600">
+                    <p className="text-sm text-gray-600 dark:text-gray-400">
                       System Size: {siteData.site.panel_size} kW
                     </p>
-                    <p className="text-sm text-gray-600">
+                    <p className="text-sm text-gray-600 dark:text-gray-400">
                       Latest Read:{" "}
                       {siteData.latest_read
                         ? `${Number(siteData.latest_read).toFixed(2)} kWh`
                         : "No data"}
                     </p>
-                    <p className="text-xs text-gray-500 mt-1">
+                    <p className="text-xs text-gray-500 dark:text-gray-500 mt-1">
                       Last Updated:{" "}
                       {new Date(siteData.last_updated).toLocaleDateString()}
                     </p>
                   </div>
                   <button
                     onClick={() => navigate(`/site/${siteData.site.site_id}`)}
-                    className="w-full py-2 bg-green-700 hover:bg-[#16a34a] text-white rounded transition-colors duration-200"
+                    className="w-full py-2 bg-green-700 hover:bg-[#16a34a] dark:bg-green-600 dark:hover:bg-green-700 text-white rounded transition-colors duration-200"
                   >
                     See Site Details
                   </button>
@@ -260,7 +239,7 @@ const SitesView = () => {
             ))}
           </div>
         ) : (
-          <div className="text-center py-8 text-gray-500">
+          <div className="text-center py-8 text-gray-500 dark:text-gray-400">
             {isLoading ? "Loading..." : "No sites found"}
           </div>
         )}
@@ -271,17 +250,17 @@ const SitesView = () => {
             <button
               disabled={!data.pagination.has_previous}
               onClick={() => fetchSites(searchTerm, currentPage - 1)}
-              className="px-4 py-2 border rounded disabled:opacity-50"
+              className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded disabled:opacity-50 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
             >
               Previous
             </button>
-            <span className="px-4 py-2">
+            <span className="px-4 py-2 text-gray-900 dark:text-gray-100">
               Page {currentPage} of {data.pagination.num_pages}
             </span>
             <button
               disabled={!data.pagination.has_next}
               onClick={() => fetchSites(searchTerm, currentPage + 1)}
-              className="px-4 py-2 border rounded disabled:opacity-50"
+              className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded disabled:opacity-50 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
             >
               Next
             </button>

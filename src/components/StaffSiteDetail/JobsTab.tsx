@@ -21,7 +21,6 @@ const JobsTab: React.FC<JobsTabProps> = ({ siteId }) => {
         const response = await jobService.getJobsBySite(siteId);
         setJobs(response.results);
       } catch (err) {
-        console.error('Error fetching site jobs:', err);
         setError('Failed to load jobs for this site');
       } finally {
         setLoading(false);

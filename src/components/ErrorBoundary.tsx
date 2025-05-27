@@ -33,14 +33,14 @@ class ErrorBoundary extends Component<Props, State> {
         this.setState({ errorInfo });
         
         // Log error details for debugging
-        console.error('ErrorBoundary caught an error:', {
-            error,
-            errorInfo,
-            errorId: this.state.errorId,
-            timestamp: new Date().toISOString(),
-            userAgent: navigator.userAgent,
-            url: window.location.href
-        });
+        // console.error('ErrorBoundary caught an error:', {
+        //     error,
+        //     errorInfo,
+        //     errorId: this.state.errorId,
+        //     timestamp: new Date().toISOString(),
+        //     userAgent: navigator.userAgent,
+        //     url: window.location.href
+        // });
 
         // In production, you might want to send this to an error reporting service
         // Example: Sentry.captureException(error, { contexts: { errorInfo } });
@@ -66,7 +66,7 @@ class ErrorBoundary extends Component<Props, State> {
         
         navigator.clipboard.writeText(JSON.stringify(errorDetails, null, 2))
             .then(() => alert('Error details copied to clipboard'))
-            .catch(() => console.log('Failed to copy error details'));
+            .catch(() => {});
     };
 
     public render() {
@@ -78,18 +78,18 @@ class ErrorBoundary extends Component<Props, State> {
                                this.state.error?.message?.toLowerCase().includes('loading');
 
             return (
-                <div className="min-h-screen bg-gray-50 flex items-center justify-center px-4">
-                    <div className="max-w-lg w-full bg-white shadow-lg rounded-lg p-8">
+                <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center px-4">
+                    <div className="max-w-lg w-full bg-white dark:bg-gray-800 shadow-lg rounded-lg p-8">
                         <div className="text-center mb-6">
                             <div className="text-6xl mb-4">
                                 {isNetworkError ? '🌐' : isChunkError ? '📦' : '⚠️'}
                             </div>
-                            <h1 className="text-2xl font-bold text-gray-800 mb-2">
+                            <h1 className="text-2xl font-bold text-gray-800 dark:text-gray-100 mb-2">
                                 {isNetworkError ? 'Connection Error' : 
                                  isChunkError ? 'Loading Error' : 
                                  'Something Went Wrong'}
                             </h1>
-                            <p className="text-gray-600 mb-4">
+                            <p className="text-gray-600 dark:text-gray-300 mb-4">
                                 {isNetworkError ? 
                                     'Unable to connect to the server. Please check your internet connection.' :
                                  isChunkError ?
@@ -99,12 +99,12 @@ class ErrorBoundary extends Component<Props, State> {
                             </p>
                         </div>
 
-                        <div className="bg-gray-50 rounded-lg p-4 mb-6">
-                            <h3 className="font-medium text-gray-800 mb-2">Error Details:</h3>
-                            <p className="text-sm text-gray-600 font-mono break-all">
+                        <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4 mb-6">
+                            <h3 className="font-medium text-gray-800 dark:text-gray-200 mb-2">Error Details:</h3>
+                            <p className="text-sm text-gray-600 dark:text-gray-300 font-mono break-all">
                                 {this.state.error?.message || 'Unknown error'}
                             </p>
-                            <p className="text-xs text-gray-500 mt-2">
+                            <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
                                 Error ID: {this.state.errorId}
                             </p>
                         </div>
@@ -119,7 +119,7 @@ class ErrorBoundary extends Component<Props, State> {
                                 </button>
                                 <button
                                     onClick={this.handleGoHome}
-                                    className="flex-1 bg-gray-600 text-white px-4 py-3 rounded-lg hover:bg-gray-700 transition-colors font-medium"
+                                    className="flex-1 bg-gray-600 dark:bg-gray-700 text-white px-4 py-3 rounded-lg hover:bg-gray-700 dark:hover:bg-gray-600 transition-colors font-medium"
                                 >
                                     🏠 Go Home
                                 </button>
@@ -127,14 +127,14 @@ class ErrorBoundary extends Component<Props, State> {
                             
                             <button
                                 onClick={this.copyErrorDetails}
-                                className="w-full bg-gray-100 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-200 transition-colors text-sm"
+                                className="w-full bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 px-4 py-2 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors text-sm"
                             >
                                 📋 Copy Error Details
                             </button>
                         </div>
 
-                        <div className="mt-6 pt-6 border-t border-gray-200 text-center">
-                            <p className="text-xs text-gray-500">
+                        <div className="mt-6 pt-6 border-t border-gray-200 dark:border-gray-700 text-center">
+                            <p className="text-xs text-gray-500 dark:text-gray-400">
                                 If this problem persists, please contact technical support with the error ID above.
                             </p>
                         </div>

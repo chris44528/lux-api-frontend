@@ -44,13 +44,13 @@ export function JobCard({ job, technicians, overlay, onSelect, isSelected }: Job
   const getPriorityColor = (priority: string) => {
     switch (priority.toLowerCase()) {
       case "high":
-        return "bg-red-100 text-red-800 hover:bg-red-100"
+        return "bg-red-100 text-red-800 hover:bg-red-100 dark:bg-red-900/30 dark:text-red-400"
       case "medium":
-        return "bg-amber-100 text-amber-800 hover:bg-amber-100"
+        return "bg-amber-100 text-amber-800 hover:bg-amber-100 dark:bg-amber-900/30 dark:text-amber-400"
       case "low":
-        return "bg-green-100 text-green-800 hover:bg-green-100"
+        return "bg-green-100 text-green-800 hover:bg-green-100 dark:bg-green-900/30 dark:text-green-400"
       default:
-        return "bg-gray-100 text-gray-800 hover:bg-gray-100"
+        return "bg-gray-100 text-gray-800 hover:bg-gray-100 dark:bg-gray-700 dark:text-gray-300"
     }
   }
 
@@ -70,7 +70,7 @@ export function JobCard({ job, technicians, overlay, onSelect, isSelected }: Job
       {...attributes}
       {...listeners}
       className={cn(
-        "bg-white rounded-lg shadow-sm border border-gray-200 p-4 mb-3 cursor-pointer hover:shadow-md transition-shadow",
+        "bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4 mb-3 cursor-pointer hover:shadow-md transition-shadow",
         isDragging && "opacity-50",
         overlay && "shadow-lg"
       )}
@@ -94,8 +94,8 @@ export function JobCard({ job, technicians, overlay, onSelect, isSelected }: Job
             </div>
           )}
           <div>
-            <h3 className="font-medium text-sm">{job.title}</h3>
-            <p className="text-xs text-gray-500">{job.client}</p>
+            <h3 className="font-medium text-sm dark:text-gray-100">{job.title}</h3>
+            <p className="text-xs text-gray-500 dark:text-gray-400">{job.client}</p>
           </div>
         </div>
         <Badge className={cn("text-xs", getPriorityColor(job.priority))}>
@@ -103,43 +103,43 @@ export function JobCard({ job, technicians, overlay, onSelect, isSelected }: Job
         </Badge>
       </div>
       
-      <div className="text-sm text-gray-500 mb-2">{job.client}</div>
+      <div className="text-sm text-gray-500 dark:text-gray-400 mb-2">{job.client}</div>
       
-      <div className="flex items-center text-xs text-gray-500 mb-2">
+      <div className="flex items-center text-xs text-gray-500 dark:text-gray-400 mb-2">
         <MapPin className="h-3 w-3 mr-1" />
         <span className="truncate">{job.address}</span>
       </div>
       
       <div className="flex justify-between">
-        <div className="flex items-center text-xs text-gray-500">
+        <div className="flex items-center text-xs text-gray-500 dark:text-gray-400">
           <Calendar className="h-3 w-3 mr-1" />
           <span>{formattedDueDate}</span>
         </div>
         
-        <div className="flex items-center text-xs text-gray-500">
+        <div className="flex items-center text-xs text-gray-500 dark:text-gray-400">
           <Badge variant="outline" className="ml-2 px-1 border-dashed">
             {job.queue.name}
           </Badge>
         </div>
       </div>
       
-      <div className="flex justify-between items-center mt-3 pt-2 border-t border-gray-100">
+      <div className="flex justify-between items-center mt-3 pt-2 border-t border-gray-100 dark:border-gray-700">
         {assignedTechnician ? (
           <div className="flex items-center">
             <Avatar className="h-6 w-6 mr-1">
               <AvatarImage src={assignedTechnician.avatar || ""} alt={assignedTechnician.full_name || "Technician"} />
               <AvatarFallback>{(assignedTechnician.full_name || "T").charAt(0)}</AvatarFallback>
             </Avatar>
-            <span className="text-xs">{assignedTechnician.full_name}</span>
+            <span className="text-xs dark:text-gray-300">{assignedTechnician.full_name}</span>
           </div>
         ) : (
-          <div className="flex items-center text-xs text-gray-500">
+          <div className="flex items-center text-xs text-gray-500 dark:text-gray-400">
             <User className="h-3 w-3 mr-1" />
             <span>Unassigned</span>
           </div>
         )}
         
-        <div className="flex items-center text-xs text-gray-500">
+        <div className="flex items-center text-xs text-gray-500 dark:text-gray-400">
           <Clock className="h-3 w-3 mr-1" />
           <span>{job.estimated_duration || "N/A"}</span>
         </div>

@@ -14,11 +14,13 @@ import { useToast } from "@/hooks/use-toast"
 import jobService, { JobStatus, JobQueue, TaskTemplate, JobType, JobTag, JobCategory } from "../../services/jobService"
 import userService from "@/services/userService"
 import { User, UserFormData, UserGroup } from '@/types/user'
-import { JobStatuses, JobTypes, JobCategories, JobTags, TaskTemplates, GroupDataFilters } from "@/components/Settings"
+import { JobStatuses, JobTypes, JobCategories, JobTags, TaskTemplates, GroupDataFilters, EmailTemplatesSettings } from "@/components/Settings"
 import { GroupAccessControl } from '@/components/GroupAccessControl'
 import MenuPermissionsSettings from '../../components/Settings/MenuPermissionsSettings'
 import DepartmentsSettings from '../../components/Settings/departments'
 import CannedMessagesSettings from '../../components/Settings/CannedMessagesSettings'
+import HolidayPolicies from '../../components/Settings/HolidayPolicies'
+import HolidayEntitlements from '../../components/Settings/HolidayEntitlements'
 
 export default function SettingsPage() {
   const { toast } = useToast();
@@ -31,6 +33,10 @@ export default function SettingsPage() {
   const [selectedJobTypeQueue] = useState<string | null>(null);
   const [selectedTagQueue] = useState<string | null>(null);
   const [selectedCategoryQueue, setSelectedCategoryQueue] = useState<string | null>(null);
+  const [activeMainTab, setActiveMainTab] = useState('jobs');
+  const [activeJobsSubTab, setActiveJobsSubTab] = useState('statuses');
+  const [activeHolidaysSubTab, setActiveHolidaysSubTab] = useState('policies');
+  const [activeSecuritySubTab, setActiveSecuritySubTab] = useState('users');
   
   // Replace mock data with state variables for real data
   const [jobQueues, setJobQueues] = useState<JobQueue[]>([]);
@@ -150,7 +156,6 @@ export default function SettingsPage() {
         });
       }
     } catch (error) {
-      console.error("Error fetching users:", error);
       if (isMountedRef.current) {
         toast({
           title: "Error",
@@ -200,7 +205,6 @@ export default function SettingsPage() {
         description: `User ${user.is_active ? 'deactivated' : 'activated'} successfully`
       });
     } catch (error) {
-      console.error("Error toggling user status:", error);
       toast({
         title: "Error",
         description: "Failed to update user status"
@@ -240,7 +244,6 @@ export default function SettingsPage() {
         description: "User updated successfully"
       });
     } catch (error) {
-      console.error("Error updating user:", error);
       toast({
         title: "Error",
         description: "Failed to update user"
@@ -299,44 +302,36 @@ export default function SettingsPage() {
       try {
         jobStatusesResponse = await jobService.getJobStatuses();
       } catch (e) {
-        console.error("Failed to fetch job statuses:", e);
       }
       
       try {
         jobTypesResponse = await jobService.getJobTypes();
       } catch (e) {
-        console.error("Failed to fetch job types:", e);
       }
       
       try {
         jobCategoriesResponse = await jobService.getJobCategories();
       } catch (e) {
-        console.error("Failed to fetch job categories:", e);
       }
       
       try {
         jobTagsResponse = await jobService.getJobTags();
       } catch (e) {
-        console.error("Failed to fetch job tags:", e);
       }
       
       try {
         jobQueuesResponse = await jobService.getJobQueues();
       } catch (e) {
-        console.error("Failed to fetch job queues:", e);
       }
       
       try {
         taskTemplatesResponse = await jobService.getTaskTemplates();
       } catch (e) {
-        console.error("Failed to fetch task templates:", e);
       }
       
       try {
         groupsResponse = await userService.getGroups();
-        console.log('Fetched groups:', groupsResponse);
       } catch (e) {
-        console.error("Failed to fetch groups:", e);
         // Continue with empty groups rather than failing the entire process
         groupsResponse = [];
       }
@@ -369,7 +364,6 @@ export default function SettingsPage() {
         description: "Settings data loaded successfully"
       });
     } catch (error) {
-      console.error("Error fetching settings data:", error);
       if (isMountedRef.current) {
         toast({
           title: "Error",
@@ -478,7 +472,6 @@ export default function SettingsPage() {
           description: `Job type "${newItemName}" has been added`
         });
       } catch (error) {
-        console.error('Error creating job type:', error);
         toast({
           title: "Error",
           description: "Failed to create job type. Please try again."
@@ -507,7 +500,6 @@ export default function SettingsPage() {
           description: "Queue has been deleted"
         });
       } catch (error) {
-        console.error('Error deleting queue:', error);
         toast({
           title: "Error",
           description: "Failed to delete queue. Please try again."
@@ -552,7 +544,6 @@ export default function SettingsPage() {
           description: `Queue "${newQueueName}" has been added`
         });
       } catch (error) {
-        console.error('Error creating queue:', error);
         toast({
           title: "Error",
           description: "Failed to create queue. Please try again."
@@ -597,7 +588,6 @@ export default function SettingsPage() {
           description: `Tag "${newTagName}" has been added`
         });
       } catch (error) {
-        console.error('Error creating tag:', error);
         toast({
           title: "Error",
           description: "Failed to create tag. Please try again."
@@ -642,7 +632,6 @@ export default function SettingsPage() {
           description: `Job category "${newCategoryName}" has been added`
         });
       } catch (error) {
-        console.error('Error creating job category:', error);
         toast({
           title: "Error",
           description: "Failed to create job category. Please try again."
@@ -671,7 +660,6 @@ export default function SettingsPage() {
           description: "Job type has been deleted"
         });
       } catch (error) {
-        console.error('Error deleting job type:', error);
         toast({
           title: "Error",
           description: "Failed to delete job type. Please try again."
@@ -699,7 +687,6 @@ export default function SettingsPage() {
           description: "Tag has been deleted"
         });
       } catch (error) {
-        console.error('Error deleting tag:', error);
         toast({
           title: "Error",
           description: "Failed to delete tag. Please try again."
@@ -727,7 +714,6 @@ export default function SettingsPage() {
           description: "Job category has been deleted"
         });
       } catch (error) {
-        console.error('Error deleting job category:', error);
         toast({
           title: "Error",
           description: "Failed to delete job category. Please try again."
@@ -771,7 +757,6 @@ export default function SettingsPage() {
         description: `User "${newUsername}" has been created.`
       });
     } catch (error) {
-      console.error("Error creating user:", error);
       toast({
         title: "Error",
         description: "Failed to create user. Please try again."
@@ -791,7 +776,6 @@ export default function SettingsPage() {
         description: `Password for user "${selectedUser.username}" has been reset.`
       });
     } catch (error) {
-      console.error(`Error resetting password for user ${selectedUser.id}:`, error);
       toast({
         title: "Error",
         description: "Failed to reset password. Please try again."
@@ -820,7 +804,6 @@ export default function SettingsPage() {
       // Update the users list with the updated user
       setUsers(users.map(u => u.id === updatedUser.id ? updatedUser : u));
     } catch (error) {
-      console.error(`Error toggling active status for user ${user.id}:`, error);
       toast({
         title: "Error",
         description: `Failed to ${user.is_active ? 'deactivate' : 'activate'} user. Please try again.`
@@ -843,7 +826,6 @@ export default function SettingsPage() {
         description: `User "${user.username}" has been deleted.`
       });
     } catch (error) {
-      console.error(`Error deleting user ${user.id}:`, error);
       toast({
         title: "Error",
         description: "Failed to delete user. Please try again."
@@ -873,7 +855,6 @@ export default function SettingsPage() {
         description: `Group "${newGroupName}" has been created.`
       });
     } catch (error) {
-      console.error("Error creating group:", error);
       toast({
         title: "Error",
         description: "Failed to create group. Please try again."
@@ -896,7 +877,6 @@ export default function SettingsPage() {
         description: `Group "${group.name}" has been deleted.`
       });
     } catch (error) {
-      console.error(`Error deleting group ${group.id}:`, error);
       toast({
         title: "Error",
         description: "Failed to delete group. Please try again."
@@ -923,7 +903,6 @@ export default function SettingsPage() {
         description: `Group "${group.name}" has been updated.`
       });
     } catch (error) {
-      console.error(`Error updating group ${group.id}:`, error);
       toast({
         title: "Error",
         description: "Failed to update group. Please try again."
@@ -944,7 +923,6 @@ export default function SettingsPage() {
         description: "User removed from group successfully"
       });
     } catch (error) {
-      console.error(`Error removing user ${userId} from group ${groupId}:`, error);
       toast({
         title: "Error",
         description: "Failed to remove user from group. Please try again."
@@ -969,14 +947,12 @@ export default function SettingsPage() {
     groupLoadingRef.current = true;
     
     try {
-      console.log(`Fetching users for group ${groupId}...`);
       const fetchedUsers = await userService.getUsersInGroup(groupId);
       
       if (groupMountedRef.current) {
         setUsersInGroup(Array.isArray(fetchedUsers) ? fetchedUsers : []);
       }
     } catch (error) {
-      console.error(`Error fetching users in group ${groupId}:`, error);
       if (groupMountedRef.current) {
         toast({
           title: "Error",
@@ -1023,7 +999,7 @@ export default function SettingsPage() {
   const renderUserManagementTab = () => (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
-        <h2 className="text-2xl font-bold">User Management</h2>
+        <h2 className="text-2xl font-bold text-gray-900 dark:text-white">User Management</h2>
         <Button onClick={() => setIsAddUserModalOpen(true)}>
           Add New User
         </Button>
@@ -1041,7 +1017,7 @@ export default function SettingsPage() {
           </div>
         </div>
 
-        <div className="rounded-md border">
+        <div className="rounded-md border border-gray-200 dark:border-gray-700">
           <Table>
             <TableHeader>
               <TableRow>
@@ -1127,7 +1103,7 @@ export default function SettingsPage() {
       {/* User Edit Modal */}
       {isEditingUser && selectedUser && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
-          <Card className="w-full max-w-md">
+          <Card className="w-full max-w-md bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700">
             <CardHeader>
               <CardTitle>Edit User</CardTitle>
               <CardDescription>
@@ -1189,9 +1165,9 @@ export default function SettingsPage() {
                     <div className="mt-2 space-y-2">
                       {selectedUser.groups.length > 0 ? (
                         selectedUser.groups.map(group => (
-                          <div key={group.id} className="flex items-center justify-between p-2 border rounded-md bg-muted/30">
+                          <div key={group.id} className="flex items-center justify-between p-2 border rounded-md bg-muted/30 dark:bg-gray-700/30 border-gray-200 dark:border-gray-600">
                             <div>
-                              <div className="font-medium">{group.name}</div>
+                              <div className="font-medium text-gray-900 dark:text-white">{group.name}</div>
                               {group.description && (
                                 <div className="text-sm text-muted-foreground">{group.description}</div>
                               )}
@@ -1213,7 +1189,6 @@ export default function SettingsPage() {
                                     });
                                   })
                                   .catch(error => {
-                                    console.error(`Error removing user from group ${group.id}:`, error);
                                     toast({
                                       title: "Error",
                                       description: "Failed to remove from group. Please try again."
@@ -1226,7 +1201,7 @@ export default function SettingsPage() {
                           </div>
                         ))
                       ) : (
-                        <div className="p-2 text-center text-sm text-muted-foreground border rounded-md">
+                        <div className="p-2 text-center text-sm text-muted-foreground border rounded-md border-gray-200 dark:border-gray-600">
                           User is not a member of any groups
                         </div>
                       )}
@@ -1240,9 +1215,9 @@ export default function SettingsPage() {
                         (Array.isArray(groups) ? groups : [])
                           .filter(group => !selectedUser.groups.some(g => g.id === group.id))
                           .map(group => (
-                            <div key={group.id} className="flex items-center justify-between p-2 border rounded-md">
+                            <div key={group.id} className="flex items-center justify-between p-2 border rounded-md border-gray-200 dark:border-gray-600">
                               <div>
-                                <div className="font-medium">{group.name}</div>
+                                <div className="font-medium text-gray-900 dark:text-white">{group.name}</div>
                                 {group.description && (
                                   <div className="text-sm text-muted-foreground">{group.description}</div>
                                 )}
@@ -1263,7 +1238,6 @@ export default function SettingsPage() {
                                       });
                                     })
                                     .catch(error => {
-                                      console.error(`Error adding user to group ${group.id}:`, error);
                                       toast({
                                         title: "Error",
                                         description: "Failed to add to group. Please try again."
@@ -1276,7 +1250,7 @@ export default function SettingsPage() {
                             </div>
                           ))
                       ) : (
-                        <div className="p-2 text-center text-sm text-muted-foreground border rounded-md">
+                        <div className="p-2 text-center text-sm text-muted-foreground border rounded-md border-gray-200 dark:border-gray-600">
                           No more groups available to add
                         </div>
                       )}
@@ -1300,7 +1274,7 @@ export default function SettingsPage() {
       {/* Add User Modal */}
       {isAddUserModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
-          <Card className="w-full max-w-md">
+          <Card className="w-full max-w-md bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700">
             <CardHeader>
               <CardTitle>Add New User</CardTitle>
               <CardDescription>
@@ -1369,7 +1343,7 @@ export default function SettingsPage() {
       {/* Add Group Modal */}
       {isAddGroupModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
-          <Card className="w-full max-w-md">
+          <Card className="w-full max-w-md bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700">
             <CardHeader>
               <CardTitle>Add New Group</CardTitle>
               <CardDescription>
@@ -1409,7 +1383,7 @@ export default function SettingsPage() {
       {/* Reset Password Modal */}
       {isResetPasswordModalOpen && selectedUser && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
-          <Card className="w-full max-w-md">
+          <Card className="w-full max-w-md bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700">
             <CardHeader>
               <CardTitle>Reset Password</CardTitle>
               <CardDescription>
@@ -1431,7 +1405,7 @@ export default function SettingsPage() {
       {/* Add User to Group Modal */}
       {isAddUserToGroupModalOpen && selectedGroup && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
-          <Card className="w-full max-w-md">
+          <Card className="w-full max-w-md bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700">
             <CardHeader>
               <CardTitle>Add User to {selectedGroup.name}</CardTitle>
               <CardDescription>
@@ -1443,9 +1417,9 @@ export default function SettingsPage() {
                 {Array.isArray(users) && users
                   .filter(user => !usersInGroup.some(u => u.id === user.id))
                   .map(user => (
-                    <div key={user.id} className="flex items-center justify-between p-2 border rounded-md">
+                    <div key={user.id} className="flex items-center justify-between p-2 border rounded-md border-gray-200 dark:border-gray-600">
                       <div>
-                        <div className="font-medium">{user.first_name} {user.last_name}</div>
+                        <div className="font-medium text-gray-900 dark:text-white">{user.first_name} {user.last_name}</div>
                         <div className="text-sm text-muted-foreground">{user.username}</div>
                       </div>
                       <Button 
@@ -1474,7 +1448,7 @@ export default function SettingsPage() {
   const renderGroupManagementTab = () => (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
-        <h2 className="text-2xl font-bold">Group Management</h2>
+        <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Group Management</h2>
         <Button onClick={() => setIsAddGroupModalOpen(true)}>
           Add New Group
         </Button>
@@ -1482,7 +1456,7 @@ export default function SettingsPage() {
 
       <div className="grid grid-cols-1 md:grid-cols-5 gap-6">
         {/* Left sidebar - group list */}
-        <Card className="md:col-span-2">
+        <Card className="md:col-span-2 bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700">
           <CardHeader>
             <CardTitle>Groups</CardTitle>
             <CardDescription>Manage user groups and permissions</CardDescription>
@@ -1504,7 +1478,7 @@ export default function SettingsPage() {
                   <div 
                     key={group.id} 
                     className={`flex items-center justify-between p-2 border rounded-md cursor-pointer ${
-                      selectedGroup?.id === group.id ? 'bg-muted border-primary' : ''
+                      selectedGroup?.id === group.id ? 'bg-muted dark:bg-gray-700 border-primary dark:border-blue-500' : 'border-gray-200 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700'
                     }`}
                     onClick={() => setSelectedGroup(group)}
                   >
@@ -1541,9 +1515,9 @@ export default function SettingsPage() {
         <div className="md:col-span-3">
           {selectedGroup ? (
             <div className="space-y-4">
-              <Card>
+              <Card className="bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700">
                 <CardHeader>
-                  <CardTitle>{selectedGroup.name}</CardTitle>
+                  <CardTitle className="text-gray-900 dark:text-white">{selectedGroup.name}</CardTitle>
                   <CardDescription>{selectedGroup.description || 'No description'}</CardDescription>
                 </CardHeader>
                 <CardContent>
@@ -1589,9 +1563,9 @@ export default function SettingsPage() {
                         <div className="space-y-2">
                           {usersInGroup.length > 0 ? (
                             usersInGroup.map(user => (
-                              <div key={user.id} className="flex items-center justify-between p-2 border rounded-md">
+                              <div key={user.id} className="flex items-center justify-between p-2 border rounded-md border-gray-200 dark:border-gray-600">
                                 <div>
-                                  <div className="font-medium">{user.first_name} {user.last_name}</div>
+                                  <div className="font-medium text-gray-900 dark:text-white">{user.first_name} {user.last_name}</div>
                                   <div className="text-sm text-muted-foreground">{user.email}</div>
                                 </div>
                                 <Button
@@ -1604,7 +1578,7 @@ export default function SettingsPage() {
                               </div>
                             ))
                           ) : (
-                            <div className="text-center p-2 border rounded-md text-muted-foreground">
+                            <div className="text-center p-2 border rounded-md text-muted-foreground border-gray-200 dark:border-gray-600">
                               User is not a member of any groups
                             </div>
                           )}
@@ -1619,10 +1593,10 @@ export default function SettingsPage() {
               </Card>
             </div>
           ) : (
-            <Card>
+            <Card className="bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700">
               <CardContent className="flex items-center justify-center h-full p-8">
                 <div className="text-center">
-                  <h3 className="text-lg font-medium">No Group Selected</h3>
+                  <h3 className="text-lg font-medium text-gray-900 dark:text-white">No Group Selected</h3>
                   <p className="text-muted-foreground mt-2">
                     Select a group from the list or create a new one.
                   </p>
@@ -1636,107 +1610,209 @@ export default function SettingsPage() {
   );
 
   return (
-    <div className="flex flex-col min-h-screen">
+    <div className="flex flex-col min-h-screen bg-white dark:bg-gray-900">
       <DashboardHeader />
       <div className="flex-1 space-y-4 p-8 pt-6">
         <div className="flex items-center justify-between space-y-2">
-          <h2 className="text-3xl font-bold tracking-tight">Settings</h2>
+          <h2 className="text-3xl font-bold tracking-tight text-gray-900 dark:text-white">Settings</h2>
         </div>
         
-        <Tabs defaultValue="statuses" className="space-y-4">
+        <Tabs value={activeMainTab} onValueChange={setActiveMainTab} className="space-y-4">
           <div className="border-b">
-            <TabsList className="flex h-10 items-center justify-start space-x-2 overflow-x-auto bg-white">
-              <TabsTrigger className="rounded-sm data-[state=active]:bg-gray-100" value="statuses">Job Statuses</TabsTrigger>
-              <TabsTrigger className="rounded-sm data-[state=active]:bg-gray-100" value="types">Job Types</TabsTrigger>
-              <TabsTrigger className="rounded-sm data-[state=active]:bg-gray-100" value="categories">Categories</TabsTrigger>
-              <TabsTrigger className="rounded-sm data-[state=active]:bg-gray-100" value="tags">Tags</TabsTrigger>
-              <TabsTrigger className="rounded-sm data-[state=active]:bg-gray-100" value="templates">Templates</TabsTrigger>
-              <TabsTrigger className="rounded-sm data-[state=active]:bg-gray-100" value="users">User Management</TabsTrigger>
-              <TabsTrigger className="rounded-sm data-[state=active]:bg-gray-100" value="menu">Menu Permissions</TabsTrigger>
-              <TabsTrigger className="rounded-sm data-[state=active]:bg-gray-100" value="departments">Departments</TabsTrigger>
-              <TabsTrigger className="rounded-sm data-[state=active]:bg-gray-100" value="canned-messages">Canned Messages</TabsTrigger>
-              <TabsTrigger className="rounded-sm data-[state=active]:bg-gray-100" value="data-filters">Data Filters</TabsTrigger>
+            <TabsList className="flex h-10 items-center justify-start space-x-2 overflow-x-auto bg-white dark:bg-gray-800 border-b dark:border-gray-700">
+              <TabsTrigger className="rounded-sm data-[state=active]:bg-gray-100 dark:data-[state=active]:bg-gray-700 text-gray-700 dark:text-gray-300 data-[state=active]:text-gray-900 dark:data-[state=active]:text-white" value="jobs">Jobs</TabsTrigger>
+              <TabsTrigger className="rounded-sm data-[state=active]:bg-gray-100 dark:data-[state=active]:bg-gray-700 text-gray-700 dark:text-gray-300 data-[state=active]:text-gray-900 dark:data-[state=active]:text-white" value="holidays">Holidays</TabsTrigger>
+              <TabsTrigger className="rounded-sm data-[state=active]:bg-gray-100 dark:data-[state=active]:bg-gray-700 text-gray-700 dark:text-gray-300 data-[state=active]:text-gray-900 dark:data-[state=active]:text-white" value="security">Security</TabsTrigger>
+              <TabsTrigger className="rounded-sm data-[state=active]:bg-gray-100 dark:data-[state=active]:bg-gray-700 text-gray-700 dark:text-gray-300 data-[state=active]:text-gray-900 dark:data-[state=active]:text-white" value="email-sms">Email and SMS</TabsTrigger>
             </TabsList>
           </div>
           
-          {/* Job Statuses Tab */}
-          <TabsContent value="statuses">
-            <JobStatuses 
-              jobStatuses={jobStatuses}
-              jobQueues={jobQueues}
-            />
-          </TabsContent>
-          
-          {/* Job Types Tab - UNCOMMENT */}
-          <TabsContent value="types">
-            <JobTypes 
-              jobTypes={jobTypes}
-              jobQueues={jobQueues}
-            />
-          </TabsContent>
-          
-          {/* Job Categories Tab - UNCOMMENT */}
-          <TabsContent value="categories">
-            <JobCategories 
-              jobCategories={jobCategories}
-              jobQueues={jobQueues}
-            />
-          </TabsContent>
-          
-          {/* Job Tags Tab - UNCOMMENT */}
-          <TabsContent value="tags">
-            <JobTags 
-              jobTags={jobTags}
-              jobQueues={jobQueues}
-            />
-          </TabsContent>
-          
-          {/* Task Templates Tab - UNCOMMENT */}
-          <TabsContent value="templates" className="space-y-4">
-            {(Array.isArray(jobTypes) && Array.isArray(jobQueues)) ? (
-              <TaskTemplates 
-                jobTypes={jobTypes}
-                queues={jobQueues}
-              />
-            ) : (
-              <div className="p-8 text-center">Loading templates data...</div>
-            )}
-          </TabsContent>
-          
-          {/* User Management Tab - UNCOMMENT */}
-          <TabsContent value="users">
-            {renderUserManagementTab()}
-          </TabsContent>
-
-          {/* Menu Permissions Tab */}
-          <TabsContent value="menu">
-            {loading ? (
-              <div className="p-8 text-center">Loading groups data...</div>
-            ) : (
-              <div>
-                {console.log('Menu Permissions Tab - Groups data:', {
-                  isArray: Array.isArray(groups),
-                  length: Array.isArray(groups) ? groups.length : 0,
-                  data: groups
-                })}
-                <MenuPermissionsSettings groups={Array.isArray(groups) ? groups : []} />
-              </div>
-            )}
+          {/* Jobs Section */}
+          <TabsContent value="jobs">
+            <div className="space-y-4">
+              <Tabs value={activeJobsSubTab} onValueChange={setActiveJobsSubTab}>
+                <TabsList className="bg-gray-100 dark:bg-gray-800">
+                  <TabsTrigger value="statuses">Job Statuses</TabsTrigger>
+                  <TabsTrigger value="types">Job Types</TabsTrigger>
+                  <TabsTrigger value="categories">Categories</TabsTrigger>
+                  <TabsTrigger value="tags">Tags</TabsTrigger>
+                  <TabsTrigger value="templates">Templates</TabsTrigger>
+                </TabsList>
+                
+                <TabsContent value="statuses">
+                  <JobStatuses 
+                    jobStatuses={jobStatuses}
+                    jobQueues={jobQueues}
+                  />
+                </TabsContent>
+                
+                <TabsContent value="types">
+                  <JobTypes 
+                    jobTypes={jobTypes}
+                    jobQueues={jobQueues}
+                  />
+                </TabsContent>
+                
+                <TabsContent value="categories">
+                  <JobCategories 
+                    jobCategories={jobCategories}
+                    jobQueues={jobQueues}
+                  />
+                </TabsContent>
+                
+                <TabsContent value="tags">
+                  <JobTags 
+                    jobTags={jobTags}
+                    jobQueues={jobQueues}
+                  />
+                </TabsContent>
+                
+                <TabsContent value="templates" className="space-y-4">
+                  {(Array.isArray(jobTypes) && Array.isArray(jobQueues)) ? (
+                    <TaskTemplates 
+                      jobTypes={jobTypes}
+                      queues={jobQueues}
+                    />
+                  ) : (
+                    <div className="p-8 text-center">Loading templates data...</div>
+                  )}
+                </TabsContent>
+              </Tabs>
+            </div>
           </TabsContent>
 
-          {/* Departments Tab */}
-          <TabsContent value="departments">
-            <DepartmentsSettings />
+          {/* Holidays Section */}
+          <TabsContent value="holidays">
+            <div className="space-y-4">
+              <Tabs value={activeHolidaysSubTab} onValueChange={setActiveHolidaysSubTab}>
+                <TabsList className="bg-gray-100 dark:bg-gray-800">
+                  <TabsTrigger value="policies">Holiday Policies</TabsTrigger>
+                  <TabsTrigger value="entitlements">Entitlements</TabsTrigger>
+                  <TabsTrigger value="public-holidays">Public Holidays</TabsTrigger>
+                  <TabsTrigger value="blackout-periods">Blackout Periods</TabsTrigger>
+                </TabsList>
+                
+                <TabsContent value="policies">
+                  <HolidayPolicies />
+                </TabsContent>
+                
+                <TabsContent value="entitlements">
+                  <HolidayEntitlements />
+                </TabsContent>
+                
+                <TabsContent value="public-holidays">
+                  <Card className="bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700">
+                    <CardHeader>
+                      <CardTitle>Public Holidays</CardTitle>
+                      <CardDescription>Manage public holidays for your organization</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      <p className="text-muted-foreground">Public holidays management coming soon...</p>
+                    </CardContent>
+                  </Card>
+                </TabsContent>
+                
+                <TabsContent value="blackout-periods">
+                  <Card className="bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700">
+                    <CardHeader>
+                      <CardTitle>Blackout Periods</CardTitle>
+                      <CardDescription>Define periods when holiday requests are restricted</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      <p className="text-muted-foreground">Blackout periods management coming soon...</p>
+                    </CardContent>
+                  </Card>
+                </TabsContent>
+              </Tabs>
+            </div>
           </TabsContent>
 
-          {/* Canned Messages Tab */}
-          <TabsContent value="canned-messages">
-            <CannedMessagesSettings />
+          {/* Security Section */}
+          <TabsContent value="security">
+            <div className="space-y-4">
+              <Tabs value={activeSecuritySubTab} onValueChange={setActiveSecuritySubTab}>
+                <TabsList className="bg-gray-100 dark:bg-gray-800">
+                  <TabsTrigger value="users">Users</TabsTrigger>
+                  <TabsTrigger value="groups">Groups</TabsTrigger>
+                  <TabsTrigger value="permissions">Permissions</TabsTrigger>
+                  <TabsTrigger value="data-filters">Data Filters</TabsTrigger>
+                  <TabsTrigger value="menu-permissions">Menu Permissions</TabsTrigger>
+                  <TabsTrigger value="departments">Departments</TabsTrigger>
+                </TabsList>
+                
+                <TabsContent value="users">
+                  {renderUserManagementTab()}
+                </TabsContent>
+                
+                <TabsContent value="groups">
+                  {renderGroupManagementTab()}
+                </TabsContent>
+                
+                <TabsContent value="permissions">
+                  <Card className="bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700">
+                    <CardHeader>
+                      <CardTitle>Permissions Management</CardTitle>
+                      <CardDescription>Manage system permissions and access rights</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      <p className="text-muted-foreground">Permissions management is integrated with group management. Select the Groups tab to manage permissions for each group.</p>
+                    </CardContent>
+                  </Card>
+                </TabsContent>
+                
+                <TabsContent value="data-filters">
+                  <GroupDataFilters />
+                </TabsContent>
+                
+                <TabsContent value="menu-permissions">
+                  {loading ? (
+                    <div className="p-8 text-center">Loading groups data...</div>
+                  ) : (
+                    <MenuPermissionsSettings groups={Array.isArray(groups) ? groups : []} />
+                  )}
+                </TabsContent>
+                
+                <TabsContent value="departments">
+                  <DepartmentsSettings />
+                </TabsContent>
+              </Tabs>
+            </div>
           </TabsContent>
 
-          {/* Data Filters Tab */}
-          <TabsContent value="data-filters">
-            <GroupDataFilters />
+          {/* Email and SMS Section */}
+          <TabsContent value="email-sms">
+            <div className="space-y-4">
+              <Tabs defaultValue="sms" className="space-y-4">
+                <TabsList className="bg-gray-100 dark:bg-gray-800">
+                  <TabsTrigger value="sms">SMS Templates</TabsTrigger>
+                  <TabsTrigger value="email">Email Templates</TabsTrigger>
+                </TabsList>
+                
+                <TabsContent value="sms">
+                  <Card className="bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700">
+                    <CardHeader>
+                      <CardTitle>Canned Text Messages</CardTitle>
+                      <CardDescription>Manage pre-defined messages for quick SMS communication</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      <CannedMessagesSettings />
+                    </CardContent>
+                  </Card>
+                </TabsContent>
+                
+                <TabsContent value="email">
+                  <Card className="bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700">
+                    <CardHeader>
+                      <CardTitle>Email Templates</CardTitle>
+                      <CardDescription>Create and manage email templates with dynamic variables</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      <EmailTemplatesSettings />
+                    </CardContent>
+                  </Card>
+                </TabsContent>
+              </Tabs>
+            </div>
           </TabsContent>
         </Tabs>
       </div>

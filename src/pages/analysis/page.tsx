@@ -1,6 +1,8 @@
 import { useState } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import ConnectionAnalysis from "@/pages/analysis/connection";
+import ReadingsAnalysis from "@/pages/analysis/readings";
+import PerformanceAnalysis from "@/pages/analysis/performance";
 
 export default function AnalysisPage() {
   const [activeTab, setActiveTab] = useState("connection");
@@ -20,24 +22,20 @@ export default function AnalysisPage() {
         >
           <TabsList className="grid w-full grid-cols-3 mb-8">
             <TabsTrigger value="connection">Connection Analysis</TabsTrigger>
-            <TabsTrigger value="readings" disabled>Readings Analysis</TabsTrigger>
-            <TabsTrigger value="performance" disabled>Performance Analysis</TabsTrigger>
+            <TabsTrigger value="readings">Readings Analysis</TabsTrigger>
+            <TabsTrigger value="performance">Performance Analysis</TabsTrigger>
           </TabsList>
           
           <TabsContent value="connection" className="mt-6">
             <ConnectionAnalysis />
           </TabsContent>
           
-          <TabsContent value="readings">
-            <div className="flex flex-col items-center justify-center h-64 bg-gray-50 dark:bg-gray-800 rounded-lg border border-dashed">
-              <p className="text-gray-500 dark:text-gray-400">Reading Analysis coming soon</p>
-            </div>
+          <TabsContent value="readings" className="mt-6">
+            <ReadingsAnalysis />
           </TabsContent>
           
-          <TabsContent value="performance">
-            <div className="flex flex-col items-center justify-center h-64 bg-gray-50 dark:bg-gray-800 rounded-lg border border-dashed">
-              <p className="text-gray-500 dark:text-gray-400">Performance Analysis coming soon</p>
-            </div>
+          <TabsContent value="performance" className="mt-6">
+            <PerformanceAnalysis />
           </TabsContent>
         </Tabs>
       </div>

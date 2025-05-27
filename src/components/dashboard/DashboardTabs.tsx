@@ -38,7 +38,6 @@ export const DashboardTabs: React.FC = () => {
         setNewDashboardName("");
         setIsDialogOpen(false);
       } catch (error) {
-        console.error("Failed to create dashboard:", error);
       } finally {
         setIsCreating(false);
       }
@@ -60,14 +59,13 @@ export const DashboardTabs: React.FC = () => {
       // Reset success state after 2 seconds
       setTimeout(() => setSaveSuccess(false), 2000);
     } catch (error) {
-      console.error("Failed to save dashboard:", error);
     } finally {
       setIsSaving(false);
     }
   };
 
   return (
-    <div className="flex items-center justify-between border-b pb-4 mb-6">
+    <div className="flex items-center justify-between border-b dark:border-gray-700 pb-4 mb-6">
       <div className="flex items-center space-x-2 overflow-x-auto">
         {dashboards.map((dashboard) => (
           <Button
@@ -142,7 +140,7 @@ export const DashboardTabs: React.FC = () => {
               </>
             ) : saveSuccess ? (
               <>
-                <Check className="h-4 w-4 text-green-600" />
+                <Check className="h-4 w-4 text-green-600 dark:text-green-400" />
                 Saved!
               </>
             ) : (

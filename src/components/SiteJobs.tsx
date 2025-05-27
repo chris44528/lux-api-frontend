@@ -28,12 +28,10 @@ const SiteJobs: React.FC<SiteJobsProps> = ({ siteId }) => {
         if (Array.isArray(response.results)) {
           setJobs(response.results);
         } else {
-          console.error('API did not return an array for jobs:', response);
           setJobs([]);
           setError('Invalid data format received from server');
         }
       } catch (err) {
-        console.error('Error fetching jobs for site:', err);
         setError('Failed to load jobs for this site');
         setJobs([]);
       } finally {

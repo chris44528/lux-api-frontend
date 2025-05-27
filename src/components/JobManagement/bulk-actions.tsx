@@ -29,15 +29,10 @@ export const BulkAssignModal: React.FC<BulkAssignModalProps> = ({
 
   const techniciansArray = Array.isArray(technicians) ? technicians : [];
   
-  console.log('BulkAssignModal - technicians prop:', technicians);
-  console.log('BulkAssignModal - techniciansArray:', techniciansArray);
-  console.log('BulkAssignModal - isOpen:', isOpen);
-  console.log('BulkAssignModal - selectedCount:', selectedCount);
 
   useEffect(() => {
     if (isOpen) {
       setSelectedTechnicianId("");
-      console.log('Modal opened, resetting selected technician');
     }
   }, [isOpen]);
 
@@ -54,7 +49,6 @@ export const BulkAssignModal: React.FC<BulkAssignModalProps> = ({
       });
       onClose();
     } catch (error) {
-      console.error("Failed to assign jobs:", error);
       toast({
         title: "Error",
         description: "Failed to assign jobs"
@@ -153,7 +147,6 @@ export const BulkDeleteModal: React.FC<BulkDeleteModalProps> = ({
       });
       onClose();
     } catch (error) {
-      console.error("Failed to delete jobs:", error);
       toast({
         title: "Error",
         description: "Failed to delete jobs"
@@ -269,7 +262,6 @@ export function BulkUpdateModal({
       
       onClose();
     } catch (error) {
-      console.error("Failed to update jobs:", error);
       toast({
         title: "Error",
         description: "Failed to update jobs. Please try again.",

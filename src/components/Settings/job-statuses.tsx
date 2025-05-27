@@ -54,7 +54,6 @@ export default function JobStatuses({ jobStatuses, jobQueues }: JobStatusesProps
       setStatusColor("blue");
       setSelectedQueue(null);
     } catch (error) {
-      console.error("Error adding job status:", error);
       toast({
         title: "Error",
         description: "Failed to add job status",
@@ -77,7 +76,6 @@ export default function JobStatuses({ jobStatuses, jobQueues }: JobStatusesProps
         description: "Job status deleted successfully",
       });
     } catch (error) {
-      console.error("Error deleting job status:", error);
       toast({
         title: "Error",
         description: "Failed to delete job status",

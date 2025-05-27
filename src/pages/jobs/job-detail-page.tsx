@@ -26,6 +26,7 @@ import jobService, { Job as APIJob } from "../../services/jobService";
 import siteComparisonService, {
   SiteComparisonData,
 } from "../../services/siteComparisonService";
+import { api } from "../../services/api";
 
 // Define types for our job data
 interface JobNote {
@@ -217,9 +218,7 @@ export default function JobDetailsPage() {
   const fetchJobTasks = async (jobId: string): Promise<JobTask[]> => {
     try {
       // Get all tasks for this job
-      console.log("Fetching tasks for job:", jobId);
       const tasks = await jobService.getJobTasks(jobId);
-      console.log("Fetched tasks:", tasks);
       setTasks(tasks);
 
       if (tasks && tasks.length > 0) {
@@ -252,9 +251,7 @@ export default function JobDetailsPage() {
         } else {
           // If no step instances in the response, try to fetch them separately
           try {
-            console.log("Fetching task details for task ID:", taskToUse.id);
             const taskDetails = await jobService.getTaskDetails(taskToUse.id);
-            console.log("Fetched task details:", taskDetails);
 
             if (taskDetails && taskDetails.step_instances) {
               setTaskSteps(taskDetails.step_instances);
@@ -273,12 +270,10 @@ export default function JobDetailsPage() {
                 setNextPendingStep("No pending steps");
               }
             } else {
-              console.log("No step instances found in task details");
               setTaskSteps([]);
               setNextPendingStep("No steps defined");
             }
           } catch (error) {
-            console.error("Error fetching task details:", error);
             setTaskSteps([]);
             setNextPendingStep("Error fetching steps");
           }
@@ -290,20 +285,16 @@ export default function JobDetailsPage() {
           setCurrentTaskId(taskToUse.id);
         } else {
           try {
-            console.log("Fetching active step for task ID:", taskToUse.id);
             const activeStep = await jobService.getActiveStep(taskToUse.id);
-            console.log("Fetched active step:", activeStep);
 
             if (activeStep) {
               setCurrentStep(activeStep);
               setCurrentTaskId(taskToUse.id);
             }
           } catch (error) {
-            console.error("Error fetching active step:", error);
           }
         }
       } else {
-        console.log("No tasks found for this job");
         setTaskSteps([]);
         setTaskProgress(0);
         setNextPendingStep("No tasks assigned");
@@ -311,7 +302,6 @@ export default function JobDetailsPage() {
 
       return tasks;
     } catch (error) {
-      console.error("Error fetching job tasks:", error);
       setTaskSteps([]);
       setTaskProgress(0);
       setNextPendingStep("Error fetching tasks");
@@ -322,7 +312,6 @@ export default function JobDetailsPage() {
   // Function to convert API job to our component format
   const convertApiJobToComponentFormat = (apiJob: APIJob): Job => {
     // Map the API job format to our component's job format
-    console.log("Converting API job to component format:", apiJob);
 
     // Extract the site_id - can be either apiJob.site_id, or apiJob.site if site is a number
     let siteId: number | undefined;
@@ -330,11 +319,9 @@ export default function JobDetailsPage() {
     if (typeof apiJob.site === "number") {
       // If site is a direct number, use it as the site_id
       siteId = apiJob.site;
-      console.log("Found site_id as direct number in site field:", siteId);
     } else if (apiJob.site_id) {
       // If site_id exists directly, use it
       siteId = apiJob.site_id;
-      console.log("Found site_id in site_id field:", siteId);
     } else if (
       apiJob.site &&
       typeof apiJob.site === "object" &&
@@ -342,10 +329,8 @@ export default function JobDetailsPage() {
     ) {
       // If site is an object with site_id, use that
       siteId = apiJob.site.site_id;
-      console.log("Found site_id in site object:", siteId);
     }
 
-    console.log("Final site ID:", siteId);
 
     return {
       id: apiJob.id.toString(),
@@ -397,40 +382,14 @@ export default function JobDetailsPage() {
   // Add function to fetch site details and update job info
   const fetchSiteDetails = async (siteId: number) => {
     try {
-      console.log(`EXPLICITLY Fetching site details for siteId: ${siteId}`);
-
-      // Directly fetch from the correct URL to avoid any issues
-      const url = `http://127.0.0.1:8000/api/v1/sites/${siteId}/`;
-      console.log("Making direct API call to:", url);
-
-      const token = localStorage.getItem("access_token");
-      const response = await fetch(url, {
-        headers: {
-          Accept: "application/json",
-          Authorization: `Token ${token}`,
-        },
-      });
-
-      if (!response.ok) {
-        throw new Error(`HTTP error: ${response.status}`);
-      }
-
-      const siteData = await response.json();
-      console.log("SUCCESSFULLY Fetched site details:", siteData);
+      // Use authenticated API service to fetch site details
+      const response = await api.get(`/sites/${siteId}/`);
+      const siteData = response.data;
 
       // Update job with site details
       setJob((prev) => {
         if (!prev) return prev;
 
-        console.log("Updating job data with site details:", {
-          systemSize: siteData.panel_size || siteData.panel_type || "Unknown",
-          panelCount: siteData.fco || "Unknown",
-          installDate: siteData.install_date
-            ? new Date(siteData.install_date).toLocaleDateString()
-            : "Unknown",
-          postcode: siteData.postcode || "Unknown",
-          site_name: siteData.site_name || "Unknown",
-        });
 
         return {
           ...prev,
@@ -444,12 +403,10 @@ export default function JobDetailsPage() {
         };
       });
     } catch (error) {
-      console.error("Failed to fetch site details:", error);
       // Set fallback values if API fails
       setJob((prev) => {
         if (!prev) return prev;
 
-        console.log("Setting fallback values due to API failure");
 
         return {
           ...prev,
@@ -466,11 +423,9 @@ export default function JobDetailsPage() {
   // Function to fetch job notes
   const fetchJobNotes = async (jobId: string) => {
     try {
-      console.log("Fetching all site notes for job:", jobId);
 
       // Fetch all site notes with a single API call
       const allNotes = await jobService.getAllSiteNotes(jobId);
-      console.log("All site notes response:", allNotes);
 
       // Convert API notes to component format
       const formattedNotes = allNotes.map((note: StepNoteResponse) => {
@@ -517,11 +472,9 @@ export default function JobDetailsPage() {
       formattedNotes.sort(
         (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
       );
-      console.log("Final formatted notes:", formattedNotes);
 
       return formattedNotes;
     } catch (error) {
-      console.error("Error fetching notes:", error);
       return [];
     }
   };
@@ -532,9 +485,6 @@ export default function JobDetailsPage() {
     currentJobId: string
   ) => {
     try {
-      console.log(
-        `Fetching last completed job for site: ${siteId}, excluding job: ${currentJobId}`
-      );
 
       // Use the jobService method instead of direct fetch
       const response = await jobService.getJobsBySite(
@@ -542,7 +492,6 @@ export default function JobDetailsPage() {
         currentJobId,
         "Completed"
       );
-      console.log("Last completed jobs response:", response);
 
       // Sort by completed_date in descending order to get the most recent
       if (response.results && response.results.length > 0) {
@@ -564,10 +513,6 @@ export default function JobDetailsPage() {
         setLastCompletedJob(null);
       }
     } catch (error) {
-      console.error(
-        `Failed to fetch last completed job for site ${siteId}:`,
-        error
-      );
       setLastCompletedJob(null);
     }
   };
@@ -590,8 +535,6 @@ export default function JobDetailsPage() {
       }
 
       // Log the entire API job to inspect its structure
-      console.log("RAW API JOB DATA:", JSON.stringify(apiJob, null, 2));
-      console.log("API job site field:", apiJob.site);
 
       // Convert API job to our component format
       const formattedJob = convertApiJobToComponentFormat(apiJob);
@@ -626,13 +569,11 @@ export default function JobDetailsPage() {
           );
           setSiteComparison(comparisonData);
         } catch (error) {
-          console.error("Error fetching site comparison:", error);
         } finally {
           setLoadingComparison(false);
         }
       }
     } catch (error) {
-      console.error("Failed to fetch job details:", error);
       setError("Failed to load job details");
     } finally {
       setLoading(false);
@@ -682,18 +623,15 @@ export default function JobDetailsPage() {
         };
 
         // Log the mock data for debugging
-        console.log("Using mock step data:", mockCurrentStep);
 
         setCurrentStep(mockCurrentStep);
       } else {
         // Log the real step data
-        console.log("Using real step data:", currentStep);
       }
 
       // Open the modal
       setCompleteModalOpen(true);
     } else {
-      console.error("No task available to mark as complete");
       // Could show an error toast here
     }
   };
@@ -701,7 +639,6 @@ export default function JobDetailsPage() {
   // Handle step completion from the modal
   const handleStepCompleted = async (nextStepId?: number) => {
     // In a real implementation, update the task/step via API
-    console.log(`Step completed. Next step: ${nextStepId || "N/A"}`);
 
     // Refresh the job data
     await fetchJobDetails();
@@ -719,14 +656,14 @@ export default function JobDetailsPage() {
           <Button
             variant="ghost"
             size="sm"
-            className="flex items-center gap-1"
+            className="flex items-center gap-1 hover:bg-gray-100 dark:hover:bg-gray-800"
             onClick={() => navigate(-1)}
           >
             <ArrowLeft className="h-4 w-4" />
             <span>Back to Jobs</span>
           </Button>
         </div>
-        <p>Loading job details...</p>
+        <p className="text-gray-700 dark:text-gray-300">Loading job details...</p>
       </div>
     );
   }
@@ -738,14 +675,14 @@ export default function JobDetailsPage() {
           <Button
             variant="ghost"
             size="sm"
-            className="flex items-center gap-1"
+            className="flex items-center gap-1 hover:bg-gray-100 dark:hover:bg-gray-800"
             onClick={() => navigate(-1)}
           >
             <ArrowLeft className="h-4 w-4" />
             <span>Back to Jobs</span>
           </Button>
         </div>
-        <p className="text-red-500">{error || "Failed to load job"}</p>
+        <p className="text-red-500 dark:text-red-400">{error || "Failed to load job"}</p>
       </div>
     );
   }
@@ -760,14 +697,14 @@ export default function JobDetailsPage() {
     // Otherwise use our hardcoded colors
     switch (status.toLowerCase()) {
       case "pending":
-        return "bg-red-100 text-red-800";
+        return "bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-400";
       case "in-progress":
       case "in progress":
-        return "bg-amber-100 text-amber-800";
+        return "bg-amber-100 text-amber-800 dark:bg-amber-900/20 dark:text-amber-400";
       case "completed":
-        return "bg-green-100 text-green-800";
+        return "bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400";
       default:
-        return "bg-gray-100 text-gray-800";
+        return "bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300";
     }
   };
 
@@ -802,7 +739,7 @@ export default function JobDetailsPage() {
         return {
           icon: <Circle className="h-5 w-5 text-gray-400" />,
           badge: "Pending",
-          badgeClass: "bg-gray-100 text-gray-800",
+          badgeClass: "bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300",
         };
     }
   };
@@ -813,7 +750,7 @@ export default function JobDetailsPage() {
         <Button
           variant="ghost"
           size="sm"
-          className="flex items-center gap-1"
+          className="flex items-center gap-1 hover:bg-gray-100 dark:hover:bg-gray-800"
           onClick={() => navigate(-1)}
         >
           <ArrowLeft className="h-4 w-4" />
@@ -823,76 +760,76 @@ export default function JobDetailsPage() {
 
       <div className="flex flex-col md:flex-row gap-6">
         <div className="w-full md:w-1/2">
-          <Card className="mb-6">
+          <Card className="mb-6 dark:bg-gray-800 dark:border-gray-700">
             <CardContent className="pt-6">
               <div className="flex items-center mb-4">
                 <div className="h-6 w-6 flex items-center justify-center mr-2">
-                  <span className="text-gray-500">⊙</span>
+                  <span className="text-gray-500 dark:text-gray-400">⊙</span>
                 </div>
-                <h2 className="text-xl font-semibold">Job Details</h2>
+                <h2 className="text-xl font-semibold dark:text-white">Job Details</h2>
               </div>
 
               <div className="space-y-4">
                 <div>
-                  <h3 className="text-sm text-gray-500 mb-1">Description</h3>
-                  <p>{job.description}</p>
+                  <h3 className="text-sm text-gray-500 dark:text-gray-400 mb-1">Description</h3>
+                  <p className="dark:text-gray-200">{job.description}</p>
                 </div>
 
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <h3 className="text-sm text-gray-500 mb-1">Job Type</h3>
-                    <p>{job.jobType}</p>
+                    <h3 className="text-sm text-gray-500 dark:text-gray-400 mb-1">Job Type</h3>
+                    <p className="dark:text-gray-200">{job.jobType}</p>
                   </div>
                   <div>
-                    <h3 className="text-sm text-gray-500 mb-1">System Size</h3>
-                    <p>{job.systemSize}</p>
+                    <h3 className="text-sm text-gray-500 dark:text-gray-400 mb-1">System Size</h3>
+                    <p className="dark:text-gray-200">{job.systemSize}</p>
                   </div>
                   <div>
-                    <h3 className="text-sm text-gray-500 mb-1">F-Co</h3>
-                    <p>{job.panelCount}</p>
+                    <h3 className="text-sm text-gray-500 dark:text-gray-400 mb-1">F-Co</h3>
+                    <p className="dark:text-gray-200">{job.panelCount}</p>
                   </div>
                   <div>
-                    <h3 className="text-sm text-gray-500 mb-1">Install Date</h3>
-                    <p>{job.installDate}</p>
+                    <h3 className="text-sm text-gray-500 dark:text-gray-400 mb-1">Install Date</h3>
+                    <p className="dark:text-gray-200">{job.installDate}</p>
                   </div>
                   <div>
-                    <h3 className="text-sm text-gray-500 mb-1">
+                    <h3 className="text-sm text-gray-500 dark:text-gray-400 mb-1">
                       Last Completed Job
                     </h3>
                     {lastCompletedJob ? (
-                      <p className="flex items-center">
+                      <p className="flex items-center dark:text-gray-200">
                         <span>{lastCompletedJob.completed_date}</span>
                         <button
                           onClick={() =>
                             navigate(`/jobs/${lastCompletedJob.id}`)
                           }
-                          className="ml-2 text-blue-600 hover:text-blue-800 inline-flex items-center"
+                          className="ml-2 text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 inline-flex items-center"
                         >
                           <span className="text-sm mr-1">View</span>
                           <ExternalLink className="h-3 w-3" />
                         </button>
                       </p>
                     ) : (
-                      <p>No previous jobs</p>
+                      <p className="dark:text-gray-200">No previous jobs</p>
                     )}
                   </div>
                   <div>
-                    <h3 className="text-sm text-gray-500 mb-1">Next Step</h3>
-                    <p>{nextPendingStep}</p>
+                    <h3 className="text-sm text-gray-500 dark:text-gray-400 mb-1">Next Step</h3>
+                    <p className="dark:text-gray-200">{nextPendingStep}</p>
                   </div>
                 </div>
               </div>
             </CardContent>
           </Card>
 
-          <Card className="mb-6">
+          <Card className="mb-6 dark:bg-gray-800 dark:border-gray-700">
             <CardContent className="py-6">
               <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center">
                   <div className="h-6 w-6 flex items-center justify-center mr-2">
-                    <span className="text-gray-500">⊙</span>
+                    <span className="text-gray-500 dark:text-gray-400">⊙</span>
                   </div>
-                  <h2 className="text-xl font-semibold">Current Progress</h2>
+                  <h2 className="text-xl font-semibold dark:text-white">Current Progress</h2>
                 </div>
                 {tasks.length > 0 && (
                   <Button
@@ -909,8 +846,8 @@ export default function JobDetailsPage() {
               {tasks.length > 0 ? (
                 <div className="space-y-4">
                   <div className="flex justify-between items-center">
-                    <p className="text-sm text-gray-500">Overall Progress</p>
-                    <p className="font-semibold">{taskProgress}%</p>
+                    <p className="text-sm text-gray-500 dark:text-gray-400">Overall Progress</p>
+                    <p className="font-semibold dark:text-white">{taskProgress}%</p>
                   </div>
                   <Progress value={taskProgress} className="h-2" />
 
@@ -930,13 +867,13 @@ export default function JobDetailsPage() {
                               <div className="mt-1">{statusDisplay.icon}</div>
                               <div className="flex-1">
                                 <div className="flex justify-between items-center">
-                                  <h4 className="font-medium">{step.name}</h4>
+                                  <h4 className="font-medium dark:text-white">{step.name}</h4>
                                   <Badge className={statusDisplay.badgeClass}>
                                     {statusDisplay.badge}
                                   </Badge>
                                 </div>
                                 {step.description && (
-                                  <p className="text-sm text-gray-500 mt-1">
+                                  <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
                                     {step.description}
                                   </p>
                                 )}
@@ -947,7 +884,7 @@ export default function JobDetailsPage() {
                       )
                     ) : (
                       // If no steps are available, show a message
-                      <div className="text-center py-6 text-gray-500">
+                      <div className="text-center py-6 text-gray-500 dark:text-gray-400">
                         <p>No step data available for this task.</p>
                         <p className="text-sm mt-2">
                           Task may be in initialization phase or template has no
@@ -985,22 +922,22 @@ export default function JobDetailsPage() {
                 </div>
               ) : (
                 // If no tasks are available, show a message
-                <div className="text-center py-10 text-gray-500">
+                <div className="text-center py-10 text-gray-500 dark:text-gray-400">
                   <p className="mb-4">No tasks assigned to this job.</p>
-                  <Button variant="outline">Assign Task Template</Button>
+                  <Button variant="outline" className="dark:border-gray-600 dark:text-gray-200 dark:hover:bg-gray-700">Assign Task Template</Button>
                 </div>
               )}
             </CardContent>
           </Card>
 
-          <Card>
+          <Card className="dark:bg-gray-800 dark:border-gray-700">
             <CardContent className="py-4">
               <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center">
                   <div className="h-6 w-6 flex items-center justify-center mr-2">
-                    <span className="text-gray-500">⊙</span>
+                    <span className="text-gray-500 dark:text-gray-400">⊙</span>
                   </div>
-                  <h2 className="text-xl font-semibold">Recent Notes</h2>
+                  <h2 className="text-xl font-semibold dark:text-white">Recent Notes</h2>
                 </div>
                 <Button
                   variant="ghost"
@@ -1017,23 +954,23 @@ export default function JobDetailsPage() {
                 {job.notes.length > 0 ? (
                   job.notes.slice(0, 2).map((note) => (
                     <div key={note.id} className="flex gap-3">
-                      <div className="w-8 h-8 bg-gray-200 rounded-full flex-shrink-0"></div>
+                      <div className="w-8 h-8 bg-gray-200 dark:bg-gray-700 rounded-full flex-shrink-0"></div>
                       <div className="flex-1">
                         <div className="flex justify-between items-center">
-                          <h4 className="font-medium">{note.author}</h4>
+                          <h4 className="font-medium dark:text-white">{note.author}</h4>
                           {note.source && (
                             <span
                               className={`text-xs px-2 py-1 rounded-full 
                               ${
                                 note.source === "step"
-                                  ? "bg-green-100 text-green-800"
+                                  ? "bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400"
                                   : note.source === "site"
-                                  ? "bg-blue-100 text-blue-800"
+                                  ? "bg-blue-100 text-blue-800 dark:bg-blue-900/20 dark:text-blue-400"
                                   : note.source === "customer"
-                                  ? "bg-purple-100 text-purple-800"
+                                  ? "bg-purple-100 text-purple-800 dark:bg-purple-900/20 dark:text-purple-400"
                                   : note.source === "task"
-                                  ? "bg-amber-100 text-amber-800"
-                                  : "bg-gray-100 text-gray-800"
+                                  ? "bg-amber-100 text-amber-800 dark:bg-amber-900/20 dark:text-amber-400"
+                                  : "bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300"
                               }`}
                             >
                               {note.source_type || note.source}
@@ -1043,15 +980,15 @@ export default function JobDetailsPage() {
                             </span>
                           )}
                         </div>
-                        <p className="text-sm text-gray-500 mt-0.5">
+                        <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">
                           {note.date}
                         </p>
-                        <p className="mt-1">{note.text}</p>
+                        <p className="mt-1 dark:text-gray-200">{note.text}</p>
                       </div>
                     </div>
                   ))
                 ) : (
-                  <p className="text-gray-500 italic">No notes available</p>
+                  <p className="text-gray-500 dark:text-gray-400 italic">No notes available</p>
                 )}
               </div>
             </CardContent>
@@ -1059,143 +996,143 @@ export default function JobDetailsPage() {
         </div>
 
         <div className="w-full md:w-1/2">
-          <Card className="mb-6">
+          <Card className="mb-6 dark:bg-gray-800 dark:border-gray-700">
             <CardContent className="pt-6">
               <div className="flex items-center mb-4">
                 <div className="h-6 w-6 flex items-center justify-center mr-2">
-                  <span className="text-gray-500">⊙</span>
+                  <span className="text-gray-500 dark:text-gray-400">⊙</span>
                 </div>
-                <h2 className="text-xl font-semibold">Site Details</h2>
+                <h2 className="text-xl font-semibold dark:text-white">Site Details</h2>
               </div>
 
               <div className="grid grid-cols-2 gap-4 mb-6">
                 <div>
-                  <h3 className="text-sm text-gray-500 mb-1">Site Name</h3>
+                  <h3 className="text-sm text-gray-500 dark:text-gray-400 mb-1">Site Name</h3>
                   <div className="flex items-center gap-2">
-                    <MapPin className="h-4 w-4 text-gray-500" />
-                    <p>{job.site_name}</p>
+                    <MapPin className="h-4 w-4 text-gray-500 dark:text-gray-400" />
+                    <p className="dark:text-gray-200">{job.site_name}</p>
                   </div>
                 </div>
 
                 <div>
-                  <h3 className="text-sm text-gray-500 mb-1">Home Owner</h3>
-                  <h3 className="font-medium">{job.client}</h3>
+                  <h3 className="text-sm text-gray-500 dark:text-gray-400 mb-1">Home Owner</h3>
+                  <h3 className="font-medium dark:text-white">{job.client}</h3>
                 </div>
 
                 <div>
-                  <h3 className="text-sm text-gray-500 mb-1">Address</h3>
+                  <h3 className="text-sm text-gray-500 dark:text-gray-400 mb-1">Address</h3>
                   <div className="flex items-center gap-2">
-                    <MapPin className="h-4 w-4 text-gray-500" />
-                    <p>{job.address}</p>
+                    <MapPin className="h-4 w-4 text-gray-500 dark:text-gray-400" />
+                    <p className="dark:text-gray-200">{job.address}</p>
                   </div>
                 </div>
 
                 <div>
-                  <h3 className="text-sm text-gray-500 mb-1">Post Code</h3>
+                  <h3 className="text-sm text-gray-500 dark:text-gray-400 mb-1">Post Code</h3>
                   <div className="flex items-center gap-2">
-                    <MapPin className="h-4 w-4 text-gray-500" />
-                    <p>{job.postcode}</p>
+                    <MapPin className="h-4 w-4 text-gray-500 dark:text-gray-400" />
+                    <p className="dark:text-gray-200">{job.postcode}</p>
                   </div>
                 </div>
 
                 <div>
-                  <h3 className="text-sm text-gray-500 mb-1">Phone</h3>
+                  <h3 className="text-sm text-gray-500 dark:text-gray-400 mb-1">Phone</h3>
                   <div className="flex items-center gap-2">
-                    <Phone className="h-4 w-4 text-gray-500" />
-                    <p>{job.phone}</p>
+                    <Phone className="h-4 w-4 text-gray-500 dark:text-gray-400" />
+                    <p className="dark:text-gray-200">{job.phone}</p>
                   </div>
                 </div>
 
                 <div>
-                  <h3 className="text-sm text-gray-500 mb-1">Email</h3>
+                  <h3 className="text-sm text-gray-500 dark:text-gray-400 mb-1">Email</h3>
                   <div className="flex items-center gap-2">
-                    <Mail className="h-4 w-4 text-gray-500" />
-                    <p>{job.email}</p>
+                    <Mail className="h-4 w-4 text-gray-500 dark:text-gray-400" />
+                    <p className="dark:text-gray-200">{job.email}</p>
                   </div>
                 </div>
               </div>
 
               <div className="flex gap-4 mt-6">
-                <Button className="w-1/2" variant="outline">
+                <Button className="w-1/2 dark:border-gray-600 dark:text-gray-200 dark:hover:bg-gray-700" variant="outline">
                   Call
                 </Button>
-                <Button className="w-1/2" variant="outline">
+                <Button className="w-1/2 dark:border-gray-600 dark:text-gray-200 dark:hover:bg-gray-700" variant="outline">
                   Email
                 </Button>
               </div>
             </CardContent>
           </Card>
 
-          <Card>
+          <Card className="dark:bg-gray-800 dark:border-gray-700">
             <CardContent className="py-6">
               <div className="flex items-center mb-4">
                 <div className="h-6 w-6 flex items-center justify-center mr-2">
-                  <span className="text-gray-500">⊙</span>
+                  <span className="text-gray-500 dark:text-gray-400">⊙</span>
                 </div>
-                <h2 className="text-xl font-semibold">System Performance</h2>
+                <h2 className="text-xl font-semibold dark:text-white">System Performance</h2>
               </div>
 
               {loadingComparison ? (
                 <div className="py-8 text-center">
-                  <p className="text-gray-500 mb-2">
+                  <p className="text-gray-500 dark:text-gray-400 mb-2">
                     Loading comparison data...
                   </p>
                 </div>
               ) : siteComparison ? (
                 <div>
                   {/* Current Site Data */}
-                  <div className="mb-6 p-4 bg-blue-50 rounded-md">
-                    <h4 className="font-medium text-blue-800">
+                  <div className="mb-6 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-md">
+                    <h4 className="font-medium text-blue-800 dark:text-blue-400">
                       Current Site: {siteComparison.current_site.site_name}
                     </h4>
                     <div className="grid grid-cols-3 gap-4 mt-2">
                       <div>
-                        <p className="text-sm text-gray-500">System Size</p>
-                        <p className="font-medium">
+                        <p className="text-sm text-gray-500 dark:text-gray-400">System Size</p>
+                        <p className="font-medium dark:text-white">
                           {siteComparison.current_site.system_size
                             ? `${siteComparison.current_site.system_size} kW`
                             : "Unknown"}
                         </p>
                       </div>
                       <div>
-                        <p className="text-sm text-gray-500">Meter Type</p>
-                        <p className="font-medium">
+                        <p className="text-sm text-gray-500 dark:text-gray-400">Meter Type</p>
+                        <p className="font-medium dark:text-white">
                           {siteComparison.current_site.meter_type}
                         </p>
                       </div>
                       <div>
-                        <p className="text-sm text-gray-500">SIM Provider</p>
-                        <p className="font-medium">
+                        <p className="text-sm text-gray-500 dark:text-gray-400">SIM Provider</p>
+                        <p className="font-medium dark:text-white">
                           {siteComparison.current_site.sim_provider}
                         </p>
                       </div>
                     </div>
                     <div className="mt-4">
-                      <h5 className="text-sm font-medium mb-2">
+                      <h5 className="text-sm font-medium mb-2 dark:text-white">
                         Generation History
                       </h5>
                       <div className="grid grid-cols-3 gap-2">
-                        <div className="bg-white p-2 rounded">
-                          <p className="text-xs text-gray-500">Last 7 Days</p>
-                          <p className="text-lg font-semibold">
+                        <div className="bg-white dark:bg-gray-800 p-2 rounded">
+                          <p className="text-xs text-gray-500 dark:text-gray-400">Last 7 Days</p>
+                          <p className="text-lg font-semibold dark:text-white">
                             {siteComparison.current_site.generation_data.current_period.total_generation.toFixed(
                               2
                             )}{" "}
                             kWh
                           </p>
                         </div>
-                        <div className="bg-white p-2 rounded">
-                          <p className="text-xs text-gray-500">1 Year Ago</p>
-                          <p className="text-lg font-semibold">
+                        <div className="bg-white dark:bg-gray-800 p-2 rounded">
+                          <p className="text-xs text-gray-500 dark:text-gray-400">1 Year Ago</p>
+                          <p className="text-lg font-semibold dark:text-white">
                             {siteComparison.current_site.generation_data.last_year.total_generation.toFixed(
                               2
                             )}{" "}
                             kWh
                           </p>
                         </div>
-                        <div className="bg-white p-2 rounded">
-                          <p className="text-xs text-gray-500">2 Years Ago</p>
-                          <p className="text-lg font-semibold">
+                        <div className="bg-white dark:bg-gray-800 p-2 rounded">
+                          <p className="text-xs text-gray-500 dark:text-gray-400">2 Years Ago</p>
+                          <p className="text-lg font-semibold dark:text-white">
                             {siteComparison.current_site.generation_data.two_years_ago.total_generation.toFixed(
                               2
                             )}{" "}
@@ -1207,68 +1144,68 @@ export default function JobDetailsPage() {
                   </div>
 
                   {/* Nearby Sites Comparison */}
-                  <h4 className="font-medium mb-3">Nearby Sites Comparison</h4>
+                  <h4 className="font-medium mb-3 dark:text-white">Nearby Sites Comparison</h4>
                   {siteComparison.nearby_sites.length > 0 ? (
                     <div className="space-y-4">
                       {siteComparison.nearby_sites.map((site, index) => (
-                        <div key={index} className="p-3 bg-gray-50 rounded-md">
-                          <h5 className="font-medium">{site.site_name}</h5>
+                        <div key={index} className="p-3 bg-gray-50 dark:bg-gray-700/50 rounded-md">
+                          <h5 className="font-medium dark:text-white">{site.site_name}</h5>
                           <div className="grid grid-cols-3 gap-2 mt-2">
                             <div>
-                              <p className="text-xs text-gray-500">
+                              <p className="text-xs text-gray-500 dark:text-gray-400">
                                 System Size
                               </p>
-                              <p className="text-sm font-medium">
+                              <p className="text-sm font-medium dark:text-gray-200">
                                 {site.system_size
                                   ? `${site.system_size} kW`
                                   : "Unknown"}
                               </p>
                             </div>
                             <div>
-                              <p className="text-xs text-gray-500">
+                              <p className="text-xs text-gray-500 dark:text-gray-400">
                                 Meter Type
                               </p>
-                              <p className="text-sm">{site.meter_type}</p>
+                              <p className="text-sm dark:text-gray-200">{site.meter_type}</p>
                             </div>
                             <div>
-                              <p className="text-xs text-gray-500">
+                              <p className="text-xs text-gray-500 dark:text-gray-400">
                                 SIM Provider
                               </p>
-                              <p className="text-sm">{site.sim_provider}</p>
+                              <p className="text-sm dark:text-gray-200">{site.sim_provider}</p>
                             </div>
                           </div>
                           <div className="mt-3">
-                            <h6 className="text-xs font-medium text-gray-700 mb-2">
+                            <h6 className="text-xs font-medium text-gray-700 dark:text-gray-300 mb-2">
                               Generation History
                             </h6>
                             <div className="grid grid-cols-3 gap-2">
-                              <div className="bg-white p-2 rounded">
-                                <p className="text-xs text-gray-500">
+                              <div className="bg-white dark:bg-gray-800 p-2 rounded">
+                                <p className="text-xs text-gray-500 dark:text-gray-400">
                                   Last 7 Days
                                 </p>
-                                <p className="text-sm font-medium">
+                                <p className="text-sm font-medium dark:text-gray-200">
                                   {site.generation_data.current_period.total_generation.toFixed(
                                     2
                                   )}{" "}
                                   kWh
                                 </p>
                               </div>
-                              <div className="bg-white p-2 rounded">
-                                <p className="text-xs text-gray-500">
+                              <div className="bg-white dark:bg-gray-800 p-2 rounded">
+                                <p className="text-xs text-gray-500 dark:text-gray-400">
                                   1 Year Ago
                                 </p>
-                                <p className="text-sm font-medium">
+                                <p className="text-sm font-medium dark:text-gray-200">
                                   {site.generation_data.last_year.total_generation.toFixed(
                                     2
                                   )}{" "}
                                   kWh
                                 </p>
                               </div>
-                              <div className="bg-white p-2 rounded">
-                                <p className="text-xs text-gray-500">
+                              <div className="bg-white dark:bg-gray-800 p-2 rounded">
+                                <p className="text-xs text-gray-500 dark:text-gray-400">
                                   2 Years Ago
                                 </p>
-                                <p className="text-sm font-medium">
+                                <p className="text-sm font-medium dark:text-gray-200">
                                   {site.generation_data.two_years_ago.total_generation.toFixed(
                                     2
                                   )}{" "}
@@ -1281,7 +1218,7 @@ export default function JobDetailsPage() {
                       ))}
                     </div>
                   ) : (
-                    <p className="text-gray-500">
+                    <p className="text-gray-500 dark:text-gray-400">
                       No nearby sites found for comparison
                     </p>
                   )}
@@ -1290,47 +1227,47 @@ export default function JobDetailsPage() {
                 <div>
                   <div className="grid grid-cols-2 gap-6 mb-8">
                     <div>
-                      <p className="text-sm text-gray-500">
+                      <p className="text-sm text-gray-500 dark:text-gray-400">
                         Current Production
                       </p>
-                      <p className="text-2xl font-semibold mt-1">
+                      <p className="text-2xl font-semibold mt-1 dark:text-white">
                         {job.currentProduction}
                       </p>
                     </div>
                     <div>
-                      <p className="text-sm text-gray-500">Efficiency</p>
-                      <p className="text-2xl font-semibold mt-1">
+                      <p className="text-sm text-gray-500 dark:text-gray-400">Efficiency</p>
+                      <p className="text-2xl font-semibold mt-1 dark:text-white">
                         {job.efficiency}
                       </p>
                     </div>
                   </div>
 
                   <div className="mb-6">
-                    <div className="flex justify-between text-sm mb-1">
+                    <div className="flex justify-between text-sm mb-1 dark:text-gray-300">
                       <span>System Efficiency</span>
                       <span>{job.efficiency}</span>
                     </div>
-                    <div className="h-2 w-full bg-gray-200 rounded-full overflow-hidden">
+                    <div className="h-2 w-full bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
                       <div
-                        className="h-full bg-green-500 rounded-full"
+                        className="h-full bg-green-500 dark:bg-green-600 rounded-full"
                         style={{ width: job.efficiency || "0%" }}
                       ></div>
                     </div>
                   </div>
 
                   <div>
-                    <h3 className="text-sm font-medium mb-3">
+                    <h3 className="text-sm font-medium mb-3 dark:text-white">
                       Detected Issues
                     </h3>
                     {job.detectedIssues && job.detectedIssues.length > 0 ? (
-                      <div className="bg-red-50 border border-red-100 rounded-md p-4">
+                      <div className="bg-red-50 dark:bg-red-900/20 border border-red-100 dark:border-red-800 rounded-md p-4">
                         <div className="flex gap-2">
-                          <div className="text-red-500 mt-0.5">⊙</div>
+                          <div className="text-red-500 dark:text-red-400 mt-0.5">⊙</div>
                           <div>
-                            <p className="font-medium text-red-700">
+                            <p className="font-medium text-red-700 dark:text-red-400">
                               Panel Degradation
                             </p>
-                            <p className="text-sm mt-1">
+                            <p className="text-sm mt-1 dark:text-red-300">
                               Two panels showing reduced efficiency, likely due
                               to dust accumulation or partial shading.
                             </p>
@@ -1338,7 +1275,7 @@ export default function JobDetailsPage() {
                         </div>
                       </div>
                     ) : (
-                      <p className="text-gray-500">No issues detected</p>
+                      <p className="text-gray-500 dark:text-gray-400">No issues detected</p>
                     )}
                     {/* No button needed as comparison data is loaded automatically */}
                   </div>

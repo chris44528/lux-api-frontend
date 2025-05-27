@@ -25,7 +25,7 @@ const api = axios.create({
 
 // Create meter testing API instance
 const meterTestApi = axios.create({
-    baseURL: 'http://10.75.0.40',
+    baseURL: 'https://meter-api.asgredirect.com/',
     headers: {
         'Content-Type': 'application/json',
         'Accept': 'application/json'
@@ -40,7 +40,6 @@ api.interceptors.request.use((config) => {
     }
     return config;
 }, (error) => {
-    console.error('Request error:', error);
     return Promise.reject(error);
 });
 
@@ -48,10 +47,6 @@ api.interceptors.request.use((config) => {
 api.interceptors.response.use(
     (response) => response,
     async (error) => {
-        console.error('Response error:', error.message);
-        if (error.code === 'ERR_NETWORK') {
-            console.error('Network error - please check if the backend server is running');
-        }
         // Handle 401 Unauthorized
         if (error.response?.status === 401) {
             localStorage.removeItem('access_token');
@@ -109,7 +104,6 @@ export const getSiteDetail = async (
     
     return response.data;
   } catch (error) {
-    console.error('Error fetching site detail:', error);
     throw error;
   }
 };
@@ -137,7 +131,6 @@ export const toggleNoteFavorite = async (noteId: number): Promise<Record<string,
         const response = await api.post(`/system-notes/${noteId}/toggle-favorite/`);
         return response.data;
     } catch (error) {
-        console.error('Error toggling note favorite:', error);
         throw error;
     }
 };
@@ -158,7 +151,6 @@ export const searchSites = async (
         });
         return response.data;
     } catch (error) {
-        console.error('Error searching sites:', error);
         throw error;
     }
 };
@@ -240,7 +232,6 @@ export const getSiteReadings = async (
     }
 
     const apiUrl = `/site-readings/${siteId}/?${params.toString()}`;
-    console.log('Fetching readings:', { apiUrl, options });
 
     try {
         const response = await api.get(apiUrl, {
@@ -250,21 +241,10 @@ export const getSiteReadings = async (
             }
         });
 
-        console.log('API Response:', {
-            status: response.status,
-            data: response.data,
-            readings: response.data?.readings?.length || 0
-        });
 
         return response.data;
     } catch (error: unknown) {
         const apiError = error as ApiError;
-        console.error('API Error:', {
-            status: apiError.response?.status,
-            statusText: apiError.response?.statusText,
-            data: apiError.response?.data,
-            message: apiError.message
-        });
         throw error;
     }
 };
@@ -295,7 +275,6 @@ export const login = async (username: string, password: string): Promise<{ token
         
         return response.data;
     } catch (error) {
-        console.error('Login error:', error);
         throw error;
     }
 };
@@ -309,7 +288,6 @@ export const logout = async () => {
         // Clear all cache on logout
         clearSiteDetailCache();
     } catch (error) {
-        console.error('Logout error:', error);
         localStorage.removeItem('access_token');
         localStorage.removeItem('username');
     }
@@ -354,7 +332,6 @@ export const startMeterTest = async (data: MeterTestRequest): Promise<MeterTestR
         const response = await meterTestApi.post('/meter/reading', data);
         return response.data;
     } catch (error) {
-        console.error('Error starting meter test:', error);
         throw error;
     }
 };
@@ -364,7 +341,6 @@ export const getMeterTestStatus = async (taskId: string): Promise<MeterTestStatu
         const response = await meterTestApi.get(`/meter/reading/status/${taskId}`);
         return response.data;
     } catch (error) {
-        console.error('Error checking meter test status:', error);
         throw error;
     }
 };
@@ -388,7 +364,6 @@ export const pollMeterTestStatus = async (
                 setTimeout(checkStatus, intervalMs);
             }
         } catch (error) {
-            console.error('Error polling meter test status:', error);
             throw error;
         }
     };
@@ -409,7 +384,6 @@ export const saveMeterTest = async (data: SaveMeterTestRequest): Promise<Record<
         const response = await api.post('/meter-test/', data);
         return response.data;
     } catch (error) {
-        console.error('Error saving meter test:', error);
         throw error;
     }
 };

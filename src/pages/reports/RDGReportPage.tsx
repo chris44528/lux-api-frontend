@@ -42,7 +42,6 @@ const RDGReportPage = () => {
       setFcoList(response.fcos);
     } catch (err) {
       setFcoError('Failed to load FCO list');
-      console.error(err);
     }
   };
 
@@ -58,7 +57,6 @@ const RDGReportPage = () => {
     } catch (err: unknown) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to generate report';
       setError(errorMessage);
-      console.error('Report generation error:', err);
     } finally {
       setLoading(false);
     }

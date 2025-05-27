@@ -96,9 +96,9 @@ export const Register = () => {
   };
 
   return (
-    <div className="min-h-screen flex flex-col">
+    <div className="min-h-screen flex flex-col bg-gray-50 dark:bg-gray-900">
       {/* Navigation */}
-      <nav className="bg-white shadow-sm">
+      <nav className="bg-white dark:bg-gray-800 shadow-sm dark:shadow-gray-700">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between h-16 items-center">
             <div className="flex items-center">
@@ -111,10 +111,10 @@ export const Register = () => {
               </Link>
             </div>
             <div className="flex items-center space-x-4">
-              <Link to="/" className="text-gray-700 hover:text-gray-900">
+              <Link to="/" className="text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white">
                 Home
               </Link>
-              <Link to="/login" className="text-gray-700 hover:text-gray-900">
+              <Link to="/login" className="text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white">
                 Login
               </Link>
             </div>
@@ -124,23 +124,23 @@ export const Register = () => {
 
       {/* Registration Form */}
       <div className="flex-grow flex flex-col items-center justify-center px-4">
-        <div className="max-w-md w-full bg-white rounded-lg shadow-sm p-8">
+        <div className="max-w-md w-full bg-white dark:bg-gray-800 rounded-lg shadow-sm dark:shadow-gray-700 p-8">
           {registrationSuccess ? (
             <div className="text-center">
-              <h2 className="text-2xl font-bold text-green-600 mb-4">Registration Successful!</h2>
-              <p className="mb-4">Your account has been created.</p>
-              <p>Redirecting to login page...</p>
+              <h2 className="text-2xl font-bold text-green-600 dark:text-green-400 mb-4">Registration Successful!</h2>
+              <p className="mb-4 text-gray-700 dark:text-gray-300">Your account has been created.</p>
+              <p className="text-gray-700 dark:text-gray-300">Redirecting to login page...</p>
             </div>
           ) : (
             <>
-              <h2 className="text-2xl font-bold text-center text-gray-900 mb-8">
+              <h2 className="text-2xl font-bold text-center text-gray-900 dark:text-white mb-8">
                 Create Your Account
               </h2>
 
               <form onSubmit={handleSubmit} className="space-y-4">
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label htmlFor="firstName" className="block text-sm font-medium text-gray-700">
+                    <label htmlFor="firstName" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
                       First Name
                     </label>
                     <input
@@ -148,13 +148,13 @@ export const Register = () => {
                       type="text"
                       value={firstName}
                       onChange={(e) => setFirstName(e.target.value)}
-                      className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-green-500 focus:outline-none focus:ring-1 focus:ring-green-500"
+                      className="mt-1 block w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white px-3 py-2 shadow-sm focus:border-green-500 focus:outline-none focus:ring-1 focus:ring-green-500 dark:focus:border-green-400 dark:focus:ring-green-400"
                       required
                       disabled={isLoading}
                     />
                   </div>
                   <div>
-                    <label htmlFor="lastName" className="block text-sm font-medium text-gray-700">
+                    <label htmlFor="lastName" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
                       Last Name
                     </label>
                     <input
@@ -162,7 +162,7 @@ export const Register = () => {
                       type="text"
                       value={lastName}
                       onChange={(e) => setLastName(e.target.value)}
-                      className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-green-500 focus:outline-none focus:ring-1 focus:ring-green-500"
+                      className="mt-1 block w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white px-3 py-2 shadow-sm focus:border-green-500 focus:outline-none focus:ring-1 focus:ring-green-500 dark:focus:border-green-400 dark:focus:ring-green-400"
                       required
                       disabled={isLoading}
                     />
@@ -170,7 +170,7 @@ export const Register = () => {
                 </div>
                 
                 <div>
-                  <label htmlFor="username" className="block text-sm font-medium text-gray-700">
+                  <label htmlFor="username" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
                     Username
                   </label>
                   <input
@@ -178,14 +178,14 @@ export const Register = () => {
                     type="text"
                     value={username}
                     onChange={(e) => setUsername(e.target.value)}
-                    className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-green-500 focus:outline-none focus:ring-1 focus:ring-green-500"
+                    className="mt-1 block w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white px-3 py-2 shadow-sm focus:border-green-500 focus:outline-none focus:ring-1 focus:ring-green-500 dark:focus:border-green-400 dark:focus:ring-green-400"
                     required
                     disabled={isLoading}
                   />
                 </div>
 
                 <div>
-                  <label htmlFor="email" className="block text-sm font-medium text-gray-700">
+                  <label htmlFor="email" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
                     Email
                   </label>
                   <input
@@ -193,14 +193,14 @@ export const Register = () => {
                     type="email"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-green-500 focus:outline-none focus:ring-1 focus:ring-green-500"
+                    className="mt-1 block w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white px-3 py-2 shadow-sm focus:border-green-500 focus:outline-none focus:ring-1 focus:ring-green-500 dark:focus:border-green-400 dark:focus:ring-green-400"
                     required
                     disabled={isLoading}
                   />
                 </div>
 
                 <div>
-                  <label htmlFor="password" className="block text-sm font-medium text-gray-700">
+                  <label htmlFor="password" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
                     Password
                   </label>
                   <input
@@ -208,14 +208,14 @@ export const Register = () => {
                     type="password"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-green-500 focus:outline-none focus:ring-1 focus:ring-green-500"
+                    className="mt-1 block w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white px-3 py-2 shadow-sm focus:border-green-500 focus:outline-none focus:ring-1 focus:ring-green-500 dark:focus:border-green-400 dark:focus:ring-green-400"
                     required
                     disabled={isLoading}
                   />
                 </div>
 
                 <div>
-                  <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700">
+                  <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
                     Confirm Password
                   </label>
                   <input
@@ -223,21 +223,21 @@ export const Register = () => {
                     type="password"
                     value={confirmPassword}
                     onChange={(e) => setConfirmPassword(e.target.value)}
-                    className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-green-500 focus:outline-none focus:ring-1 focus:ring-green-500"
+                    className="mt-1 block w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white px-3 py-2 shadow-sm focus:border-green-500 focus:outline-none focus:ring-1 focus:ring-green-500 dark:focus:border-green-400 dark:focus:ring-green-400"
                     required
                     disabled={isLoading}
                   />
                 </div>
 
                 {error && (
-                  <div className="text-red-600 text-sm">
+                  <div className="text-red-600 dark:text-red-400 text-sm">
                     {error}
                   </div>
                 )}
 
                 <button
                   type="submit"
-                  className="w-full bg-green-600 text-white py-2 px-4 rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2"
+                  className="w-full bg-green-600 dark:bg-green-700 text-white py-2 px-4 rounded-md hover:bg-green-700 dark:hover:bg-green-600 focus:outline-none focus:ring-2 focus:ring-green-500 dark:focus:ring-green-400 focus:ring-offset-2 dark:focus:ring-offset-gray-800"
                   disabled={isLoading}
                 >
                   {isLoading ? 'Creating Account...' : 'Register'}
@@ -245,8 +245,8 @@ export const Register = () => {
               </form>
 
               <div className="mt-6 text-center text-sm">
-                <span className="text-gray-600">Already have an account? </span>
-                <Link to="/login" className="text-blue-600 hover:text-blue-800">
+                <span className="text-gray-600 dark:text-gray-400">Already have an account? </span>
+                <Link to="/login" className="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300">
                   Login
                 </Link>
               </div>
@@ -256,9 +256,9 @@ export const Register = () => {
       </div>
 
       {/* Footer */}
-      <footer className="bg-white border-t mt-auto">
+      <footer className="bg-white dark:bg-gray-800 border-t dark:border-gray-700 mt-auto">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-          <p className="text-center text-gray-600 text-sm">
+          <p className="text-center text-gray-600 dark:text-gray-400 text-sm">
             {new Date().getFullYear()} A Shade Greener. All rights reserved.
           </p>
         </div>

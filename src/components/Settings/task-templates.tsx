@@ -98,14 +98,11 @@ export default function TaskTemplates({ jobTypes = [], queues = [] }: TaskTempla
     const fetchTemplates = async () => {
       setLoading(true);
       try {
-        console.log("Fetching task templates...");
         const data = await jobService.getTaskTemplates();
-        console.log("Task templates fetched successfully");
         setTemplates(data);
         setFilteredTemplates(data);
         setDataFetched(true);
       } catch (error) {
-        console.error("Failed to fetch templates:", error);
         toast({
           title: "Error",
           description: "Failed to load task templates"
@@ -163,7 +160,6 @@ export default function TaskTemplates({ jobTypes = [], queues = [] }: TaskTempla
       setSelectedJobType("");
       setSelectedQueue("");
     } catch (error) {
-      console.error("Error creating task template:", error);
       toast({
         title: "Error",
         description: "Failed to create task template"
@@ -265,7 +261,6 @@ export default function TaskTemplates({ jobTypes = [], queues = [] }: TaskTempla
         description: "Step added successfully"
       });
     } catch (error) {
-      console.error('Error adding step:', error);
       toast({
         title: "Error",
         description: "Failed to add step"
@@ -331,7 +326,6 @@ export default function TaskTemplates({ jobTypes = [], queues = [] }: TaskTempla
         description: "Steps reordered successfully"
       });
     } catch (error) {
-      console.error('Error reordering steps:', error);
       toast({
         title: "Error",
         description: "Failed to reorder steps"
@@ -347,8 +341,6 @@ export default function TaskTemplates({ jobTypes = [], queues = [] }: TaskTempla
     // Find the step to edit
     const stepToEdit = template.steps.find(s => s.id === stepId);
     if (stepToEdit) {
-      // Log the step data being edited
-      console.log('Editing step:', stepToEdit);
       
       // Pre-fill the form with the step's current values
       const formData = {
@@ -370,8 +362,6 @@ export default function TaskTemplates({ jobTypes = [], queues = [] }: TaskTempla
         })) || []
       };
       
-      // Log the form data being set
-      console.log('Setting form data:', formData);
       
       setStepForm(formData);
       setIsEditStepModalOpen(true);
@@ -389,11 +379,6 @@ export default function TaskTemplates({ jobTypes = [], queues = [] }: TaskTempla
     }
 
     try {
-      // Log the step form data being sent
-      console.log('Sending step update with data:', {
-        ...stepForm,
-        ...(stepForm.action_type === 'jump' ? { next_step: stepForm.next_step } : { next_step: undefined })
-      });
 
       // Update the step through the API
       const updatedStep = await jobService.updateTaskStep(editingStepId, {
@@ -402,16 +387,12 @@ export default function TaskTemplates({ jobTypes = [], queues = [] }: TaskTempla
         ...(stepForm.action_type === 'jump' ? { next_step: stepForm.next_step } : { next_step: undefined })
       });
 
-      // Log the response from the API
-      console.log('Received updated step:', updatedStep);
 
       // Update the step in the selected template
       const updatedSteps = selectedTemplate.steps.map(step => 
         step.id === editingStepId ? { ...step, ...updatedStep } : step
       );
 
-      // Log the updated steps array
-      console.log('Updated steps array:', updatedSteps);
 
       // Update the selected template with the updated steps
       const updatedTemplate = {
@@ -449,7 +430,6 @@ export default function TaskTemplates({ jobTypes = [], queues = [] }: TaskTempla
         description: "Step updated successfully"
       });
     } catch (error) {
-      console.error('Error updating step:', error);
       toast({
         title: "Error",
         description: "Failed to update step"

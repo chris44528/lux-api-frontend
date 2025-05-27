@@ -57,7 +57,6 @@ export default function JobCategories({ jobCategories, jobQueues }: JobCategorie
       setNewCategoryName("");
       setSelectedCategoryQueue(null);
     } catch (error) {
-      console.error("Error adding job category:", error);
       toast({
         title: "Error",
         description: "Failed to add job category"
@@ -79,7 +78,6 @@ export default function JobCategories({ jobCategories, jobQueues }: JobCategorie
         description: "Job category deleted successfully"
       });
     } catch (error) {
-      console.error("Error deleting job category:", error);
       toast({
         title: "Error",
         description: "Failed to delete job category"

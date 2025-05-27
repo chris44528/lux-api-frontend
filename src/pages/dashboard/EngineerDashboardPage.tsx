@@ -43,7 +43,6 @@ function EngineerDashboardPage() {
       setIsSearching(true);
       try {
         const response = await searchSites(term);
-        console.log('Search results:', response);
         
         if (response && response.results) {
           setSearchResults(response.results);
@@ -51,7 +50,6 @@ function EngineerDashboardPage() {
           setSearchResults([]);
         }
       } catch (error) {
-        console.error('Error searching sites:', error);
         setSearchResults([]);
       } finally {
         setIsSearching(false);

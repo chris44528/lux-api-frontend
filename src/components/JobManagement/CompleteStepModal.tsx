@@ -53,8 +53,6 @@ export function CompleteStepModal({
       setSelectedOption("");
       setError(null);
       
-      // Log the current step data for debugging
-      console.log("Current step data:", currentStep);
     }
   }, [isOpen, currentStep]);
 
@@ -103,7 +101,6 @@ export function CompleteStepModal({
         }
       }
 
-      console.log("Sending completion data:", completionData);
 
       // Call the API to complete the step
       const result = await jobService.completeTaskStep(taskId, currentStep?.id as number, completionData);
@@ -132,7 +129,6 @@ export function CompleteStepModal({
       // Close the modal
       onClose();
     } catch (error) {
-      console.error('Error completing step:', error);
       setError("Failed to complete step. Please try again.");
     } finally {
       setIsSubmitting(false);

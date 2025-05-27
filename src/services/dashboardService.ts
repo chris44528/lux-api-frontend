@@ -16,7 +16,6 @@ export const dashboardService = {
       // Extract config objects from API response
       return response.data.map((item: any) => item.config);
     } catch (error) {
-      console.error("Error fetching dashboards:", error);
       throw error;
     }
   },
@@ -34,7 +33,6 @@ export const dashboardService = {
       // Extract config objects from API response
       return response.data.map((item: any) => item.config);
     } catch (error) {
-      console.error("Error saving dashboards:", error);
       throw error;
     }
   },
@@ -49,7 +47,6 @@ export const dashboardService = {
       const response = await api.get(`/dashboard-config/${id}/`);
       return response.data;
     } catch (error) {
-      console.error(`Error fetching dashboard ${id}:`, error);
       throw error;
     }
   },
@@ -68,7 +65,6 @@ export const dashboardService = {
       const response = await api.put(`/dashboard-config/${id}/`, dashboard);
       return response.data;
     } catch (error) {
-      console.error(`Error updating dashboard ${id}:`, error);
       throw error;
     }
   },
@@ -82,7 +78,6 @@ export const dashboardService = {
     try {
       await api.delete(`/dashboard-config/${id}/`);
     } catch (error) {
-      console.error(`Error deleting dashboard ${id}:`, error);
       throw error;
     }
   },

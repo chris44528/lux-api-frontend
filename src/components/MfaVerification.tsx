@@ -41,10 +41,8 @@ const MfaVerification: React.FC<MfaVerificationProps> = ({
     try {
       // Use the verifyMfa function from the auth context instead of directly calling the API
       const response = await verifyMfa(mfaSessionId, verificationCode);
-      console.log('MFA verification successful, calling success callback');
       onVerificationSuccess(response.token);
     } catch (error) {
-      console.error('MFA verification error:', error);
       setError('Invalid verification code. Please try again.');
     } finally {
       setIsLoading(false);

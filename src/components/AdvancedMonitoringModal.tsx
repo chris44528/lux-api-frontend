@@ -34,6 +34,7 @@ import {
   Pie,
   Cell,
 } from "recharts";
+import { api } from "@/services/api";
 
 // Modal wrapper (simple overlay)
 type ModalProps = {
@@ -102,9 +103,9 @@ export default function AdvancedMonitoringModal({ siteId, open, onClose }: Advan
     setError(null);
     setIsLoading(true);
     Promise.all([
-      fetch(`/api/site/${siteId}/monitoring/`).then(r => r.json()),
-      fetch(`/api/site/${siteId}/monitoring/logs/`).then(r => r.json()),
-      fetch(`/api/site/${siteId}/monitoring/alerts/`).then(r => r.json()),
+      api.get(`/site/${siteId}/monitoring/`).then(r => r.data),
+      api.get(`/site/${siteId}/monitoring/logs/`).then(r => r.data),
+      api.get(`/site/${siteId}/monitoring/alerts/`).then(r => r.data),
     ])
       .then(([monitoring, logs, alerts]: [any, MonitoringLog[], MonitoringAlert[]]) => {
         setIsMonitoring(monitoring.is_enabled);
@@ -155,13 +156,11 @@ export default function AdvancedMonitoringModal({ siteId, open, onClose }: Advan
   // Enable/disable monitoring
   const handleToggleMonitoring = (checked: boolean) => {
     setIsLoading(true);
-    fetch(`/api/site/${siteId}/monitoring/enable/`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ enable: checked, interval: pingInterval }),
+    api.post(`/site/${siteId}/monitoring/enable/`, {
+      enable: checked,
+      interval: pingInterval
     })
-      .then(r => r.json())
-      .then(data => setIsMonitoring(data.is_enabled))
+      .then(response => setIsMonitoring(response.data.is_enabled))
       .catch(() => setError("Failed to update monitoring status"))
       .finally(() => setIsLoading(false));
   };
@@ -170,12 +169,11 @@ export default function AdvancedMonitoringModal({ siteId, open, onClose }: Advan
   const handlePingIntervalChange = (val: number) => {
     setPingInterval(val);
     setIsLoading(true);
-    fetch(`/api/site/${siteId}/monitoring/enable/`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ enable: isMonitoring, interval: val }),
+    api.post(`/site/${siteId}/monitoring/enable/`, {
+      enable: isMonitoring,
+      interval: val
     })
-      .then(r => r.json())
+      .then(response => response.data)
       .catch(() => setError("Failed to update interval"))
       .finally(() => setIsLoading(false));
   };
@@ -183,13 +181,13 @@ export default function AdvancedMonitoringModal({ siteId, open, onClose }: Advan
   // Force reading
   const forceReading = () => {
     setIsLoading(true);
-    fetch(`/api/site/${siteId}/monitoring/force-reading/`, { method: "POST" })
-      .then(r => r.json())
+    api.post(`/site/${siteId}/monitoring/force-reading/`)
       .then(() => {
         // Refetch logs to update reading history
-        return fetch(`/api/site/${siteId}/monitoring/logs/`).then(r => r.json());
+        return api.get(`/site/${siteId}/monitoring/logs/`);
       })
-      .then((logs: MonitoringLog[]) => {
+      .then((response) => {
+        const logs: MonitoringLog[] = response.data;
         const readings = logs.filter((l: MonitoringLog) => l.event_type === "reading");
         setReadingHistory(readings.map((l: MonitoringLog) => ({
           time: new Date(l.timestamp).toLocaleTimeString(),
@@ -210,8 +208,7 @@ export default function AdvancedMonitoringModal({ siteId, open, onClose }: Advan
   // Diagnostics
   const runDiagnostics = () => {
     setIsLoading(true);
-    fetch(`/api/site/${siteId}/monitoring/diagnostics/`, { method: "POST" })
-      .then(r => r.json())
+    api.post(`/site/${siteId}/monitoring/diagnostics/`)
       .then(() => alert("Diagnostics triggered"))
       .catch(() => setError("Failed to run diagnostics"))
       .finally(() => setIsLoading(false));

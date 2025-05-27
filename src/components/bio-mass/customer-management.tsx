@@ -88,7 +88,6 @@ const CustomerManagement: React.FC<CustomerManagementProps> = ({
         setCustomers(formattedCustomers);
         setLoading(false);
       } catch (err) {
-        console.error("Error fetching customers:", err);
         setError("Failed to load customers");
         setLoading(false);
       }

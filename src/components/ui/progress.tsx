@@ -16,4 +16,5 @@ const Progress: React.FC<ProgressProps> = ({ value, className = "" }) => {
   );
 };
 
-export default Progress; 
+export default Progress;
+export { Progress }; 

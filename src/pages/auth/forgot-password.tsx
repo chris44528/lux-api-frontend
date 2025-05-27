@@ -31,7 +31,6 @@ export default function ForgotPasswordPage() {
         navigate('/login');
       }, 3000);
     } catch (error) {
-      console.error('Error requesting password reset:', error);
       toast({
         title: "Error",
         description: "Failed to request password reset. Please try again.",

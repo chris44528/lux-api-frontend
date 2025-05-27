@@ -38,7 +38,7 @@ export const api = axios.create({
 
 // Create meter testing API instance
 const meterTestApi = axios.create({
-  baseURL: "http://10.75.0.40",
+  baseURL: "https://meter-api.asgredirect.com/",
   headers: {
     "Content-Type": "application/json",
     Accept: "application/json",
@@ -49,20 +49,14 @@ const meterTestApi = axios.create({
 api.interceptors.request.use(
   (config) => {
     const token = localStorage.getItem("access_token");
-    console.log("Request interceptor - Token present:", !!token);
-    console.log("Request URL:", config.url);
-
     if (token && config.headers) {
-      console.log("Authorization header set: Token", token);
       config.headers.Authorization = `Token ${token}`;
     } else {
-      console.error("No auth token found in localStorage");
       // Don't redirect here, let the response interceptor handle it
     }
     return config;
   },
   (error) => {
-    console.error("Request interceptor error:", error);
     return Promise.reject(error);
   }
 );
@@ -70,37 +64,15 @@ api.interceptors.request.use(
 // Add response interceptor to handle errors
 api.interceptors.response.use(
   (response) => {
-    console.log("Response received:", {
-      status: response.status,
-      url: response.config.url,
-      headers: response.headers,
-      data: response.config.url?.includes("/groups")
-        ? response.data
-        : undefined, // Only log group data
-    });
     return response;
   },
   async (error) => {
-    console.error("Response error:", {
-      url: error.config?.url,
-      status: error.response?.status,
-      message: error.message,
-      token: localStorage.getItem("access_token"),
-      headers: error.config?.headers,
-    });
-
     if (error.code === "ERR_NETWORK") {
-      console.error(
-        "Network error - please check if the backend server is running"
-      );
+      // Network error - please check if the backend server is running
     }
 
     // Handle 401 Unauthorized
     if (error.response?.status === 401) {
-      console.error(
-        "Authentication required. Current token:",
-        localStorage.getItem("access_token")
-      );
       // Only clear token and redirect if we're not already on the login page
       if (window.location.pathname !== "/login") {
         localStorage.removeItem("access_token");
@@ -160,7 +132,6 @@ export const getSiteDetail = async (
 
     return response.data;
   } catch (error) {
-    console.error("Error fetching site detail:", error);
     throw error;
   }
 };
@@ -190,7 +161,6 @@ export const toggleNoteFavorite = async (
     const response = await api.post(`/system-notes/${noteId}/toggle-favorite/`);
     return response.data;
   } catch (error) {
-    console.error("Error toggling note favorite:", error);
     throw error;
   }
 };
@@ -205,15 +175,6 @@ export const searchSites = async (
   ordering = "-Site_id"
 ) => {
   try {
-    console.log("Searching sites with params:", {
-      searchTerm,
-      page,
-      pageSize,
-      isEcotricityUser,
-      filter,
-      ordering,
-    });
-
     // Build API parameters
     const params: Record<string, string | number> = {
       page,
@@ -235,15 +196,12 @@ export const searchSites = async (
       params.account = "ecotricity";
     }
 
-    console.log("Making API call to /sites/ with params:", params);
     const response = await api.get("/sites/", {
       params,
     });
 
-    console.log("Site search API response:", response.data);
     return response.data;
   } catch (error) {
-    console.error("Error searching sites:", error);
     throw error;
   }
 };
@@ -321,7 +279,6 @@ export const getSiteReadings = async (
   }
 
   const apiUrl = `/site-readings/${siteId}/?${params.toString()}`;
-  console.log("Fetching readings:", { apiUrl, options });
 
   try {
     const response = await api.get(apiUrl, {
@@ -331,21 +288,8 @@ export const getSiteReadings = async (
       },
     });
 
-    console.log("API Response:", {
-      status: response.status,
-      data: response.data,
-      readings: response.data?.readings?.length || 0,
-    });
-
     return response.data;
   } catch (error: unknown) {
-    const apiError = error as ApiError;
-    console.error("API Error:", {
-      status: apiError.response?.status,
-      statusText: apiError.response?.statusText,
-      data: apiError.response?.data,
-      message: apiError.message,
-    });
     throw error;
   }
 };
@@ -379,7 +323,6 @@ export const getMeterHistory = async (
     const response = await api.get(`/meter-history/${siteId}/`);
     return response.data;
   } catch (error) {
-    console.error("Error fetching meter history:", error);
     throw error;
   }
 };
@@ -396,7 +339,6 @@ export const createMeterHistory = async (data: {
     const response = await api.post("/meter-history/", data);
     return response.data;
   } catch (error) {
-    console.error("Error creating meter history:", error);
     throw error;
   }
 };
@@ -412,7 +354,6 @@ export const updateMeterHistory = async (
     );
     return response.data;
   } catch (error) {
-    console.error("Error updating meter history:", error);
     throw error;
   }
 };
@@ -423,7 +364,6 @@ export const deleteMeterHistory = async (
   try {
     await api.delete(`/meter-history/delete/${meterHistoryId}/`);
   } catch (error) {
-    console.error("Error deleting meter history:", error);
     throw error;
   }
 };
@@ -440,7 +380,6 @@ export const searchMeters = async (searchTerm: string): Promise<Meter[]> => {
     });
     return response.data;
   } catch (error) {
-    console.error("Error searching meters:", error);
     throw error;
   }
 };
@@ -458,7 +397,6 @@ export const getMeterDetails = async (
     const response = await api.get(`/get-meter-details/${meterId}/`);
     return response.data;
   } catch (error) {
-    console.error("Error getting meter details:", error);
     throw error;
   }
 };
@@ -478,7 +416,6 @@ export const changeMeter = async (
     const response = await api.post(`/change-meter/${siteId}/`, data);
     return response.data;
   } catch (error) {
-    console.error("Error changing meter:", error);
     throw error;
   }
 };
@@ -505,7 +442,6 @@ export const searchSims = async (searchTerm: string): Promise<Sim[]> => {
     });
     return response.data;
   } catch (error) {
-    console.error("Error searching SIMs:", error);
     throw error;
   }
 };
@@ -515,7 +451,6 @@ export const getSimDetails = async (simId: number): Promise<Sim> => {
     const response = await api.get(`/get-sim-details/${simId}/`);
     return response.data;
   } catch (error) {
-    console.error("Error getting SIM details:", error);
     throw error;
   }
 };
@@ -531,7 +466,6 @@ export const changeSim = async (
     const response = await api.post(`/change-sim/${siteId}/`, data);
     return response.data;
   } catch (error) {
-    console.error("Error changing SIM:", error);
     throw error;
   }
 };
@@ -551,13 +485,10 @@ export const login = async (
   password: string
 ): Promise<AuthResponse> => {
   try {
-    console.log("Attempting login for user:", username);
     const response = await api.post("/users/login/", { username, password });
-    console.log("Login response:", response.data);
 
     // If MFA is required, return the MFA session data
     if (response.data.requiresMfa) {
-      console.log("MFA required for user:", username);
       return {
         requiresMfa: true,
         mfaSessionId: response.data.mfaSessionId,
@@ -569,17 +500,11 @@ export const login = async (
     // If MFA is not required or already verified
     const { token, user } = response.data;
     if (!token) {
-      console.error("No token received in login response");
       throw new Error("No token received in login response");
     }
 
-    console.log("Storing token for user:", username);
     localStorage.setItem("access_token", token);
     localStorage.setItem("username", user.username);
-
-    // Verify token was stored
-    const storedToken = localStorage.getItem("access_token");
-    console.log("Token stored successfully:", !!storedToken);
 
     // Redirect to intended route if exists
     const intendedRoute = localStorage.getItem("intendedRoute");
@@ -590,7 +515,6 @@ export const login = async (
 
     return { token, user, requiresMfa: false };
   } catch (error) {
-    console.error("Login error:", error);
     throw error;
   }
 };
@@ -603,7 +527,6 @@ export const requestMfaCode = async (
     const response = await api.post("/users/request-mfa-code/", { username });
     return response.data;
   } catch (error) {
-    console.error("Error requesting MFA code:", error);
     throw error;
   }
 };
@@ -618,15 +541,12 @@ export const verifyMfaCode = async (
       mfaSessionId,
       code,
     });
-    console.log("MFA verification response:", response.data);
 
     const { token, user } = response.data;
-    console.log("Storing token after MFA:", token);
     localStorage.setItem("access_token", token);
     localStorage.setItem("username", user.username);
     return { token, user, requiresMfa: false };
   } catch (error) {
-    console.error("MFA verification error:", error);
     throw error;
   }
 };
@@ -635,7 +555,7 @@ export const logout = async () => {
   try {
     await api.post("/users/logout/");
   } catch (error) {
-    console.error("Logout error:", error);
+    // Logout error
   } finally {
     localStorage.removeItem("access_token");
     localStorage.removeItem("username");
@@ -652,7 +572,6 @@ export const hasGroup = (groupName: string): boolean => {
     const groups = JSON.parse(groupsJson) as UserGroup[];
     return groups.some((group: UserGroup) => group.name === groupName);
   } catch (error) {
-    console.error("Error parsing user groups:", error);
     return false;
   }
 };
@@ -661,10 +580,8 @@ export const hasGroup = (groupName: string): boolean => {
 export const isAuthenticated = () => {
   const token = localStorage.getItem("access_token");
   if (!token) {
-    console.log("No token found in localStorage");
     return false;
   }
-  console.log("Token found in localStorage");
   return true;
 };
 
@@ -704,7 +621,6 @@ export const startMeterTest = async (
     const response = await meterTestApi.post("/meter/reading", data);
     return response.data;
   } catch (error) {
-    console.error("Error starting meter test:", error);
     throw error;
   }
 };
@@ -716,7 +632,6 @@ export const getMeterTestStatus = async (
     const response = await meterTestApi.get(`/meter/reading/status/${taskId}`);
     return response.data;
   } catch (error) {
-    console.error("Error checking meter test status:", error);
     throw error;
   }
 };
@@ -742,18 +657,16 @@ export const pollMeterTestStatus = async (
 
       if (shouldContinuePolling) {
         attempts++;
-        console.log(`Meter test polling attempt ${attempts}/${maxAttempts}, status: ${status.status}`);
+        // Meter test polling attempt ${attempts}/${maxAttempts}, status: ${status.status}
         setTimeout(checkStatus, intervalMs);
       } else if (status.status !== "completed" && status.status !== "error") {
         // If we've exhausted attempts and it's not completed or error, mark as timeout
-        console.error(`Meter test polling timeout after ${maxAttempts} attempts, final status: ${status.status}`);
         onStatusUpdate({
           status: "error",
           error: `Meter test timeout after ${maxAttempts * intervalMs / 1000} seconds. Final status: ${status.status}`
         });
       }
     } catch (error) {
-      console.error("Error polling meter test status:", error);
       onStatusUpdate({
         status: "error",
         error: `Failed to check meter test status: ${error instanceof Error ? error.message : 'Unknown error'}`
@@ -779,7 +692,6 @@ export const saveMeterTest = async (
     const response = await api.post("/meter-test/", data);
     return response.data;
   } catch (error) {
-    console.error("Error saving meter test:", error);
     throw error;
   }
 };
@@ -799,7 +711,6 @@ export const fetchTableSchema = async () => {
     });
     return response.data;
   } catch (error) {
-    console.error("Error fetching database schema:", error);
     throw error;
   }
 };
@@ -820,17 +731,10 @@ export const executeReportQuery = async (params: {
   pageSize?: number;
 }) => {
   try {
-    // Log the request parameters for debugging
-    console.log(
-      "Executing report query with params:",
-      JSON.stringify(params, null, 2)
-    );
-
     // Use absolute URL to ensure we're hitting the backend server
     const baseUrl =
       import.meta.env.VITE_API_URL || "http://127.0.0.1:8000/api/v1";
     const fullUrl = `${baseUrl}/report-builder/query`;
-    console.log("Making request to:", fullUrl);
 
     const response = await axios.post(fullUrl, params, {
       headers: {
@@ -840,16 +744,8 @@ export const executeReportQuery = async (params: {
       },
     });
 
-    console.log("Response received:", response.status);
     return response.data;
   } catch (error) {
-    console.error("Error executing report query:", error);
-    if (axios.isAxiosError(error)) {
-      console.error("Request URL:", error.config?.url);
-      console.error("Request data:", error.config?.data);
-      console.error("Response status:", error.response?.status);
-      console.error("Response data:", error.response?.data);
-    }
     throw error;
   }
 };
@@ -902,7 +798,6 @@ export const exportToExcel = async (params: {
 
     return true;
   } catch (error) {
-    console.error("Error exporting to Excel:", error);
     throw error;
   }
 };
@@ -957,7 +852,6 @@ export const getMeterReadingSessions = async (
     const response = await api.get("/meter-reading-sessions/", { params });
     return response.data;
   } catch (error) {
-    console.error("Error fetching meter reading sessions:", error);
     throw error;
   }
 };
@@ -985,7 +879,6 @@ export const getAlertTypes = async (): Promise<{ alert_types: AlertType }> => {
     const response = await api.get("/alert-types/");
     return response.data;
   } catch (error) {
-    console.error("Error fetching alert types:", error);
     throw error;
   }
 };
@@ -1000,7 +893,6 @@ export const getSiteAlerts = async (
     });
     return response.data;
   } catch (error) {
-    console.error("Error fetching site alerts:", error);
     throw error;
   }
 };
@@ -1018,7 +910,6 @@ export const createSiteAlert = async (
     const response = await api.post(`/sites/${siteId}/alerts/`, data);
     return response.data;
   } catch (error) {
-    console.error("Error creating site alert:", error);
     throw error;
   }
 };
@@ -1031,7 +922,6 @@ export const updateSiteAlert = async (
     const response = await api.put(`/alerts/${alertId}/`, data);
     return response.data;
   } catch (error) {
-    console.error("Error updating site alert:", error);
     throw error;
   }
 };
@@ -1040,7 +930,6 @@ export const deleteSiteAlert = async (alertId: number): Promise<void> => {
   try {
     await api.delete(`/alerts/${alertId}/`);
   } catch (error) {
-    console.error("Error deleting site alert:", error);
     throw error;
   }
 };
@@ -1052,7 +941,109 @@ export const deactivateSiteAlert = async (
     const response = await api.post(`/alerts/${alertId}/deactivate/`);
     return response.data;
   } catch (error) {
-    console.error("Error deactivating site alert:", error);
+    throw error;
+  }
+};
+
+// Get site communication status
+export const getSiteCommunicationStatus = async (siteId: string | number) => {
+  try {
+    const response = await api.get(`/sites/${siteId}/communication-status/`);
+    return response.data;
+  } catch (error) {
+    throw error;
+  }
+};
+
+// Get bulk site communication status - for multiple sites at once
+export const getBulkSiteCommunicationStatus = async (siteIds: number[]) => {
+  try {
+    // Split into batches of 500 if needed
+    const batchSize = 500;
+    const batches = [];
+    for (let i = 0; i < siteIds.length; i += batchSize) {
+      batches.push(siteIds.slice(i, i + batchSize));
+    }
+
+    // Fetch all batches
+    const allStatuses: Record<string, any> = {};
+    for (const batch of batches) {
+      const response = await api.post('/communication-status/bulk/', {
+        site_ids: batch
+      });
+      Object.assign(allStatuses, response.data);
+    }
+
+    return allStatuses;
+  } catch (error) {
+    console.error('Error fetching bulk site statuses:', error);
+    return {};
+  }
+};
+
+// Test meter for a site - simplified wrapper
+export const testMeter = async (siteId: string) => {
+  try {
+    console.log('Testing meter for site:', siteId);
+    
+    // First get site details to get meter info
+    const siteData = await getSiteDetail(siteId);
+    console.log('Site data received:', siteData);
+    
+    // Check different possible locations for meter data
+    const meters = siteData.meter || siteData.meters || siteData.meter_details || [];
+    
+    if (!meters || !meters.length) {
+      console.error('No meter found in site data:', siteData);
+      throw new Error('No meter found for site');
+    }
+    
+    const meter = meters[0];
+    console.log('Using meter:', meter);
+    
+    // Check for SIM details which might contain IP
+    const sim = siteData.sim || siteData.sim_details || [];
+    const simData = sim[0] || {};
+    
+    // Start meter test
+    const testRequest = {
+      ip: simData.sim_ip || meter.meter_serial || '',
+      model: meter.meter_model || '',
+      password: meter.meter_password || '',
+      site_id: parseInt(siteId)
+    };
+    
+    console.log('Meter test request:', testRequest);
+    const testResponse = await startMeterTest(testRequest);
+    
+    // Poll for results
+    const result = await new Promise<MeterTestStatusResponse>((resolve, reject) => {
+      pollMeterTestStatus(
+        testResponse.task_id,
+        (status) => {
+          if (status.status === 'completed') {
+            resolve(status);
+          } else if (status.status === 'failed') {
+            reject(new Error(status.error || 'Meter test failed'));
+          }
+        }
+      );
+    });
+    
+    // Extract reading and signal from result
+    if (result.result) {
+      const readingData = result.result['total_active_energy_import'] || result.result['total_import_kwh'];
+      const signalData = result.result['signal_strength'] || result.result['signal_level'];
+      
+      return {
+        reading: readingData?.value || 0,
+        signal_level: signalData?.value || 0,
+        status: 'success'
+      };
+    }
+    
+    throw new Error('No data returned from meter test');
+  } catch (error) {
     throw error;
   }
 };
@@ -1069,7 +1060,6 @@ export const requestSiteReadingReport = async (
     const response = await api.post(`/sites/${siteId}/reading-report/`, data);
     return response.data;
   } catch (error) {
-    console.error("Error requesting site reading report:", error);
     throw error;
   }
 };
@@ -1084,16 +1074,13 @@ export const register = async (
   userData: RegisterUserData
 ): Promise<{ success: boolean; user?: User }> => {
   try {
-    console.log("Attempting to register user:", userData.username);
     const response = await api.post("/users/register/", userData);
-    console.log("Registration response:", response.data);
 
     return {
       success: true,
       user: response.data,
     };
   } catch (error) {
-    console.error("Registration error:", error);
     throw error;
   }
 };
@@ -1138,14 +1125,9 @@ export const getCustomerCalls = async (
       return response.data;
     } else {
       // Unexpected response format
-      console.error(
-        "Unexpected response format for customer calls:",
-        response.data
-      );
       return [];
     }
   } catch (error) {
-    console.error("Error fetching customer calls:", error);
     throw error;
   }
 };
@@ -1160,7 +1142,6 @@ export const createCustomerCall = async (
     const response = await api.post<CustomerCall>("/customer-calls/", callData);
     return response.data;
   } catch (error) {
-    console.error("Error creating customer call:", error);
     throw error;
   }
 };
@@ -1171,7 +1152,6 @@ export const getFcoList = async (): Promise<{ fcos: string[] }> => {
     const response = await api.get("/get-fco-list/");
     return response.data;
   } catch (error) {
-    console.error("Error fetching FCO list:", error);
     throw error;
   }
 };
@@ -1190,10 +1170,9 @@ export const generateRDGReport = async (
   data: GenerateRDGReportParams
 ): Promise<{ message: string }> => {
   try {
-    const response = await api.post("/api/v1/generate-rdg-report/", data);
+    const response = await api.post("/generate-rdg-report/", data);
     return response.data;
   } catch (error) {
-    console.error("Error generating RDG report:", error);
     throw error;
   }
 };
@@ -1211,7 +1190,6 @@ export const generateFCOAvailabilityReport = async (data: {
     });
     return response.data;
   } catch (error) {
-    console.error("Error generating FCO Availability Report:", error);
     throw error;
   }
 };
@@ -1230,9 +1208,14 @@ export interface Notification {
 export const getNotifications = async (): Promise<Notification[]> => {
   try {
     const response = await api.get("/users/notifications/");
-    return response.data;
+    // Handle paginated response format
+    if (response.data && response.data.results) {
+      return response.data.results;
+    }
+    // Fallback to direct array if not paginated
+    return response.data || [];
   } catch (error) {
-    console.error("Error fetching notifications:", error);
+    console.error('Error fetching notifications:', error);
     throw error;
   }
 };
@@ -1246,7 +1229,6 @@ export const getUserDashboardConfig = async (): Promise<DashboardConfig[]> => {
     const response = await api.get("/dashboard-config/");
     return response.data;
   } catch (error) {
-    console.error("Error fetching user dashboard config:", error);
     throw error;
   }
 };
@@ -1258,7 +1240,6 @@ export const saveUserDashboardConfig = async (
     const response = await api.post("/dashboard-config/", dashboards);
     return response.data;
   } catch (error) {
-    console.error("Error saving user dashboard config:", error);
     throw error;
   }
 };
@@ -1268,7 +1249,6 @@ export const getDefaultDashboardConfig = async (): Promise<DashboardConfig> => {
     const response = await api.get("/dashboard-config/default/");
     return response.data;
   } catch (error) {
-    console.error("Error fetching default dashboard config:", error);
     throw error;
   }
 };
@@ -1287,7 +1267,6 @@ export const getAvailableWidgets = async (): Promise<{
     const response = await api.get("/dashboard-widgets/");
     return response.data;
   } catch (error) {
-    console.error("Error fetching available widgets:", error);
     throw error;
   }
 };
@@ -1300,7 +1279,6 @@ export const getWidgetData = async (
     const response = await api.get(`/widget-data/${widgetType}/`, { params });
     return response.data;
   } catch (error) {
-    console.error(`Error fetching data for widget type ${widgetType}:`, error);
     throw error;
   }
 };
@@ -1321,7 +1299,6 @@ export const getSystemStatusSummary = async (): Promise<{
     const response = await api.get("/widget-data/system-status/");
     return response.data;
   } catch (error) {
-    console.error("Error fetching system status summary:", error);
     throw error;
   }
 };
@@ -1343,7 +1320,6 @@ export const getRecentActivities = async (
     });
     return response.data;
   } catch (error) {
-    console.error("Error fetching recent activities:", error);
     throw error;
   }
 };
@@ -1364,7 +1340,6 @@ export const getSitePerformanceMetrics = async (params: {
     });
     return response.data;
   } catch (error) {
-    console.error("Error fetching site performance metrics:", error);
     throw error;
   }
 };
@@ -1382,7 +1357,6 @@ export const getSiteDistribution = async (
     });
     return response.data;
   } catch (error) {
-    console.error("Error fetching site distribution:", error);
     throw error;
   }
 };
@@ -1403,7 +1377,6 @@ export const getAlertsSummary = async (): Promise<{
     const response = await api.get("/widget-data/alerts-summary/");
     return response.data;
   } catch (error) {
-    console.error("Error fetching alerts summary:", error);
     throw error;
   }
 };
@@ -1420,7 +1393,6 @@ export const addWidgetToDashboard = async (
     );
     return response.data;
   } catch (error) {
-    console.error("Error adding widget to dashboard:", error);
     throw error;
   }
 };
@@ -1435,7 +1407,6 @@ export const removeWidgetFromDashboard = async (
     );
     return response.data;
   } catch (error) {
-    console.error("Error removing widget from dashboard:", error);
     throw error;
   }
 };
@@ -1452,7 +1423,6 @@ export const updateWidgetPosition = async (
     );
     return response.data;
   } catch (error) {
-    console.error("Error updating widget position:", error);
     throw error;
   }
 };
@@ -1469,7 +1439,6 @@ export const updateWidgetSettings = async (
     );
     return response.data;
   } catch (error) {
-    console.error("Error updating widget settings:", error);
     throw error;
   }
 };

@@ -34,14 +34,14 @@ const NotFound: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 flex items-center justify-center px-4">
-      <div className="max-w-md w-full bg-white shadow-lg rounded-lg p-8 text-center">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center px-4">
+      <div className="max-w-md w-full bg-white dark:bg-gray-800 shadow-lg rounded-lg p-8 text-center">
         <div className="mb-6">
           <h1 className="text-6xl font-bold text-[#1b5e20] mb-2">404</h1>
-          <h2 className="text-2xl font-semibold text-gray-800 mb-4">
+          <h2 className="text-2xl font-semibold text-gray-800 dark:text-gray-100 mb-4">
             Oops! Page Not Found
           </h2>
-          <p className="text-gray-600 mb-6">
+          <p className="text-gray-600 dark:text-gray-300 mb-6">
             The page you're looking for cannot be found. Please use the link below to get back to safety.
           </p>
         </div>
@@ -54,16 +54,16 @@ const NotFound: React.FC = () => {
             Return to {getRedirectText()}
           </Link>
           
-          <div className="text-sm text-gray-500">
+          <div className="text-sm text-gray-500 dark:text-gray-400">
             <p>You will be automatically redirected in</p>
-            <span className="inline-block bg-gray-100 text-gray-700 px-2 py-1 rounded font-mono text-lg mt-1">
+            <span className="inline-block bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 px-2 py-1 rounded font-mono text-lg mt-1">
               {countdown}s
             </span>
           </div>
         </div>
 
-        <div className="mt-8 pt-6 border-t border-gray-200">
-          <p className="text-xs text-gray-400">
+        <div className="mt-8 pt-6 border-t border-gray-200 dark:border-gray-700">
+          <p className="text-xs text-gray-400 dark:text-gray-500">
             If you believe this is an error, please contact support.
           </p>
         </div>

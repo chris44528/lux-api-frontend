@@ -165,12 +165,12 @@ const ReportBuilder: React.FC = () => {
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
       <main className="max-w-full mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="flex justify-between items-center mb-6">
-          <h1 className="text-2xl font-bold dark:text-gray-100">Report Builder</h1>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Report Builder</h1>
           <div className="flex space-x-4">
             <button
               onClick={() => handlePreview(currentPage)}
               disabled={loading || schemaLoading}
-              className="flex items-center px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50"
+              className="flex items-center px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50 dark:bg-blue-500 dark:hover:bg-blue-600"
               type="button"
             >
               <RefreshCw className="h-4 w-4 mr-2" />
@@ -179,7 +179,7 @@ const ReportBuilder: React.FC = () => {
             <button
               onClick={handleExport}
               disabled={loading || previewData.length === 0}
-              className="flex items-center px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 disabled:opacity-50"
+              className="flex items-center px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 disabled:opacity-50 dark:bg-green-500 dark:hover:bg-green-600"
               type="button"
             >
               <Download className="h-4 w-4 mr-2" />
@@ -254,7 +254,7 @@ const ReportBuilder: React.FC = () => {
                     <button
                       onClick={() => handlePageChange(currentPage - 1)}
                       disabled={currentPage === 1 || loading}
-                      className="px-3 py-1 rounded-l border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 disabled:opacity-50 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-300"
+                      className="px-3 py-1 rounded-l border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 disabled:opacity-50 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-600"
                       type="button"
                     >
                       Previous
@@ -267,7 +267,7 @@ const ReportBuilder: React.FC = () => {
                     <button
                       onClick={() => handlePageChange(currentPage + 1)}
                       disabled={currentPage === totalPages || loading}
-                      className="px-3 py-1 rounded-r border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 disabled:opacity-50 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-300"
+                      className="px-3 py-1 rounded-r border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 disabled:opacity-50 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-600"
                       type="button"
                     >
                       Next

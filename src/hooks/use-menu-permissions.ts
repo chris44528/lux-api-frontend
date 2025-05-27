@@ -35,20 +35,15 @@ export function useMenuPermissions(userId?: number) {
 
   const fetchPermissions = async () => {
     try {
-      console.log("useMenuPermissions: Starting to fetch permissions" + (userId ? ` for user ${userId}` : ''));
       setLoading(true);
       // Check if user is logged in by looking for token
       const token = localStorage.getItem('access_token');
-      console.log("useMenuPermissions: Access token present:", !!token);
       if (!token) {
-        console.log("useMenuPermissions: No token, using default permissions");
         setPermissions(defaultPermissions);
         return;
       }
       
-      console.log("useMenuPermissions: Calling userService.getMenuPermissions()");
       const permissionsData = await userService.getMenuPermissions(userId);
-      console.log('useMenuPermissions: Fetched menu permissions:', permissionsData);
       
       // Normalize all permission values to ensure they're proper booleans
       const normalizedPermissions: MenuPermissions = { ...defaultPermissions };
@@ -57,17 +52,13 @@ export function useMenuPermissions(userId?: number) {
       Object.entries(permissionsData).forEach(([key, value]) => {
         const boolValue = normalizePermission(value);
         normalizedPermissions[key] = boolValue;
-        console.log(`useMenuPermissions: Permission ${key} = ${value} (${typeof value}) → ${boolValue}`);
       });
       
-      console.log('useMenuPermissions: Normalized permissions:', normalizedPermissions);
       setPermissions(normalizedPermissions);
       setError(null);
     } catch (err) {
-      console.error('useMenuPermissions: Error fetching menu permissions:', err);
       setError(err instanceof Error ? err : new Error('Failed to fetch menu permissions'));
       // Use default permissions as fallback
-      console.log('useMenuPermissions: Using default permissions as fallback');
       setPermissions(defaultPermissions);
     } finally {
       setLoading(false);
@@ -76,12 +67,10 @@ export function useMenuPermissions(userId?: number) {
 
   // Function to manually refresh permissions
   const refreshPermissions = () => {
-    console.log('useMenuPermissions: Manual refresh requested');
     fetchPermissions();
   };
 
   useEffect(() => {
-    console.log('useMenuPermissions: Initial permissions fetch');
     fetchPermissions();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [userId]); // Re-fetch when userId changes

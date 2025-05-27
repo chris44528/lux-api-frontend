@@ -192,17 +192,17 @@ const FCOReport: React.FC = () => {
 
   return (
     <div className="container mx-auto py-6 space-y-6 max-w-7xl px-4 sm:px-6 lg:px-8">
-      <Card className="bg-white shadow-lg">
+      <Card className="bg-white dark:bg-gray-800 shadow-lg">
         <CardHeader>
-          <CardTitle>FCO Availability Report</CardTitle>
+          <CardTitle className="dark:text-gray-100">FCO Availability Report</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="flex flex-col md:flex-row gap-4 items-center">
             <Select value={selectedFco} onValueChange={setSelectedFco}>
-              <SelectTrigger className="w-full md:w-[200px]">
+              <SelectTrigger className="w-full md:w-[200px] dark:bg-gray-700 dark:border-gray-600">
                 <SelectValue placeholder="Select FCO" />
               </SelectTrigger>
-              <SelectContent>
+              <SelectContent className="dark:bg-gray-800 dark:border-gray-700">
                 {fcoList.map(fco => (
                   <SelectItem key={fco} value={fco}>{fco}</SelectItem>
                 ))}
@@ -210,10 +210,10 @@ const FCOReport: React.FC = () => {
             </Select>
 
             <Select value={selectedMonth} onValueChange={setSelectedMonth}>
-              <SelectTrigger className="w-full md:w-[200px]">
+              <SelectTrigger className="w-full md:w-[200px] dark:bg-gray-700 dark:border-gray-600">
                 <SelectValue placeholder="Select Month" />
               </SelectTrigger>
-              <SelectContent>
+              <SelectContent className="dark:bg-gray-800 dark:border-gray-700">
                 {months.map(month => (
                   <SelectItem key={month.value} value={month.value}>
                     {month.label}
@@ -223,8 +223,8 @@ const FCOReport: React.FC = () => {
             </Select>
 
             <div className="flex items-center gap-2">
-              <Checkbox id="include-no-comms" checked={includeNoComms} onCheckedChange={checked => setIncludeNoComms(checked === true)} />
-              <label htmlFor="include-no-comms" className="text-sm select-none cursor-pointer">Include No Comms in Available Days</label>
+              <Checkbox id="include-no-comms" checked={includeNoComms} onCheckedChange={checked => setIncludeNoComms(checked === true)} className="dark:border-gray-600" />
+              <label htmlFor="include-no-comms" className="text-sm select-none cursor-pointer dark:text-gray-300">Include No Comms in Available Days</label>
             </div>
 
             <Button
@@ -242,7 +242,7 @@ const FCOReport: React.FC = () => {
                   variant="outline"
                   onClick={exportToCSV}
                   disabled={loadingState.exportingExcel}
-                  className="w-full md:w-auto bg-white hover:bg-gray-100 text-gray-800"
+                  className="w-full md:w-auto bg-white hover:bg-gray-100 text-gray-800 dark:bg-gray-700 dark:hover:bg-gray-600 dark:text-gray-200"
                 >
                   {loadingState.exportingExcel && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                   Export to Excel
@@ -271,9 +271,9 @@ const FCOReport: React.FC = () => {
           )}
           
           {isCurrentYearOnly && reportData && (
-            <Alert className="mt-4 bg-blue-50 border-blue-200">
-              <AlertCircle className="h-4 w-4 text-blue-500" />
-              <AlertDescription>
+            <Alert className="mt-4 bg-blue-50 border-blue-200 dark:bg-blue-900/20 dark:border-blue-800">
+              <AlertCircle className="h-4 w-4 text-blue-500 dark:text-blue-400" />
+              <AlertDescription className="dark:text-blue-300">
                 Showing current year data for faster loading. Click "Load Historical Data" for complete history.
               </AlertDescription>
             </Alert>
@@ -281,26 +281,26 @@ const FCOReport: React.FC = () => {
           
           {loadingState.generatingReport && (
             <div className="mt-4 py-8 flex items-center justify-center">
-              <Loader2 className="h-8 w-8 animate-spin text-blue-500 mr-2" />
-              <span>Generating report, please wait...</span>
+              <Loader2 className="h-8 w-8 animate-spin text-blue-500 dark:text-blue-400 mr-2" />
+              <span className="dark:text-gray-300">Generating report, please wait...</span>
             </div>
           )}
           
           {loadingState.loadingAllYears && (
             <div className="mt-4 py-8 flex items-center justify-center">
-              <Loader2 className="h-8 w-8 animate-spin text-blue-500 mr-2" />
-              <span>Loading historical data, this may take a moment...</span>
+              <Loader2 className="h-8 w-8 animate-spin text-blue-500 dark:text-blue-400 mr-2" />
+              <span className="dark:text-gray-300">Loading historical data, this may take a moment...</span>
             </div>
           )}
 
           {/* Year Summary Box */}
           {yearSummary && (
-            <div className="mt-6 mb-4 p-4 bg-blue-50 border border-blue-200 rounded-md flex flex-wrap gap-8 items-center justify-start">
-              <div><span className="font-semibold">Year:</span> {yearSummary.year}</div>
-              <div><span className="font-semibold">Total Sites:</span> {yearSummary.totalSites}</div>
-              <div><span className="font-semibold">Total Days:</span> {yearSummary.totalDays}</div>
-              <div><span className="font-semibold">Total Available Days:</span> {yearSummary.totalAvailableDays}</div>
-              <div><span className="font-semibold">Overall %:</span> {yearSummary.overallPercentage?.toFixed(2)}%</div>
+            <div className="mt-6 mb-4 p-4 bg-blue-50 border border-blue-200 dark:bg-blue-900/20 dark:border-blue-800 rounded-md flex flex-wrap gap-8 items-center justify-start">
+              <div className="dark:text-gray-300"><span className="font-semibold">Year:</span> {yearSummary.year}</div>
+              <div className="dark:text-gray-300"><span className="font-semibold">Total Sites:</span> {yearSummary.totalSites}</div>
+              <div className="dark:text-gray-300"><span className="font-semibold">Total Days:</span> {yearSummary.totalDays}</div>
+              <div className="dark:text-gray-300"><span className="font-semibold">Total Available Days:</span> {yearSummary.totalAvailableDays}</div>
+              <div className="dark:text-gray-300"><span className="font-semibold">Overall %:</span> {yearSummary.overallPercentage?.toFixed(2)}%</div>
             </div>
           )}
 
@@ -314,37 +314,37 @@ const FCOReport: React.FC = () => {
 
               {Object.entries(reportData).map(([year, yearData], idx) => (
                 <TabPanel key={year}>
-                  <table className="w-full mt-6 border-collapse border border-gray-200">
+                  <table className="w-full mt-6 border-collapse border border-gray-200 dark:border-gray-700">
                     <thead>
-                    <tr>
-                      <th className="border border-gray-300 px-4 py-2">Site Name</th>
-                      <th className="border border-gray-300 px-4 py-2">Available Days</th>
-                      <th className="border border-gray-300 px-4 py-2">Total Days</th>
-                      <th className="border border-gray-300 px-4 py-2">Availability %</th>
-                      <th className="border border-gray-300 px-4 py-2">Missed Days %</th>
+                    <tr className="dark:bg-gray-700">
+                      <th className="border border-gray-300 dark:border-gray-600 px-4 py-2 dark:text-gray-100">Site Name</th>
+                      <th className="border border-gray-300 dark:border-gray-600 px-4 py-2 dark:text-gray-100">Available Days</th>
+                      <th className="border border-gray-300 dark:border-gray-600 px-4 py-2 dark:text-gray-100">Total Days</th>
+                      <th className="border border-gray-300 dark:border-gray-600 px-4 py-2 dark:text-gray-100">Availability %</th>
+                      <th className="border border-gray-300 dark:border-gray-600 px-4 py-2 dark:text-gray-100">Missed Days %</th>
                     </tr>
                     </thead>
                     <tbody>
                       {yearData.sites.map((site, index) => (
-                          <tr key={index}>
-                            <td className="border border-gray-300 px-4 py-2">{site.name}</td>
-                            <td className="border border-gray-300 px-4 py-2 text-center">{site.availableDays}</td>
-                            <td className="border border-gray-300 px-4 py-2 text-center">{site.totalDays}</td>
-                            <td className="border border-gray-300 px-4 py-2 text-center">
+                          <tr key={index} className="dark:text-gray-300">
+                            <td className="border border-gray-300 dark:border-gray-600 px-4 py-2">{site.name}</td>
+                            <td className="border border-gray-300 dark:border-gray-600 px-4 py-2 text-center">{site.availableDays}</td>
+                            <td className="border border-gray-300 dark:border-gray-600 px-4 py-2 text-center">{site.totalDays}</td>
+                            <td className="border border-gray-300 dark:border-gray-600 px-4 py-2 text-center">
                               {site.availabilityPercentage.toFixed(1)}%
                             </td>
-                            <td className="border border-gray-300 px-4 py-2 text-center">
+                            <td className="border border-gray-300 dark:border-gray-600 px-4 py-2 text-center">
                               {site.missedDaysPercentage.toFixed(1)}%
                             </td>
                           </tr>
                       ))}
                       {/* Total row for this year */}
-                      <tr className="font-semibold bg-gray-50">
-                        <td className="border border-gray-300 px-4 py-2">Total</td>
-                        <td className="border border-gray-300 px-4 py-2 text-center">{yearData.totalAvailableDays}</td>
-                        <td className="border border-gray-300 px-4 py-2 text-center">{yearData.totalDays}</td>
-                        <td className="border border-gray-300 px-4 py-2 text-center">{yearData.overallAvailability.toFixed(1)}%</td>
-                        <td className="border border-gray-300 px-4 py-2 text-center"></td>
+                      <tr className="font-semibold bg-gray-50 dark:bg-gray-700 dark:text-gray-100">
+                        <td className="border border-gray-300 dark:border-gray-600 px-4 py-2">Total</td>
+                        <td className="border border-gray-300 dark:border-gray-600 px-4 py-2 text-center">{yearData.totalAvailableDays}</td>
+                        <td className="border border-gray-300 dark:border-gray-600 px-4 py-2 text-center">{yearData.totalDays}</td>
+                        <td className="border border-gray-300 dark:border-gray-600 px-4 py-2 text-center">{yearData.overallAvailability.toFixed(1)}%</td>
+                        <td className="border border-gray-300 dark:border-gray-600 px-4 py-2 text-center"></td>
                       </tr>
                     </tbody>
                   </table>

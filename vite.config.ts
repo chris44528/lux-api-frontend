@@ -11,6 +11,7 @@ export default defineConfig({
       '@': '/src'
     },
   },
+  
   server: {
     host: true,
     port: 5173,

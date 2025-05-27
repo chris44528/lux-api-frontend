@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import EcotricityActionsDropdown from './EcotricityActionsDropdown';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams } from 'react-router-dom';
 import { getSiteDetail, startMeterTest, pollMeterTestStatus } from '../../services/api';
 import LinearProgress from '@mui/material/LinearProgress';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
@@ -68,7 +68,6 @@ const OBIS_MAP: Record<string, string> = {
 
 const EcotricityStaffSiteDetailPage: React.FC = () => {
   const { siteId } = useParams<{ siteId: string }>();
-  const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [siteData, setSiteData] = useState<SiteDetailApiResponse | null>(null);
@@ -136,7 +135,6 @@ const EcotricityStaffSiteDetailPage: React.FC = () => {
       await pollMeterTestStatus(
         task_id,
         async (statusResponse) => {
-          console.log('Ecotricity meter test status update:', statusResponse.status, statusResponse);
           setMeterTestStatus(statusResponse.status);
           
           // Handle completed status - this is when we have real data
@@ -236,7 +234,7 @@ const EcotricityStaffSiteDetailPage: React.FC = () => {
         <div className="flex items-center justify-between px-8 py-4 border-b bg-white dark:bg-gray-800 dark:border-gray-700 gap-4 relative">
           {/* Site name (center) */}
           <div className="flex-1 flex justify-center items-center min-w-0">
-            <h1 className="text-2xl font-bold text-center truncate text-gray-900 dark:text-gray-100">Site Name: {siteData.site?.site_name || ''}</h1>
+            <h1 className="text-2xl font-bold text-center truncate text-gray-900 dark:text-gray-100">Site Name: {String(siteData.site?.site_name || '')}</h1>
           </div>
           {/* Actions menu (right) */}
           <div className="flex-shrink-0">
@@ -253,6 +251,7 @@ const EcotricityStaffSiteDetailPage: React.FC = () => {
                   variant="indeterminate"
                   style={{ height: 16, borderRadius: 8 }}
                   color="primary"
+                  className="dark:bg-gray-700"
                 />
                 <div className="mt-4 text-base text-gray-700 dark:text-gray-200 font-semibold animate-pulse">
                   {getDisplayStatus(meterTestStatus)}
@@ -272,6 +271,7 @@ const EcotricityStaffSiteDetailPage: React.FC = () => {
                     value={100}
                     style={{ height: 16, borderRadius: 8, background: isSuccess ? '#e6f4ea' : '#fdecea' }}
                     color={isSuccess ? 'success' : 'error'}
+                    className="dark:opacity-90"
                   />
                   <div className={`mt-4 flex items-center gap-2 text-lg font-semibold ${isSuccess ? 'text-green-700 dark:text-green-400' : 'text-red-700 dark:text-red-400'}`}
                   >
@@ -314,6 +314,7 @@ const EcotricityStaffSiteDetailPage: React.FC = () => {
                   value={100}
                   style={{ height: 16, borderRadius: 8, background: '#fdecea' }}
                   color="error"
+                  className="dark:opacity-90"
                 />
                 <div className="mt-4 flex items-center gap-2 text-lg font-semibold text-red-700 dark:text-red-400">
                   <ErrorIcon color="error" />
@@ -331,15 +332,15 @@ const EcotricityStaffSiteDetailPage: React.FC = () => {
               </div>
             )}
             {showDetails && meterTestResult && (
-              <div className="w-full max-w-xl mt-4 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
-                <h3 className="text-lg font-semibold mb-3">Meter Test Details</h3>
+              <div className="w-full max-w-xl mt-4 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg border dark:border-gray-700">
+                <h3 className="text-lg font-semibold mb-3 dark:text-gray-100">Meter Test Details</h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {Object.entries(meterTestResult).map(([code, data]) => {
                     const displayData = data as Record<string, unknown>;
                     return (
-                      <div key={code} className="p-3 bg-white dark:bg-gray-700 rounded shadow-sm">
+                      <div key={code} className="p-3 bg-white dark:bg-gray-700 rounded shadow-sm border dark:border-gray-600">
                         <div className="text-sm font-semibold text-gray-600 dark:text-gray-300">{OBIS_MAP[code] || code}</div>
-                        <div className="mt-1 text-lg font-medium">{displayData.value || '—'}</div>
+                        <div className="mt-1 text-lg font-medium dark:text-gray-100">{String(displayData.value || '—')}</div>
                         {displayData.timestamp && (
                           <div className="mt-1 text-xs text-gray-500 dark:text-gray-400">
                             {new Date(displayData.timestamp as string).toLocaleString()}
@@ -361,28 +362,28 @@ const EcotricityStaffSiteDetailPage: React.FC = () => {
             <h2 className="text-xl font-bold mb-4 text-gray-900 dark:text-gray-100">SITE DETAILS</h2>
             <div className="space-y-4">
               <div>
-                <div className="font-semibold">Site Name:</div>
-                <div>{siteData.site?.site_name || '—'}</div>
+                <div className="font-semibold dark:text-gray-300">Site Name:</div>
+                <div className="dark:text-gray-400">{String(siteData.site?.site_name || '—')}</div>
               </div>
               <div>
-                <div className="font-semibold">Address:</div>
-                <div>{siteData.site?.address || '—'}</div>
+                <div className="font-semibold dark:text-gray-300">Address:</div>
+                <div className="dark:text-gray-400">{String(siteData.site?.address || '—')}</div>
               </div>
               <div>
-                <div className="font-semibold">Postcode:</div>
-                <div>{siteData.site?.postcode || '—'}</div>
+                <div className="font-semibold dark:text-gray-300">Postcode:</div>
+                <div className="dark:text-gray-400">{String(siteData.site?.postcode || '—')}</div>
               </div>
               <div>
-                <div className="font-semibold">Account:</div>
-                <div>Ecotricity</div>
+                <div className="font-semibold dark:text-gray-300">Account:</div>
+                <div className="dark:text-gray-400">Ecotricity</div>
               </div>
               <div>
-                <div className="font-semibold">Last Reading:</div>
-                <div>{lastReading || '—'}</div>
+                <div className="font-semibold dark:text-gray-300">Last Reading:</div>
+                <div className="dark:text-gray-400">{lastReading || '—'}</div>
               </div>
               <div>
-                <div className="font-semibold">Last Reading Date:</div>
-                <div>{lastReadingDate || '—'}</div>
+                <div className="font-semibold dark:text-gray-300">Last Reading Date:</div>
+                <div className="dark:text-gray-400">{lastReadingDate || '—'}</div>
               </div>
             </div>
           </div>
@@ -403,14 +404,14 @@ const EcotricityStaffSiteDetailPage: React.FC = () => {
                   {siteData.meter_tests && siteData.meter_tests.length > 0 ? (
                     siteData.meter_tests.map((test, index) => (
                       <tr key={test.id || index} className={index % 2 === 0 ? 'bg-white dark:bg-gray-800' : 'bg-gray-50 dark:bg-gray-900'}>
-                        <td className="px-2 py-3 whitespace-nowrap">{test.test_reading || '—'}</td>
-                        <td className="px-2 py-3 whitespace-nowrap">{test.test_date ? new Date(test.test_date).toLocaleString() : '—'}</td>
-                        <td className="px-2 py-3 whitespace-nowrap">{test.signal_level || '—'}</td>
+                        <td className="px-2 py-3 whitespace-nowrap dark:text-gray-300">{test.test_reading || '—'}</td>
+                        <td className="px-2 py-3 whitespace-nowrap dark:text-gray-300">{test.test_date ? new Date(test.test_date).toLocaleString() : '—'}</td>
+                        <td className="px-2 py-3 whitespace-nowrap dark:text-gray-300">{test.signal_level || '—'}</td>
                       </tr>
                     ))
                   ) : (
                     <tr>
-                      <td colSpan={3} className="px-2 py-3 text-center">No test history available</td>
+                      <td colSpan={3} className="px-2 py-3 text-center dark:text-gray-400">No test history available</td>
                     </tr>
                   )}
                 </tbody>
@@ -423,29 +424,29 @@ const EcotricityStaffSiteDetailPage: React.FC = () => {
             <h2 className="text-xl font-bold mb-4 text-gray-900 dark:text-gray-100">INSTALLED METER & SIM DETAILS</h2>
             
             <div className="mb-6">
-              <h3 className="text-lg font-semibold mb-2">Meter Details</h3>
+              <h3 className="text-lg font-semibold mb-2 dark:text-gray-200">Meter Details</h3>
               <div className="space-y-2">
                 <div>
-                  <div className="font-semibold">Meter Serial:</div>
-                  <div>{siteData.active_meter?.meter_serial || '—'}</div>
+                  <div className="font-semibold dark:text-gray-300">Meter Serial:</div>
+                  <div className="dark:text-gray-400">{String(siteData.active_meter?.meter_serial || '—')}</div>
                 </div>
                 <div>
-                  <div className="font-semibold">Meter Model:</div>
-                  <div>{siteData.active_meter?.meter_model || '—'}</div>
+                  <div className="font-semibold dark:text-gray-300">Meter Model:</div>
+                  <div className="dark:text-gray-400">{String(siteData.active_meter?.meter_model || '—')}</div>
                 </div>
               </div>
             </div>
 
             <div>
-              <h3 className="text-lg font-semibold mb-2">SIM Details</h3>
+              <h3 className="text-lg font-semibold mb-2 dark:text-gray-200">SIM Details</h3>
               <div className="space-y-2">
                 <div>
-                  <div className="font-semibold">SIM Number:</div>
-                  <div>{siteData.sim?.sim_num || '—'}</div>
+                  <div className="font-semibold dark:text-gray-300">SIM Number:</div>
+                  <div className="dark:text-gray-400">{String(siteData.sim?.sim_num || '—')}</div>
                 </div>
                 <div>
-                  <div className="font-semibold">SIM IP:</div>
-                  <div>{siteData.sim?.sim_ip || '—'}</div>
+                  <div className="font-semibold dark:text-gray-300">SIM IP:</div>
+                  <div className="dark:text-gray-400">{String(siteData.sim?.sim_ip || '—')}</div>
                 </div>
               </div>
             </div>
@@ -471,20 +472,20 @@ const EcotricityStaffSiteDetailPage: React.FC = () => {
                       .slice(0, 30) // Limit to 30 days
                       .map((reading, index) => (
                         <tr key={index} className={index % 2 === 0 ? 'bg-white dark:bg-gray-800' : 'bg-gray-50 dark:bg-gray-900'}>
-                          <td className="px-4 py-3 whitespace-nowrap">
+                          <td className="px-4 py-3 whitespace-nowrap dark:text-gray-300">
                             {new Date(reading.date).toLocaleDateString('en-GB')}
                           </td>
-                          <td className="px-4 py-3 whitespace-nowrap">
+                          <td className="px-4 py-3 whitespace-nowrap dark:text-gray-300">
                             {reading.meter_reading ? parseFloat(reading.meter_reading).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '—'}
                           </td>
-                          <td className="px-4 py-3 whitespace-nowrap">
+                          <td className="px-4 py-3 whitespace-nowrap dark:text-gray-300">
                             {reading.generation ? parseFloat(reading.generation).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '—'}
                           </td>
                         </tr>
                       ))
                   ) : (
                     <tr>
-                      <td colSpan={3} className="px-4 py-3 text-center">No readings available</td>
+                      <td colSpan={3} className="px-4 py-3 text-center dark:text-gray-400">No readings available</td>
                     </tr>
                   )}
                 </tbody>

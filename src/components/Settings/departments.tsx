@@ -73,7 +73,7 @@ const DepartmentsSettings: React.FC = () => {
   const handleDelete = async (id: number) => {
     if (!window.confirm('Delete this department?')) return;
     try {
-      await api.delete(`/departments/${id}/`);
+      await api.delete(`/api/v1/departments/${id}/`);
       fetchDepartments();
     } catch {
       setError('Failed to delete department');

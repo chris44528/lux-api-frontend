@@ -121,7 +121,6 @@ export function ViewAllNotesModal({
     try {
       // Use the new consolidated method to get all site notes in one call
       const siteNotes = await jobService.getAllSiteNotes(jobId);
-      console.log("All site notes response:", siteNotes);
       
       // Convert to our component's Note format
       const allNotes: Note[] = siteNotes.map(note => {
@@ -172,7 +171,6 @@ export function ViewAllNotesModal({
       
       setNotes(allNotes);
     } catch (err) {
-      console.error("Error fetching notes:", err);
       setError("Failed to load notes. Please try again.");
     } finally {
       setLoading(false);
@@ -212,7 +210,6 @@ export function ViewAllNotesModal({
         description: "Note added successfully"
       });
     } catch (err) {
-      console.error("Error adding note:", err);
       toast({
         title: "Error",
         description: "Failed to add note. Please try again."

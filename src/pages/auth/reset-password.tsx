@@ -66,7 +66,6 @@ export default function ResetPasswordPage() {
         navigate('/login');
       }, 3000);
     } catch (error) {
-      console.error('Error resetting password:', error);
       toast({
         title: "Error",
         description: "Failed to reset password. The link may have expired.",

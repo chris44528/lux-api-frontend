@@ -8,7 +8,7 @@ import NotFound from '../components/NotFound';
 
 function EngineerLayout() {
   return (
-    <div className="flex flex-col min-h-screen w-full bg-gray-50">
+    <div className="flex flex-col min-h-screen w-full bg-gray-50 dark:bg-gray-900">
       {/* Engineer-specific Header? */}
       <main className="flex-1 p-4"> {/* Mobile-friendly padding */}
         <Routes>

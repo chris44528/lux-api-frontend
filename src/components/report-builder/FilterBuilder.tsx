@@ -52,10 +52,10 @@ const FilterBuilder: React.FC<FilterBuilderProps> = ({
   return (
     <div>
       <div className="flex justify-between items-center mb-4">
-        <h3 className="font-medium text-gray-700">Filter Criteria</h3>
+        <h3 className="font-medium text-gray-700 dark:text-gray-300">Filter Criteria</h3>
         <button
           onClick={addFilter}
-          className="flex items-center text-sm text-blue-600 hover:text-blue-800"
+          className="flex items-center text-sm text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300"
           type="button"
         >
           <Plus className="h-4 w-4 mr-1" />
@@ -66,25 +66,25 @@ const FilterBuilder: React.FC<FilterBuilderProps> = ({
       {/* Date range filter (common for most reports) */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
             Start Date
           </label>
           <input
             type="date"
             value={dateRange.startDate || ''}
             onChange={(e) => handleDateRangeChange('startDate', e.target.value)}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md"
+            className="w-full px-3 py-2 border border-gray-300 rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-gray-100"
           />
         </div>
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
             End Date
           </label>
           <input
             type="date"
             value={dateRange.endDate || ''}
             onChange={(e) => handleDateRangeChange('endDate', e.target.value)}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md"
+            className="w-full px-3 py-2 border border-gray-300 rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-gray-100"
           />
         </div>
       </div>
@@ -97,7 +97,7 @@ const FilterBuilder: React.FC<FilterBuilderProps> = ({
               <select
                 value={filter.column}
                 onChange={(e) => updateFilter(filter.id, 'column', e.target.value)}
-                className="flex-1 px-3 py-2 border border-gray-300 rounded-md"
+                className="flex-1 px-3 py-2 border border-gray-300 rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-gray-100"
               >
                 <option value="">Select Column</option>
                 {availableColumns.map(column => (
@@ -110,7 +110,7 @@ const FilterBuilder: React.FC<FilterBuilderProps> = ({
               <select
                 value={filter.operator}
                 onChange={(e) => updateFilter(filter.id, 'operator', e.target.value)}
-                className="w-24 px-3 py-2 border border-gray-300 rounded-md"
+                className="w-24 px-3 py-2 border border-gray-300 rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-gray-100"
               >
                 <option value="=">=</option>
                 <option value="!=">!=</option>
@@ -127,12 +127,12 @@ const FilterBuilder: React.FC<FilterBuilderProps> = ({
                 value={filter.value}
                 onChange={(e) => updateFilter(filter.id, 'value', e.target.value)}
                 placeholder="Value"
-                className="flex-1 px-3 py-2 border border-gray-300 rounded-md"
+                className="flex-1 px-3 py-2 border border-gray-300 rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-gray-100"
               />
               
               <button
                 onClick={() => removeFilter(filter.id)}
-                className="p-2 text-red-500 hover:text-red-700"
+                className="p-2 text-red-500 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300"
                 type="button"
               >
                 <X className="h-5 w-5" />
@@ -141,7 +141,7 @@ const FilterBuilder: React.FC<FilterBuilderProps> = ({
           ))}
         </div>
       ) : (
-        <p className="text-sm text-gray-500">No filters added yet. Click "Add Filter" to create one.</p>
+        <p className="text-sm text-gray-500 dark:text-gray-400">No filters added yet. Click "Add Filter" to create one.</p>
       )}
     </div>
   );

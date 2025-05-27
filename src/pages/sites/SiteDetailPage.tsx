@@ -27,21 +27,17 @@ function SiteDetailPage() {
           ? await getSiteDetail(siteId) 
           : Promise.reject(new Error('No site ID provided'));
           
-        console.log('SiteDetailPage: Site data loaded:', siteResponse);
         setSiteData(siteResponse);
         
         // Try to get user view type, but don't let it block rendering if it fails
         try {
           const userViewTypeResponse = await userService.getUserViewType();
-          console.log('SiteDetailPage: User view type from API:', userViewTypeResponse);
           setViewType(userViewTypeResponse);
         } catch (viewTypeErr) {
-          console.error('Error determining user view type:', viewTypeErr);
           // Default to staff view if we can't determine the user type
           setViewType('staff');
         }
       } catch (err) {
-        console.error('Error loading site data:', err);
         setError('Failed to load site data');
       } finally {
         setLoading(false);
@@ -88,7 +84,6 @@ function SiteDetailPage() {
   // Determine which view to show based on user role/view type
   // Default to staff view for safety if viewType is not explicitly 'engineer'
   const isEngineerView = viewType === 'engineer';
-  console.log('SiteDetailPage: Rendering view based on viewType:', viewType, 'isEngineerView:', isEngineerView);
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">

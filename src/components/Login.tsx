@@ -18,7 +18,6 @@ export const Login = () => {
   // Check if MFA is required based on mfaSessionId from context
   useEffect(() => {
     if (mfaSessionId) {
-      console.log('MFA session detected, showing MFA verification screen');
       setShowMfa(true);
     }
   }, [mfaSessionId]);
@@ -40,12 +39,10 @@ export const Login = () => {
         setIsLoading(false);
       } else {
         // MFA not required, login successful
-        console.log('Login successful (no MFA), letting auth state handle navigation...');
         // Auth state change will trigger routing in App.tsx
         // setIsLoading(false); // useAuth sets loading to false
       }
     } catch (error) {
-      console.error('Login error:', error);
       setError('Invalid username or password');
       setIsLoading(false);
       // Ensure MFA session is cleared on login error
@@ -58,7 +55,6 @@ export const Login = () => {
      // This function might be called by MfaVerification upon its success
      // MfaVerification itself should call a function in useAuth to finalize login
      // and set the user state. App.tsx routing will then take over.
-     console.log('MFA successful callback in Login, letting auth state handle navigation...');
      setShowMfa(false); // Hide MFA screen
   };
   
@@ -69,17 +65,11 @@ export const Login = () => {
     setMfaSessionId(null); 
   };
 
-  // Add some debugging
-  console.log('Login component render state:', { 
-    showMfa, 
-    mfaSessionId,
-    username 
-  });
 
   return (
-    <div className="min-h-screen flex flex-col">
+    <div className="min-h-screen flex flex-col bg-gray-50 dark:bg-gray-900">
       {/* Navigation */}
-      <nav className="bg-white shadow-sm">
+      <nav className="bg-white dark:bg-gray-800 shadow-sm dark:shadow-gray-700">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between h-16 items-center">
             <div className="flex items-center">
@@ -92,7 +82,7 @@ export const Login = () => {
               </Link>
             </div>
             <div>
-              <Link to="/" className="text-gray-700 hover:text-gray-900">
+              <Link to="/" className="text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white">
                 Home
               </Link>
             </div>
@@ -110,14 +100,14 @@ export const Login = () => {
             onCancel={handleMfaCancel}
           />
         ) : (
-          <div className="max-w-md w-full bg-white rounded-lg shadow-sm p-8">
-            <h2 className="text-2xl font-bold text-center text-gray-900 mb-8">
+          <div className="max-w-md w-full bg-white dark:bg-gray-800 rounded-lg shadow-sm dark:shadow-gray-700 p-8">
+            <h2 className="text-2xl font-bold text-center text-gray-900 dark:text-white mb-8">
               Please Complete Login Form
             </h2>
 
             <form onSubmit={handleSubmit} className="space-y-6">
               <div>
-                <label htmlFor="username" className="block text-sm font-medium text-gray-700">
+                <label htmlFor="username" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
                   Username
                 </label>
                 <input
@@ -125,7 +115,7 @@ export const Login = () => {
                   type="text"
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
-                  className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-green-500 focus:outline-none focus:ring-1 focus:ring-green-500"
+                  className="mt-1 block w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white px-3 py-2 shadow-sm focus:border-green-500 focus:outline-none focus:ring-1 focus:ring-green-500 dark:focus:border-green-400 dark:focus:ring-green-400"
                   placeholder="Username"
                   required
                   disabled={isLoading}
@@ -133,7 +123,7 @@ export const Login = () => {
               </div>
 
               <div>
-                <label htmlFor="password" className="block text-sm font-medium text-gray-700">
+                <label htmlFor="password" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
                   Password
                 </label>
                 <input
@@ -141,7 +131,7 @@ export const Login = () => {
                   type="password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-green-500 focus:outline-none focus:ring-1 focus:ring-green-500"
+                  className="mt-1 block w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white px-3 py-2 shadow-sm focus:border-green-500 focus:outline-none focus:ring-1 focus:ring-green-500 dark:focus:border-green-400 dark:focus:ring-green-400"
                   placeholder="Password"
                   required
                   disabled={isLoading}
@@ -149,14 +139,14 @@ export const Login = () => {
               </div>
 
               {error && (
-                <div className="text-red-600 text-sm">
+                <div className="text-red-600 dark:text-red-400 text-sm">
                   {error}
                 </div>
               )}
 
               <button
                 type="submit"
-                className="w-full bg-green-600 text-white py-2 px-4 rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2"
+                className="w-full bg-green-600 dark:bg-green-700 text-white py-2 px-4 rounded-md hover:bg-green-700 dark:hover:bg-green-600 focus:outline-none focus:ring-2 focus:ring-green-500 dark:focus:ring-green-400 focus:ring-offset-2 dark:focus:ring-offset-gray-800"
                 disabled={isLoading}
               >
                 {isLoading ? 'Logging in...' : 'Login'}
@@ -164,12 +154,12 @@ export const Login = () => {
             </form>
 
             <div className="mt-6 text-center text-sm">
-              <span className="text-gray-600">Trouble Logging in? </span>
-              <Link to="/forgot-password" className="text-blue-600 hover:text-blue-800 mr-2">
+              <span className="text-gray-600 dark:text-gray-400">Trouble Logging in? </span>
+              <Link to="/forgot-password" className="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 mr-2">
                 Forgot Password
               </Link>
-              <span className="text-gray-600">or </span>
-              <a href="/contact" className="text-blue-600 hover:text-blue-800">
+              <span className="text-gray-600 dark:text-gray-400">or </span>
+              <a href="/contact" className="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300">
                 Contact Us
               </a>
             </div>
@@ -178,9 +168,9 @@ export const Login = () => {
       </div>
 
       {/* Footer */}
-      <footer className="bg-white border-t mt-auto">
+      <footer className="bg-white dark:bg-gray-800 border-t dark:border-gray-700 mt-auto">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-          <p className="text-center text-gray-600 text-sm">
+          <p className="text-center text-gray-600 dark:text-gray-400 text-sm">
             {new Date().getFullYear()} A Shade Greener. All rights reserved.
           </p>
         </div>

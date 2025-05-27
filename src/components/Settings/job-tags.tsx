@@ -57,7 +57,6 @@ export default function JobTags({ jobTags, jobQueues }: JobTagsProps) {
       setNewTagName("");
       setSelectedTagQueue(null);
     } catch (error) {
-      console.error("Error adding tag:", error);
       toast({
         title: "Error",
         description: "Failed to add tag"
@@ -79,7 +78,6 @@ export default function JobTags({ jobTags, jobQueues }: JobTagsProps) {
         description: "Tag deleted successfully"
       });
     } catch (error) {
-      console.error("Error deleting tag:", error);
       toast({
         title: "Error",
         description: "Failed to delete tag"

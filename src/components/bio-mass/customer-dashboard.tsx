@@ -48,7 +48,6 @@ export default function CustomerDashboard({
         setCustomer(customerData);
         setLoading(false);
       } catch (err) {
-        console.error(`Error fetching customer with ID ${customerId}:`, err);
         setError("Failed to load customer data");
         setLoading(false);
       }

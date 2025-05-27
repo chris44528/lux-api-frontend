@@ -98,10 +98,6 @@ const CustomerDetails: React.FC<CustomerDetailsProps> = ({ customerId }) => {
         setNotes(customerData?.important_notes || "");
         setLoading(false);
       } catch (err) {
-        console.error(
-          `Error fetching customer details with ID ${customerId}:`,
-          err
-        );
         setError("Failed to load customer details");
         setLoading(false);
       }
@@ -369,7 +365,6 @@ const CustomerDetails: React.FC<CustomerDetailsProps> = ({ customerId }) => {
                     });
                     alert("Notes saved successfully");
                   } catch (err) {
-                    console.error("Error saving notes:", err);
                     alert("Failed to save notes");
                   }
                 }}

@@ -14,17 +14,8 @@ export interface Job {
   title: string;
   description: string;
   site_id?: number; // Add direct site_id property
-  site:
-    | number
-    | {
-        // Site can be a direct number ID or an object
-        site_id: number;
-        site_name: string;
-        postcode: string;
-        panel_size?: string;
-        fco?: string;
-        install_date?: string;
-      };
+  site: number; // Now always a number (site ID)
+  site_name?: string; // Site name is now a separate field
   client: string;
   address: string;
   priority: "low" | "medium" | "high";
@@ -423,7 +414,6 @@ const jobService = {
       );
       return response.data;
     } catch (error) {
-      console.error("Error fetching jobs:", error);
       throw error;
     }
   },
@@ -457,7 +447,6 @@ const jobService = {
       );
       return response.data;
     } catch (error) {
-      console.error(`Error fetching jobs for site ${siteId}:`, error);
       throw error;
     }
   },
@@ -467,7 +456,6 @@ const jobService = {
       const response = await api.get(`/jobs/${id}/`);
       return response.data;
     } catch (error: unknown) {
-      console.error(`Error fetching job ${id}:`, error);
       if (error && typeof error === 'object' && 'response' in error) {
         const axiosError = error as { response?: { status?: number } };
         if (axiosError.response?.status === 401) {
@@ -482,22 +470,10 @@ const jobService = {
 
   async createJob(jobData: JobCreate): Promise<Job> {
     try {
-      // Log detailed job data for debugging
-      console.log("Creating job with data:", JSON.stringify(jobData, null, 2));
 
       const response = await api.post(`/jobs/`, jobData);
       return response.data;
     } catch (error: unknown) {
-      console.error("Error creating job", error);
-      // Log more details about the error response if available
-      if (error && typeof error === "object" && "response" in error) {
-        const axiosError = error as {
-          response?: { data?: any; status?: number; headers?: any };
-        };
-        console.error("Error response data:", axiosError.response?.data);
-        console.error("Error response status:", axiosError.response?.status);
-        console.error("Error response headers:", axiosError.response?.headers);
-      }
       throw error;
     }
   },
@@ -507,7 +483,6 @@ const jobService = {
       const response = await api.patch(`/jobs/${id}/`, jobData);
       return response.data;
     } catch (error) {
-      console.error(`Error updating job ${id}`, error);
       throw error;
     }
   },
@@ -516,7 +491,6 @@ const jobService = {
     try {
       await api.delete(`/jobs/${id}/`);
     } catch (error) {
-      console.error(`Error deleting job ${id}`, error);
       throw error;
     }
   },
@@ -531,7 +505,6 @@ const jobService = {
         technician_id: technicianId,
       });
     } catch (error) {
-      console.error("Error bulk assigning jobs:", error);
       throw error;
     }
   },
@@ -544,7 +517,6 @@ const jobService = {
         },
       });
     } catch (error) {
-      console.error("Error bulk deleting jobs:", error);
       throw error;
     }
   },
@@ -588,7 +560,6 @@ const jobService = {
 
       await api.patch(`/jobs/bulk-update/`, updateData);
     } catch (error) {
-      console.error("Error bulk updating jobs:", error);
       throw error;
     }
   },
@@ -597,7 +568,6 @@ const jobService = {
   async getJobTasks(jobId: number): Promise<JobTask[]> {
     // If we know this job has no tasks, return an empty array immediately
     if (jobsWithNoTasks.has(jobId)) {
-      console.log(`Job ${jobId} has no tasks (cached). Returning empty array.`);
       return [];
     }
 
@@ -612,10 +582,8 @@ const jobService = {
 
       return response.data;
     } catch (error: any) {
-      console.error(`Error fetching tasks for job ${jobId}:`, error);
       // If it's a 404, the job simply doesn't have tasks yet, return empty array
       if (error?.response?.status === 404) {
-        console.warn(`No tasks found for job ${jobId}`);
         // Remember this job has no tasks to avoid future API calls
         jobsWithNoTasks.add(jobId);
         return [];
@@ -630,7 +598,6 @@ const jobService = {
       const response = await api.get(`/job-tasks/${taskId}/`);
       return response.data;
     } catch (error) {
-      console.error(`Error fetching task ${taskId}`, error);
       throw error;
     }
   },
@@ -638,7 +605,6 @@ const jobService = {
   // Add function to clear the no-tasks cache for a job
   async clearJobTasksCache(jobId: number): Promise<void> {
     if (jobsWithNoTasks.has(jobId)) {
-      console.log(`Clearing no-tasks cache for job ${jobId}`);
       jobsWithNoTasks.delete(jobId);
     }
   },
@@ -664,7 +630,6 @@ const jobService = {
       });
       return response.data;
     } catch (error) {
-      console.error(`Error assigning template to job ${jobId}`, error);
       throw error;
     }
   },
@@ -675,7 +640,6 @@ const jobService = {
       const response = await api.get(`/tasks/${taskId}/steps/`);
       return response.data;
     } catch (error) {
-      console.error(`Error fetching steps for task ${taskId}`, error);
       throw error;
     }
   },
@@ -692,7 +656,6 @@ const jobService = {
       });
       return response.data;
     } catch (error) {
-      console.error(`Error updating step ${stepId}`, error);
       throw error;
     }
   },
@@ -709,7 +672,6 @@ const jobService = {
       );
       return response.data;
     } catch (error) {
-      console.error(`Error submitting values for step ${stepId}`, error);
       throw error;
     }
   },
@@ -720,7 +682,6 @@ const jobService = {
       const response = await api.get(`/jobs/${jobId}/notes/`);
       return response.data;
     } catch (error) {
-      console.error(`Error fetching notes for job ${jobId}`, error);
       throw error;
     }
   },
@@ -735,7 +696,6 @@ const jobService = {
       const response = await api.get(`/jobs/${jobId}/step-notes/`);
       return response.data;
     } catch (error) {
-      console.error(`Error fetching step notes for job ${jobId}:`, error);
       return [];
     }
   },
@@ -750,7 +710,6 @@ const jobService = {
       const response = await api.get(`/jobs/${jobId}/all-notes/`);
       return response.data;
     } catch (error) {
-      console.error(`Error fetching all site notes for job ${jobId}:`, error);
       return [];
     }
   },
@@ -765,7 +724,6 @@ const jobService = {
       const response = await api.get(`/sites/${siteId}/notes/`);
       return response.data;
     } catch (error) {
-      console.error(`Error fetching site notes for site ${siteId}:`, error);
       return [];
     }
   },
@@ -792,10 +750,6 @@ const jobService = {
       );
       return response.data;
     } catch (error) {
-      console.error(
-        `Error fetching historical job notes for site ${siteId}:`,
-        error
-      );
       return [];
     }
   },
@@ -805,7 +759,6 @@ const jobService = {
       const response = await api.post(`/jobs/${jobId}/notes/`, { content });
       return response.data;
     } catch (error) {
-      console.error(`Error adding note to job ${jobId}`, error);
       throw error;
     }
   },
@@ -816,7 +769,6 @@ const jobService = {
       const response = await api.get(`/jobs/${jobId}/attachments/`);
       return response.data;
     } catch (error) {
-      console.error(`Error fetching attachments for job ${jobId}`, error);
       throw error;
     }
   },
@@ -838,7 +790,6 @@ const jobService = {
       });
       return response.data;
     } catch (error) {
-      console.error(`Error uploading attachment to job ${jobId}`, error);
       throw error;
     }
   },
@@ -852,7 +803,6 @@ const jobService = {
       const response = await api.get(`/jobs/${jobId}/links/`);
       return response.data;
     } catch (error) {
-      console.error(`Error fetching links for job ${jobId}`, error);
       throw error;
     }
   },
@@ -870,10 +820,6 @@ const jobService = {
       });
       return response.data;
     } catch (error) {
-      console.error(
-        `Error linking jobs ${sourceJobId} and ${targetJobId}`,
-        error
-      );
       throw error;
     }
   },
@@ -882,7 +828,6 @@ const jobService = {
     try {
       await api.delete(`/job-links/${linkId}/`);
     } catch (error) {
-      console.error(`Error removing job link ${linkId}`, error);
       throw error;
     }
   },
@@ -912,7 +857,6 @@ const jobService = {
 
       return response.data;
     } catch (error: unknown) {
-      console.error("Error fetching task templates:", error);
       if (error && typeof error === 'object' && 'response' in error) {
         const axiosError = error as { response?: { status?: number } };
         if (axiosError.response?.status === 401) {
@@ -930,7 +874,23 @@ const jobService = {
       const response = await api.get(`/task-templates/${id}/`);
       return response.data;
     } catch (error) {
-      console.error(`Error fetching task template ${id}`, error);
+      throw error;
+    }
+  },
+
+  async createTaskTemplate(data: { name: string; queue: number | null; job_type: number | null }): Promise<TaskTemplate> {
+    try {
+      const response = await api.post('/task-templates/', data);
+      return response.data;
+    } catch (error) {
+      throw error;
+    }
+  },
+
+  async deleteTaskTemplate(id: number): Promise<void> {
+    try {
+      await api.delete(`/task-templates/${id}/`);
+    } catch (error) {
       throw error;
     }
   },
@@ -938,20 +898,16 @@ const jobService = {
   // Technicians
   async getTechnicians(): Promise<Technician[]> {
     try {
-      console.log("Fetching technicians...");
       const response = await api.get("/technicians/");
-      console.log("Technicians response:", response.data);
 
       // Check if the response is paginated
       if (response.data && "results" in response.data) {
         const paginatedData = response.data as PaginatedResponse<Technician>;
-        console.log("Paginated technicians data:", paginatedData.results);
         return paginatedData.results;
       }
 
       return response.data;
     } catch (error: unknown) {
-      console.error("Error fetching technicians:", error);
       if (error && typeof error === 'object' && 'response' in error) {
         const axiosError = error as { response?: { status?: number } };
         if (axiosError.response?.status === 401) {
@@ -977,7 +933,6 @@ const jobService = {
 
       return response.data;
     } catch (error: unknown) {
-      console.error("Error fetching job statuses:", error);
       if (error && typeof error === 'object' && 'response' in error) {
         const axiosError = error as { response?: { status?: number } };
         if (axiosError.response?.status === 401) {
@@ -1002,7 +957,6 @@ const jobService = {
 
       return response.data;
     } catch (error: unknown) {
-      console.error("Error fetching job queues:", error);
       if (error && typeof error === 'object' && 'response' in error) {
         const axiosError = error as { response?: { status?: number } };
         if (axiosError.response?.status === 401) {
@@ -1027,7 +981,6 @@ const jobService = {
 
       return response.data;
     } catch (error: unknown) {
-      console.error("Error fetching job types:", error);
       if (error && typeof error === 'object' && 'response' in error) {
         const axiosError = error as { response?: { status?: number } };
         if (axiosError.response?.status === 401) {
@@ -1048,7 +1001,6 @@ const jobService = {
       const response = await api.post(`/job-types/`, data);
       return response.data;
     } catch (error) {
-      console.error("Error creating job type:", error);
       throw error;
     }
   },
@@ -1057,7 +1009,6 @@ const jobService = {
     try {
       await api.delete(`/job-types/${id}/`);
     } catch (error) {
-      console.error("Error deleting job type:", error);
       throw error;
     }
   },
@@ -1070,7 +1021,6 @@ const jobService = {
       });
       return response.data;
     } catch (error) {
-      console.error(`Error updating step order for step ${stepId}`, error);
       throw error;
     }
   },
@@ -1087,7 +1037,6 @@ const jobService = {
 
       return response.data;
     } catch (error: unknown) {
-      console.error("Error fetching job categories:", error);
       if (error && typeof error === 'object' && 'response' in error) {
         const axiosError = error as { response?: { status?: number } };
         if (axiosError.response?.status === 401) {
@@ -1112,7 +1061,6 @@ const jobService = {
 
       return response.data;
     } catch (error: unknown) {
-      console.error("Error fetching job tags:", error);
       if (error && typeof error === 'object' && 'response' in error) {
         const axiosError = error as { response?: { status?: number } };
         if (axiosError.response?.status === 401) {
@@ -1140,10 +1088,6 @@ const jobService = {
     data: Record<string, unknown>
   ): Promise<any> {
     try {
-      console.log(
-        `Completing step ${stepId} for task ${taskId} with data:`,
-        data
-      );
 
       // The correct endpoint URL based on the REST API design
       const response = await api.post(
@@ -1151,13 +1095,8 @@ const jobService = {
         data
       );
 
-      console.log("Step completion response:", response.data);
       return response.data;
     } catch (error: any) {
-      console.error(
-        `Error completing step ${stepId} for task ${taskId}:`,
-        error
-      );
       throw error;
     }
   },
@@ -1174,7 +1113,6 @@ const jobService = {
       const response = await api.get(`/job-tasks/${taskId.toString()}/`);
       return response.data;
     } catch (error) {
-      console.error("Error fetching task details:", error);
       return null;
     }
   },
@@ -1194,7 +1132,6 @@ const jobService = {
       }
       return null;
     } catch (error) {
-      console.error("Error fetching active step:", error);
       return null;
     }
   },
@@ -1210,7 +1147,6 @@ const jobService = {
       const response = await api.patch(`/tasks/${taskId}`, { status });
       return response.data;
     } catch (error) {
-      console.error("Error updating task status:", error);
       throw error;
     }
   },
@@ -1221,7 +1157,6 @@ const jobService = {
       const response = await api.post(`/job-queues/`, data);
       return response.data;
     } catch (error) {
-      console.error("Error creating job queue:", error);
       throw error;
     }
   },
@@ -1230,7 +1165,6 @@ const jobService = {
     try {
       await api.delete(`/job-queues/${id}/`);
     } catch (error) {
-      console.error("Error deleting job queue:", error);
       throw error;
     }
   },
@@ -1241,7 +1175,6 @@ const jobService = {
       const response = await api.post(`/job-tags/`, data);
       return response.data;
     } catch (error) {
-      console.error("Error creating job tag:", error);
       throw error;
     }
   },
@@ -1250,7 +1183,6 @@ const jobService = {
     try {
       await api.delete(`/job-tags/${id}/`);
     } catch (error) {
-      console.error("Error deleting job tag:", error);
       throw error;
     }
   },
@@ -1261,7 +1193,6 @@ const jobService = {
       const response = await api.post(`/job-categories/`, data);
       return response.data;
     } catch (error) {
-      console.error("Error creating job category:", error);
       throw error;
     }
   },
@@ -1270,7 +1201,6 @@ const jobService = {
     try {
       await api.delete(`/job-categories/${id}/`);
     } catch (error) {
-      console.error("Error deleting job category:", error);
       throw error;
     }
   },
@@ -1278,12 +1208,8 @@ const jobService = {
   // Site details
   async getSite(siteId: number): Promise<any> {
     try {
-      // Log the request for debugging
-      console.log(`Fetching site details for site ID: ${siteId}`);
-
       // Use the exact URL format from the example that works
       const url = `http://127.0.0.1:8000/api/v1/sites/${siteId}/`;
-      console.log("Making request to URL:", url);
 
       // Use a direct fetch to avoid baseURL issues
       const response = await fetch(url, {
@@ -1298,10 +1224,8 @@ const jobService = {
       }
 
       const data = await response.json();
-      console.log("Site details response:", data);
       return data;
     } catch (error: any) {
-      console.error(`Error fetching site ${siteId}:`, error);
       throw error;
     }
   },

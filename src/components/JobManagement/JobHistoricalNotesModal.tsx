@@ -6,13 +6,11 @@ import { Input } from "../ui/input";
 import { Textarea } from "../ui/textarea";
 import jobService from "../../services/jobService";
 
-// Add debug logging 
-console.log("JobHistoricalNotesModal module loaded");
 
 // Simple toast implementation
 const useToast = () => {
   const toast = (options: { title?: string; description?: string }) => {
-    console.log(`Toast: ${options.title} - ${options.description}`);
+    // Toast notification placeholder
   };
   return { toast };
 };
@@ -151,7 +149,6 @@ export function JobHistoricalNotesModal({
           is_current_job: true
         })));
       } catch (err) {
-        console.error("Error fetching job notes:", err);
       }
       
       // Fetch current job step notes
@@ -166,7 +163,6 @@ export function JobHistoricalNotesModal({
           })));
         }
       } catch (err) {
-        console.error("Error fetching step notes:", err);
       }
       
       // Fetch site notes
@@ -181,7 +177,6 @@ export function JobHistoricalNotesModal({
           }
         }
       } catch (err) {
-        console.error("Error fetching site notes:", err);
       }
       
       // Fetch historical job notes for this site
@@ -208,7 +203,6 @@ export function JobHistoricalNotesModal({
           }
         }
       } catch (err) {
-        console.error("Error fetching historical job notes:", err);
       }
       
       // Sort all notes by date (newest first)
@@ -218,7 +212,6 @@ export function JobHistoricalNotesModal({
       
       setNotes(allNotes);
     } catch (err) {
-      console.error("Error fetching notes:", err);
       setError("Failed to load notes. Please try again.");
     } finally {
       setLoading(false);
@@ -259,7 +252,6 @@ export function JobHistoricalNotesModal({
         description: "Note added successfully"
       });
     } catch (err) {
-      console.error("Error adding note:", err);
       toast({
         title: "Error",
         description: "Failed to add note. Please try again."
@@ -317,7 +309,6 @@ export function JobHistoricalNotesModal({
     <Dialog 
       open={isOpen} 
       onOpenChange={(open) => {
-        console.log("Dialog onOpenChange called with:", open);
         onClose();
       }}
     >

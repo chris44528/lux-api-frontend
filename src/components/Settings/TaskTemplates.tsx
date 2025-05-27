@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef } from "react"
+import { useState, useEffect, useCallback, useRef } from "react"
 import { Input } from "../ui/input"
 import { Button } from "../ui/button"
 import { Plus, Trash2 } from "lucide-react"
@@ -39,14 +39,12 @@ export function TaskTemplates({ jobTypes, queues }: TaskTemplatesProps) {
     
     try {
       const templatesData = await jobService.getTaskTemplates();
-      console.log("Task templates fetched successfully");
       
       // Only update state if still mounted
       if (isMountedRef.current) {
         setTemplates(Array.isArray(templatesData) ? templatesData : []);
       }
     } catch (error) {
-      console.error("Error fetching task templates:", error);
       if (isMountedRef.current) {
         toast({
           title: "Error",
@@ -99,7 +97,6 @@ export function TaskTemplates({ jobTypes, queues }: TaskTemplatesProps) {
         });
       }
     } catch (error) {
-      console.error("Error creating template:", error);
       if (isMountedRef.current) {
         toast({
           title: "Error",
@@ -127,7 +124,6 @@ export function TaskTemplates({ jobTypes, queues }: TaskTemplatesProps) {
         });
       }
     } catch (error) {
-      console.error("Error deleting template:", error);
       if (isMountedRef.current) {
         toast({
           title: "Error",
@@ -163,7 +159,7 @@ export function TaskTemplates({ jobTypes, queues }: TaskTemplatesProps) {
         </div>
         <div className="md:w-1/3">
           <select
-            className="w-full p-2 border rounded-md"
+            className="w-full p-2 border rounded-md border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
             value={newQueueId?.toString() || ""}
             onChange={(e) => setNewQueueId(e.target.value ? parseInt(e.target.value) : null)}
           >
@@ -177,7 +173,7 @@ export function TaskTemplates({ jobTypes, queues }: TaskTemplatesProps) {
         </div>
         <div className="md:w-1/3">
           <select
-            className="w-full p-2 border rounded-md"
+            className="w-full p-2 border rounded-md border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
             value={newJobTypeId?.toString() || ""}
             onChange={(e) => setNewJobTypeId(e.target.value ? parseInt(e.target.value) : null)}
           >
@@ -195,27 +191,27 @@ export function TaskTemplates({ jobTypes, queues }: TaskTemplatesProps) {
         </Button>
       </div>
 
-      <div className="rounded-md border">
+      <div className="rounded-md border border-gray-200 dark:border-gray-700">
         <div className="w-full">
-          <div className="bg-gray-50 border-b">
+          <div className="bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
             <div className="grid grid-cols-4 gap-4">
-              <div className="px-4 py-3 text-left text-sm font-medium text-gray-500">Template Name</div>
-              <div className="px-4 py-3 text-left text-sm font-medium text-gray-500">Queue</div>
-              <div className="px-4 py-3 text-left text-sm font-medium text-gray-500">Job Type</div>
-              <div className="px-4 py-3 text-left text-sm font-medium text-gray-500">Actions</div>
+              <div className="px-4 py-3 text-left text-sm font-medium text-gray-500 dark:text-gray-400">Template Name</div>
+              <div className="px-4 py-3 text-left text-sm font-medium text-gray-500 dark:text-gray-400">Queue</div>
+              <div className="px-4 py-3 text-left text-sm font-medium text-gray-500 dark:text-gray-400">Job Type</div>
+              <div className="px-4 py-3 text-left text-sm font-medium text-gray-500 dark:text-gray-400">Actions</div>
             </div>
           </div>
-          <div className="divide-y">
+          <div className="divide-y divide-gray-200 dark:divide-gray-700">
             {templates.length === 0 ? (
-              <div className="text-center py-4 text-sm text-gray-500">
+              <div className="text-center py-4 text-sm text-gray-500 dark:text-gray-400">
                 No task templates found. Create one to get started.
               </div>
             ) : (
               templates.map((template) => (
-                <div key={template.id} className="grid grid-cols-4 gap-4 py-3 hover:bg-gray-50">
-                  <div className="px-4 text-sm font-medium">{template.name}</div>
-                  <div className="px-4 text-sm">{template.queue ? getQueueName(template.queue.id) : "All Queues"}</div>
-                  <div className="px-4 text-sm">{template.job_type ? getJobTypeName(template.job_type.id) : "Any Job Type"}</div>
+                <div key={template.id} className="grid grid-cols-4 gap-4 py-3 hover:bg-gray-50 dark:hover:bg-gray-700">
+                  <div className="px-4 text-sm font-medium text-gray-900 dark:text-white">{template.name}</div>
+                  <div className="px-4 text-sm text-gray-700 dark:text-gray-300">{template.queue ? getQueueName(template.queue.id) : "All Queues"}</div>
+                  <div className="px-4 text-sm text-gray-700 dark:text-gray-300">{template.job_type ? getJobTypeName(template.job_type.id) : "Any Job Type"}</div>
                   <div className="px-4">
                     <Button
                       variant="ghost"

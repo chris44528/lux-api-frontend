@@ -2,6 +2,7 @@ import React, { createContext, useState, useContext, useEffect, ReactNode, useCa
 import { User, UserGroup } from '../types/user';
 import { login as apiLogin, logout as apiLogout, verifyMfaCode as apiVerifyMfaCode, AuthResponse } from '../services/api';
 import userService from '../services/userService';
+import { uiPermissionService } from '../services/uiPermissionService';
 
 interface AuthContextType {
   user: (User & { role: 'staff' | 'engineer' | 'unknown' }) | null;
@@ -26,7 +27,6 @@ const determineRole = async (groups: UserGroup[]): Promise<'staff' | 'engineer' 
   try {
     // Call the API to get the user's view type
     const viewType = await userService.getUserViewType();
-    console.log('Auth Hook: Got view type from API:', viewType);
     
     // Ensure we return a valid role type
     if (viewType === 'staff' || viewType === 'engineer') {
@@ -36,7 +36,6 @@ const determineRole = async (groups: UserGroup[]): Promise<'staff' | 'engineer' 
     // Fallback to 'staff' if the API returns an unexpected value
     return 'staff';
   } catch (error) {
-    console.error('Auth Hook: Error getting user view type, falling back to basic logic', error);
     
     // Fallback logic if the API fails
     if (groups.some(group => group.name?.toLowerCase() === 'admin')) {
@@ -69,13 +68,17 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           // Get role from API rather than simple function
           const role = await determineRole(storedUser.groups);
           setUser({ ...storedUser, role });
-          console.log('Auth Hook: Session loaded from localStorage', { username: storedUser.username, role });
+          
+          // Preload UI permissions when checking auth status
+          try {
+            await uiPermissionService.loadPermissions();
+          } catch (error) {
+            console.warn('Failed to preload UI permissions:', error);
+          }
         } else {
-          console.log('Auth Hook: No active session found in localStorage');
           setUser(null); 
         }
       } catch (error) {
-        console.error('Auth Hook: Error loading auth status from localStorage', error);
         setUser(null);
         localStorage.removeItem('access_token');
         localStorage.removeItem('user');
@@ -97,7 +100,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         setUser(null); // Ensure user is null during MFA step
         localStorage.removeItem('access_token'); // Clear any old token
         localStorage.removeItem('user');
-        console.log('Auth Hook: MFA required');
       } else if (response.token && response.user) {
         // Login successful, MFA not required or already handled
         const role = await determineRole(response.user.groups);
@@ -106,6 +108,13 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         localStorage.setItem('access_token', response.token);
         localStorage.setItem('user', JSON.stringify(response.user)); // Store base user object
         
+        // Preload UI permissions after successful login
+        try {
+          await uiPermissionService.loadPermissions();
+        } catch (error) {
+          console.warn('Failed to preload UI permissions:', error);
+        }
+        
         // Handle intended route redirect
         const intendedRoute = localStorage.getItem('intendedRoute');
         if (intendedRoute && intendedRoute !== '/login') {
@@ -113,7 +122,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           window.location.href = intendedRoute;
         }
         
-        console.log('Auth Hook: Login successful', { username: response.user.username, role });
       } else {
         // Handle unexpected response
          throw new Error('Login failed: Invalid response from server');
@@ -121,7 +129,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       setLoading(false);
       return response; // Return full response for component handling (e.g., MFA flow)
     } catch (error) {
-      console.error('Auth Hook: Login failed', error);
       setUser(null);
       localStorage.removeItem('access_token');
       localStorage.removeItem('user');
@@ -135,15 +142,16 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     setLoading(true);
     try {
       await apiLogout(); // Call API logout if necessary (e.g., to invalidate token server-side)
+      
+      // Clear UI permissions cache
+      uiPermissionService.clearCache();
     } catch (error) {
-        console.error('Auth Hook: API logout failed, proceeding with client-side logout', error);
     } finally {
         setUser(null);
         localStorage.removeItem('access_token');
         localStorage.removeItem('user');
         setMfaSessionId(null);
         setLoading(false);
-        console.log('Auth Hook: User logged out');
     }
   }, []);
 
@@ -169,11 +177,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           window.location.href = intendedRoute;
         }
         
-        console.log('Auth Hook: MFA verification successful', { 
-          username: response.user.username, 
-          role, 
-          token: response.token ? 'present' : 'absent' 
-        });
       } else {
         throw new Error('MFA verification failed: Invalid response from server');
       }
@@ -182,7 +185,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       setLoading(false);
       return response;
     } catch (error) {
-      console.error('Auth Hook: MFA verification failed', error);
       setLoading(false);
       throw error;
     }

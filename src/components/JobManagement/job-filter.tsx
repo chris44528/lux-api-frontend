@@ -133,7 +133,7 @@ export function JobFilter({
       return (
         <div className="p-4 text-center">
           <div className="h-4 w-4 spinner mx-auto mb-2" />
-          <p className="text-sm text-gray-500">Loading filters...</p>
+          <p className="text-sm text-gray-500 dark:text-gray-400">Loading filters...</p>
         </div>
       )
     }
@@ -143,9 +143,9 @@ export function JobFilter({
         <div className="p-4">
           <div className="space-y-4">
             <div>
-              <h4 className="font-medium mb-2">Default Queue</h4>
+              <h4 className="font-medium mb-2 text-gray-900 dark:text-gray-100">Default Queue</h4>
               <div className="space-y-2">
-                <Label>Default Queue</Label>
+                <Label className="text-gray-700 dark:text-gray-300">Default Queue</Label>
                 <Select
                   value={filters.defaultQueue || undefined}
                   onValueChange={handleDefaultQueueChange}
@@ -168,7 +168,7 @@ export function JobFilter({
             <Separator />
             
             <div>
-              <h4 className="font-medium mb-2">Priority</h4>
+              <h4 className="font-medium mb-2 text-gray-900 dark:text-gray-100">Priority</h4>
               <div className="space-y-2">
                 {priorityOptions.map(option => (
                   <div key={option.value} className="flex items-center">
@@ -181,7 +181,7 @@ export function JobFilter({
                     />
                     <Label 
                       htmlFor={`priority-${option.value}`}
-                      className="ml-2 text-sm font-normal"
+                      className="ml-2 text-sm font-normal text-gray-700 dark:text-gray-300"
                     >
                       {option.label}
                     </Label>
@@ -193,7 +193,7 @@ export function JobFilter({
             <Separator />
             
             <div>
-              <h4 className="font-medium mb-2">Assigned To</h4>
+              <h4 className="font-medium mb-2 text-gray-900 dark:text-gray-100">Assigned To</h4>
               <div className="space-y-2">
                 <div className="flex items-center">
                   <Checkbox 
@@ -205,7 +205,7 @@ export function JobFilter({
                   />
                   <Label 
                     htmlFor="assigned-unassigned"
-                    className="ml-2 text-sm font-normal"
+                    className="ml-2 text-sm font-normal text-gray-700 dark:text-gray-300"
                   >
                     Unassigned
                   </Label>
@@ -221,7 +221,7 @@ export function JobFilter({
                     />
                     <Label 
                       htmlFor={`tech-${tech.id}`}
-                      className="ml-2 text-sm font-normal"
+                      className="ml-2 text-sm font-normal text-gray-700 dark:text-gray-300"
                     >
                       {tech.full_name}
                     </Label>
@@ -233,7 +233,7 @@ export function JobFilter({
             <Separator />
             
             <div>
-              <h4 className="font-medium mb-2">Queue</h4>
+              <h4 className="font-medium mb-2 text-gray-900 dark:text-gray-100">Queue</h4>
               <div className="space-y-2">
                 {Array.isArray(queues) && queues.map(queue => (
                   <div key={queue.id} className="flex items-center">
@@ -246,7 +246,7 @@ export function JobFilter({
                     />
                     <Label 
                       htmlFor={`queue-${queue.id}`}
-                      className="ml-2 text-sm font-normal"
+                      className="ml-2 text-sm font-normal text-gray-700 dark:text-gray-300"
                     >
                       {queue.name}
                     </Label>
@@ -267,26 +267,26 @@ export function JobFilter({
               />
               <Label 
                 htmlFor="save-default"
-                className="ml-2 text-sm font-normal"
+                className="ml-2 text-sm font-normal text-gray-700 dark:text-gray-300"
               >
                 Save as default filters
               </Label>
             </div>
           </div>
         </div>
-        <div className="flex items-center justify-between p-4 pt-0">
+        <div className="flex items-center justify-between p-4 pt-0 border-t dark:border-gray-700">
           <Button
             variant="ghost"
             size="sm"
             onClick={resetFilters}
-            className="h-8"
+            className="h-8 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 hover:bg-gray-100 dark:hover:bg-gray-700"
           >
             Reset
           </Button>
           <Button
             size="sm"
             onClick={() => setOpen(false)}
-            className="h-8"
+            className="h-8 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 hover:bg-gray-100 dark:hover:bg-gray-700"
           >
             Apply Filters
           </Button>
@@ -301,17 +301,17 @@ export function JobFilter({
       <div className="flex flex-wrap items-center gap-2 w-full">
         {/* Search input */}
         <div className="relative flex-1 min-w-[200px]">
-          <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+          <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground dark:text-gray-400" />
           <Input
             type="text"
             placeholder="Search by client, title, or site..."
-            className="pl-8 h-9"
+            className="pl-8 h-9 bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400"
             value={filters.search || ""}
             onChange={(e) => handleSearchChange(e.target.value)}
           />
           {filters.search && (
             <button 
-              className="absolute right-2 top-2.5 text-muted-foreground hover:text-foreground"
+              className="absolute right-2 top-2.5 text-muted-foreground hover:text-foreground dark:text-gray-400 dark:hover:text-gray-200"
               onClick={() => handleSearchChange("")}
             >
               <X className="h-4 w-4" />
@@ -326,7 +326,11 @@ export function JobFilter({
               key={status.id}
               variant={filters.status.includes(status.name) ? "default" : "outline"}
               size="sm"
-              className="h-8"
+              className={`h-8 ${
+                filters.status.includes(status.name) 
+                  ? "bg-primary text-primary-foreground hover:bg-primary/90 dark:bg-primary dark:text-primary-foreground dark:hover:bg-primary/90" 
+                  : "border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700"
+              }`}
               onClick={() => handleStatusChange(status.name, !filters.status.includes(status.name))}
             >
               {status.name}
@@ -337,20 +341,20 @@ export function JobFilter({
         {/* Advanced filters button */}
         <Popover open={open} onOpenChange={setOpen}>
           <PopoverTrigger asChild>
-            <Button variant="outline" className="h-8 border-dashed">
+            <Button variant="outline" className="h-8 border-dashed border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700">
               <Filter className="mr-2 h-3.5 w-3.5" />
               Advanced
               {totalActiveFilters > 0 && (
                 <Badge 
                   variant="secondary" 
-                  className="ml-2 rounded-sm px-1 font-normal"
+                  className="ml-2 rounded-sm px-1 font-normal bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200"
                 >
                   {totalActiveFilters}
                 </Badge>
               )}
             </Button>
           </PopoverTrigger>
-          <PopoverContent className="w-80 p-0" align="end">
+          <PopoverContent className="w-80 p-0 bg-white dark:bg-gray-800 border dark:border-gray-700" align="end">
             {getAdvancedFilterContent()}
           </PopoverContent>
         </Popover>
@@ -363,7 +367,7 @@ export function JobFilter({
             <Badge 
               key={`status-${status}`} 
               variant="secondary"
-              className="cursor-pointer h-6"
+              className="cursor-pointer h-6 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 hover:bg-gray-300 dark:hover:bg-gray-600"
               onClick={() => handleStatusChange(status, false)}
             >
               {status}
@@ -374,7 +378,7 @@ export function JobFilter({
             <Badge 
               key={`priority-${priority}`} 
               variant="secondary"
-              className="cursor-pointer h-6"
+              className="cursor-pointer h-6 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 hover:bg-gray-300 dark:hover:bg-gray-600"
               onClick={() => handlePriorityChange(priority, false)}
             >
               {priority}
@@ -387,7 +391,7 @@ export function JobFilter({
                 <Badge 
                   key="unassigned" 
                   variant="secondary"
-                  className="cursor-pointer h-6"
+                  className="cursor-pointer h-6 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 hover:bg-gray-300 dark:hover:bg-gray-600"
                   onClick={() => handleAssignedToChange(techId, false)}
                 >
                   Unassigned
@@ -400,7 +404,7 @@ export function JobFilter({
               <Badge 
                 key={`tech-${techId}`} 
                 variant="secondary"
-                className="cursor-pointer h-6"
+                className="cursor-pointer h-6 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 hover:bg-gray-300 dark:hover:bg-gray-600"
                 onClick={() => handleAssignedToChange(techId, false)}
               >
                 {tech.full_name}
@@ -412,7 +416,7 @@ export function JobFilter({
             <Badge 
               key={`queue-${queue}`} 
               variant="secondary"
-              className="cursor-pointer h-6"
+              className="cursor-pointer h-6 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 hover:bg-gray-300 dark:hover:bg-gray-600"
               onClick={() => handleQueueChange(queue, false)}
             >
               {queue}
@@ -424,7 +428,7 @@ export function JobFilter({
               variant="ghost" 
               size="sm" 
               onClick={resetFilters}
-              className="h-6 px-2 text-xs"
+              className="h-6 px-2 text-xs text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100"
             >
               Clear all
             </Button>

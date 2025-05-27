@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Search, Gauge, WifiOff, Bell } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
-import api from '../services/api';
+import { api } from '../services/api';
 import { DashboardResponse, SiteData } from '../types/api';
 import { DashboardHeader } from './JobManagement/dashboard-header';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -45,7 +45,6 @@ const StaffDashboardView = () => {
 
   const fetchSites = useCallback(async (term = '', page = 1) => {
     setIsLoading(true);
-    console.log('Fetching sites with term:', term);
     try {
       const params = {
         search: term,
@@ -53,17 +52,11 @@ const StaffDashboardView = () => {
         page: page.toString(),
         ordering: '-Site_id'
       };
-      console.log('API request params:', params);
       const response = await api.get('/sites/', { params });
-      
-      console.log('Search response data:', response.data);
 
       if (response.data) {
         // Transform the API response data into our expected format
         const transformedSites: SiteData[] = response.data.results.map((site: ApiSiteResponse) => {
-          // Log each site to debug the structure
-          console.log('Processing site:', site);
-          
           return {
             site: {
               site_id: site.site_id?.toString() || '',
@@ -99,14 +92,11 @@ const StaffDashboardView = () => {
           metrics_last_updated: new Date().toISOString()
         };
 
-        console.log('Transformed data:', transformedData);
         setData(transformedData);
         setCurrentPage(page);
       } else {
-        console.warn('No data in response');
       }
     } catch (err) {
-      console.error('Error fetching sites:', err);
       if ((err as { response?: { status: number } })?.response?.status === 401) {
         navigate('/login');
       }
@@ -119,7 +109,6 @@ const StaffDashboardView = () => {
   useEffect(() => {
     const timer = setTimeout(() => {
       if (searchTerm) {
-        console.log('Debounced search triggered with term:', searchTerm);
         fetchSites(searchTerm, 1);
       }
     }, 300);
@@ -128,26 +117,16 @@ const StaffDashboardView = () => {
   }, [searchTerm, fetchSites]);
 
   useEffect(() => {
-    console.log('Dashboard mounted, checking token...');
     const token = localStorage.getItem('access_token');
     if (!token) {
-      console.log('No token found, redirecting to login');
       navigate('/login');
       return;
     }
-    console.log('Token found, fetching sites...');
     fetchSites();
   }, [fetchSites, navigate]);
 
-  console.log('Dashboard rendering with state:', {
-    isLoading,
-    sitesCount: data?.filtered_sites?.length,
-    currentPage
-  });
-
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
-    console.log('Search input changed:', value);
     setSearchTerm(value);
   };
 

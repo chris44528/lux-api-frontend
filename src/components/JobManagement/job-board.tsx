@@ -60,7 +60,6 @@ export function JobBoard() {
       try {
         return JSON.parse(saved)
       } catch (e) {
-        console.error('Error parsing saved filters', e)
         return null
       }
     }
@@ -95,7 +94,6 @@ export function JobBoard() {
         
         // Try to fetch real data first
         try {
-          console.log('Fetching data from API...');
           const [jobsResponse, techniciansResponse, statusesResponse, queuesResponse] = await Promise.all([
             jobService.getJobs(),
             jobService.getTechnicians(),
@@ -105,19 +103,12 @@ export function JobBoard() {
 
           if (!isMounted) return;
 
-          console.log('API responses received:', {
-            jobs: jobsResponse,
-            technicians: techniciansResponse,
-            statuses: statusesResponse,
-            queues: queuesResponse
-          });
 
           jobsData = jobsResponse.results || jobsResponse;
           techniciansData = techniciansResponse;
           statusesData = statusesResponse;
           queuesData = queuesResponse;
         } catch (error: unknown) {
-          console.error('Error fetching data:', error);
           if (error && typeof error === 'object' && 'response' in error && 
               error.response && typeof error.response === 'object' && 
               'status' in error.response && error.response.status === 401) {
@@ -197,7 +188,6 @@ export function JobBoard() {
           }
         }
       } catch (error) {
-        console.error('Error in fetchData:', error);
         if (isMounted) {
           toast({
             title: "Error",
@@ -259,7 +249,6 @@ export function JobBoard() {
             type: "success"
           });
         } catch (error) {
-          console.error('Error updating job status:', error);
           toast({
             title: "Error",
             description: "Failed to update job status. Please try again.",
@@ -308,7 +297,6 @@ export function JobBoard() {
         type: "success"
       });
     } catch (error) {
-      console.error('Error assigning jobs:', error);
       toast({
         title: "Error",
         description: "Failed to assign jobs. Please try again.",
@@ -329,7 +317,6 @@ export function JobBoard() {
         type: "success"
       });
     } catch (error) {
-      console.error('Error deleting jobs:', error);
       toast({
         title: "Error",
         description: "Failed to delete jobs. Please try again.",
@@ -371,7 +358,7 @@ export function JobBoard() {
   }, [jobs, filters]);
 
   return (
-    <div className="h-full flex flex-col">
+    <div className="h-full flex flex-col bg-gray-50 dark:bg-gray-900">
       <DashboardHeader />
 
       <div className="flex-1 p-4">
@@ -425,11 +412,13 @@ export function JobBoard() {
 
           <DragOverlay>
             {activeJob ? (
-              <JobCard
-                job={activeJob}
-                technicians={technicians}
-                overlay
-              />
+              <div className="opacity-90">
+                <JobCard
+                  job={activeJob}
+                  technicians={technicians}
+                  overlay
+                />
+              </div>
             ) : null}
           </DragOverlay>
         </DndContext>
@@ -438,7 +427,6 @@ export function JobBoard() {
       <BulkAssignModal
         isOpen={showAssignModal}
         onClose={() => {
-          console.log('Technicians data:', technicians);
           setShowAssignModal(false);
         }}
         onAssign={handleBulkAssign}

@@ -8,13 +8,21 @@ import { useToast } from "../../hooks/use-toast"
 import { Badge } from "../ui/badge"
 import { JobFilter, type JobFilters } from "./job-filter"
 import jobService, { Job, Technician, JobStatus, JobQueue, JobTask, TaskStepInstance } from "../../services/jobService"
+import { getBulkSiteCommunicationStatus } from "../../services/api"
 
 // Extended Job interface with current step info
 interface ExtendedJob extends Job {
   currentStep?: string;
   tasks?: JobTask[];
+  siteStatus?: {
+    status: 'no_coms' | 'zero_read' | 'healthy' | 'loading' | 'error';
+    days?: number;
+    last_reading_date?: string;
+    last_reading_value?: number;
+  };
 }
 import { BulkAssignModal, BulkDeleteModal, BulkUpdateModal } from "./bulk-actions"
+import { BulkMeterTestModal } from "./BulkMeterTestModal"
 import {
   Table,
   TableBody,
@@ -25,8 +33,6 @@ import {
 } from "../ui/table"
 import { Checkbox } from "../ui/checkbox"
 import { format } from "date-fns"
-import { ArrowUpDown } from "lucide-react"
-// Removed ColumnDef import since @tanstack/react-table is not installed
 
 interface PaginatedResponse<T> {
   count: number
@@ -50,12 +56,16 @@ const getSavedFilters = (): JobFilters | null => {
   return savedFilters ? JSON.parse(savedFilters) : null
 }
 
-export function JobTable() {
+interface JobTableProps {
+  showOnlyCompleted?: boolean;
+}
+
+export function JobTable({ showOnlyCompleted = false }: JobTableProps) {
   const [jobs, setJobs] = useState<ExtendedJob[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [filteredJobs, setFilteredJobs] = useState<ExtendedJob[]>([])
-  const [loadingSteps, setLoadingSteps] = useState(false)
+  // Removed unused loadingSteps state
   const [technicians, setTechnicians] = useState<Technician[]>([])
   const [statuses, setStatuses] = useState<JobStatus[]>([])
   const [queues, setQueues] = useState<JobQueue[]>([])
@@ -64,56 +74,67 @@ export function JobTable() {
   const [showAssignModal, setShowAssignModal] = useState(false)
   const [showDeleteModal, setShowDeleteModal] = useState(false)
   const [showUpdateModal, setShowUpdateModal] = useState(false)
-  const [page, setPage] = useState(1)
-  const [totalPages, setTotalPages] = useState(1)
+  const [showMeterTestModal, setShowMeterTestModal] = useState(false)
+  // Removed unused pagination states
   
   const { toast } = useToast()
   const navigate = useNavigate()
 
   // Function to get the current step for each job
   const fetchJobsWithSteps = async (jobsList: Job[]) => {
-    setLoadingSteps(true)
     
     try {
       // Create extended jobs with empty current step
       const extendedJobs: ExtendedJob[] = jobsList.map(job => ({
         ...job,
-        currentStep: "Loading..."
+        currentStep: "Loading...",
+        siteStatus: { status: 'loading' }
       }))
       
       // Update the jobs state immediately with loading state
       setJobs(extendedJobs)
       
+      // First, get all unique site IDs and fetch their statuses in bulk
+      const siteIds = jobsList
+        .filter(job => job.site !== null && job.site !== undefined)
+        .map(job => {
+          // Handle both cases: site as number or site as object
+          if (typeof job.site === 'number') {
+            return job.site;
+          } else if (typeof job.site === 'object' && job.site.site_id) {
+            return job.site.site_id;
+          }
+          return null;
+        })
+        .filter(id => id !== null) as number[];
+      
+      const uniqueSiteIds = [...new Set(siteIds)];
+      const siteStatuses = await getBulkSiteCommunicationStatus(uniqueSiteIds);
+      
       // For each job, fetch its tasks and update state
       const jobsWithSteps = await Promise.all(
         extendedJobs.map(async (job) => {
           try {
-            console.log(`Fetching tasks for job ID: ${job.id}`)
             // Get tasks for this job using the numeric ID
             const jobId = typeof job.id === 'string' ? parseInt(job.id) : job.id
             const tasks = await jobService.getJobTasks(jobId)
-            console.log(`Received tasks for job ${job.id}:`, tasks)
             
             // Set default value
             let currentStepName = "No tasks assigned"
             
             if (tasks && tasks.length > 0) {
               // Log the first task for debugging
-              console.log(`First task for job ${job.id}:`, tasks[0])
               
               // Find the active task or use the first one
               const activeTask = tasks.find(task => task.status === "in_progress") || tasks[0]
-              console.log(`Active task for job ${job.id}:`, activeTask)
               
               // If task has step_instances, find the current or next step
               if (activeTask.step_instances && activeTask.step_instances.length > 0) {
-                console.log(`Step instances available for job ${job.id}`)
                 
                 // First look for in_progress steps
                 const inProgressStep = activeTask.step_instances.find(step => step.status === "in_progress")
                 
                 if (inProgressStep) {
-                  console.log(`Found in-progress step: ${inProgressStep.name}`)
                   currentStepName = `In progress: ${inProgressStep.name}`
                 } else {
                   // Then look for pending steps
@@ -122,7 +143,6 @@ export function JobTable() {
                     .sort((a, b) => a.step_order - b.step_order)
                   
                   if (pendingSteps.length > 0) {
-                    console.log(`Found pending step: ${pendingSteps[0].name}`)
                     currentStepName = pendingSteps[0].name
                   } else {
                     // If no in_progress or pending steps, look for the latest completed step
@@ -131,7 +151,6 @@ export function JobTable() {
                       .sort((a, b) => b.step_order - a.step_order) // Reverse order to get latest
                     
                     if (completedSteps.length > 0) {
-                      console.log(`Found completed step: ${completedSteps[0].name}`)
                       currentStepName = `Completed: ${completedSteps[0].name}`
                     } else {
                       currentStepName = "No active steps"
@@ -140,41 +159,59 @@ export function JobTable() {
                 }
               } else {
                 // No step_instances, try to get task details
-                console.log(`No step instances, trying to get task details for task ${activeTask.id}`)
                 try {
                   const taskDetails = await jobService.getTaskDetails(activeTask.id)
-                  console.log(`Task details for task ${activeTask.id}:`, taskDetails)
                   
                   if (taskDetails && taskDetails.step_instances && taskDetails.step_instances.length > 0) {
                     const steps = taskDetails.step_instances
-                    const activeStep = steps.find(step => step.status === "in_progress") || 
-                                      steps.filter(step => step.status === "pending")
-                                          .sort((a, b) => a.step_order - b.step_order)[0]
+                    const activeStep = steps.find((step: TaskStepInstance) => step.status === "in_progress") || 
+                                      steps.filter((step: TaskStepInstance) => step.status === "pending")
+                                          .sort((a: TaskStepInstance, b: TaskStepInstance) => a.step_order - b.step_order)[0]
                                     
                     if (activeStep) {
-                      console.log(`Found active step from task details: ${activeStep.name}`)
                       currentStepName = activeStep.name
                     }
                   } else if (taskDetails && taskDetails.current_step) {
-                    console.log(`Found current step in task details: ${taskDetails.current_step.name}`)
                     currentStepName = taskDetails.current_step.name
                   }
                 } catch (error) {
-                  console.error(`Error fetching task details for task ${activeTask.id}:`, error)
                 }
               }
             }
             
-            console.log(`Final current step for job ${job.id}: "${currentStepName}"`)
             
-            // Return updated job with current step
+            // Get site communication status from bulk results
+            let siteStatus: ExtendedJob['siteStatus'] = { status: 'loading' };
+            let siteId: number | null = null;
+            
+            // Extract site ID from either number or object format
+            if (typeof job.site === 'number') {
+              siteId = job.site;
+            } else if (typeof job.site === 'object' && job.site && job.site.site_id) {
+              siteId = job.site.site_id;
+            }
+            
+            if (siteId !== null) {
+              const statusData = siteStatuses[siteId];
+              
+              if (statusData && !statusData.error) {
+                siteStatus = statusData;
+              } else if (statusData && statusData.error) {
+                siteStatus = { status: 'error' };
+              } else {
+                // No data available
+                siteStatus = { status: 'error' };
+              }
+            }
+            
+            // Return updated job with current step and site status
             return {
               ...job,
               currentStep: currentStepName,
-              tasks
+              tasks,
+              siteStatus
             }
           } catch (error) {
-            console.error(`Error fetching tasks for job ${job.id}:`, error)
             // Return job with error message
             return {
               ...job,
@@ -190,9 +227,6 @@ export function JobTable() {
       setFilteredJobs(jobsWithSteps)
       
     } catch (error) {
-      console.error('Error fetching job steps:', error)
-    } finally {
-      setLoadingSteps(false)
     }
   }
 
@@ -200,11 +234,11 @@ export function JobTable() {
     try {
       setLoading(true)
       // Adapt filters to match service interface
-      const serviceFilters: JobFilters = {
+      const serviceFilters = {
         status: filters.status,
         priority: filters.priority,
         queue: filters.queue,
-        assignedTo: filters.assignedTo,
+        assignedTo: filters.assignedTo.map(id => id === 'unassigned' ? -1 : parseInt(id)),
         search: filters.search || ''
       }
       
@@ -214,10 +248,10 @@ export function JobTable() {
       if (response && typeof response === 'object' && 'results' in response) {
         const paginatedResponse = response as unknown as PaginatedResponse<Job>
         jobsList = paginatedResponse.results
-        setTotalPages(Math.ceil(paginatedResponse.count / 10))
+        // setTotalPages(Math.ceil(paginatedResponse.count / 10))
       } else if (Array.isArray(response)) {
         jobsList = response
-        setTotalPages(1)
+        // setTotalPages(1)
       }
       
       // First update with basic job data
@@ -227,7 +261,6 @@ export function JobTable() {
       fetchJobsWithSteps(jobsList)
       
     } catch (error) {
-      console.error('Error fetching jobs:', error)
     } finally {
       setLoading(false)
     }
@@ -235,7 +268,7 @@ export function JobTable() {
 
   useEffect(() => {
     fetchData()
-  }, [filters, page])
+  }, [filters])
 
   // Load all data from API
   useEffect(() => {
@@ -266,12 +299,18 @@ export function JobTable() {
 
           if (!isMounted) return;
 
-          jobsData = jobsResponse.results || jobsResponse;
+          // Handle both array and paginated response
+          if (Array.isArray(jobsResponse)) {
+            jobsData = jobsResponse;
+          } else if (jobsResponse && typeof jobsResponse === 'object' && 'results' in jobsResponse) {
+            jobsData = (jobsResponse as PaginatedResponse<Job>).results;
+          } else {
+            jobsData = [];
+          }
           techniciansData = techniciansResponse;
           statusesData = statusesResponse;
           queuesData = queuesResponse;
         } catch (err) {
-          console.error('Error fetching data:', err);
           if (err.response?.status === 401) {
             if (isMounted) {
               setError('Authentication failed. Please log in again.');
@@ -282,55 +321,12 @@ export function JobTable() {
             }
             return;
           }
-          // Use mock data if API fails
-          jobsData = [
-            {
-              id: 1,
-              title: "Plumbing Repair",
-              description: "Fix leaking pipe in kitchen",
-              site: { site_id: 1, site_name: "Test Site", postcode: "12345" },
-              client: "John Smith",
-              address: "123 Main St, Anytown",
-              priority: "high",
-              status: { id: 1, name: "pending", color: "#ef4444" },
-              queue: { id: 1, name: "Electrical", description: "Electrical queue" },
-              due_date: "2025-04-01",
-              created_at: "2023-03-15",
-              updated_at: "2023-03-15",
-              estimated_duration: 2
-            }
-          ];
-          techniciansData = [
-            { 
-              id: 1, 
-              user: { id: 1, first_name: "Alex", last_name: "Johnson", username: "alex.johnson" },
-              full_name: "Alex Johnson",
-              is_active: true
-            },
-            { 
-              id: 2, 
-              user: { id: 2, first_name: "Sam", last_name: "Williams", username: "sam.williams" },
-              full_name: "Sam Williams",
-              is_active: true
-            },
-            { 
-              id: 3, 
-              user: { id: 3, first_name: "Taylor", last_name: "Smith", username: "taylor.smith" },
-              full_name: "Taylor Smith",
-              is_active: true
-            }
-          ];
-          statusesData = [
-            { id: 1, name: 'pending', color: '#ef4444', site: 1, is_default: false },
-            { id: 2, name: 'in-progress', color: '#f59e0b', site: 1, is_default: false },
-            { id: 3, name: 'completed', color: '#10b981', site: 1, is_default: true }
-          ];
-          queuesData = [
-            { id: 1, name: 'Electrical', description: 'Electrical queue', created_at: '2024-01-01', updated_at: '2024-01-01' },
-            { id: 2, name: 'Roofing', description: 'Roofing queue', created_at: '2024-01-01', updated_at: '2024-01-01' },
-            { id: 3, name: 'Biomass', description: 'Biomass queue', created_at: '2024-01-01', updated_at: '2024-01-01' },
-            { id: 4, name: 'Legal', description: 'Legal queue', created_at: '2024-01-01', updated_at: '2024-01-01' }
-          ];
+          // If API fails, show error and return
+          setError(`Failed to load data: ${err.message || 'Unknown error'}`);
+          toast({
+            title: "Error",
+            description: "Failed to load job data. Please try again."
+          });
         }
         
         if (isMounted) {
@@ -348,7 +344,6 @@ export function JobTable() {
           }
         }
       } catch (error) {
-        console.error('Error in fetchData:', error);
         if (isMounted) {
           setError('Failed to load data. Please try again later.');
           toast({
@@ -376,6 +371,17 @@ export function JobTable() {
     if (!jobs.length) return;
 
     let result = [...jobs];
+    
+    // Apply route-based filtering first
+    if (showOnlyCompleted) {
+      // Show only completed jobs
+      result = result.filter(job => job.status.name.toLowerCase() === 'completed');
+    } else {
+      // Default view: exclude completed jobs unless explicitly filtered
+      if (filters.status.length === 0) {
+        result = result.filter(job => job.status.name.toLowerCase() !== 'completed');
+      }
+    }
     
     if (filters.status.length > 0) {
       result = result.filter(job => filters.status.includes(job.status.name));
@@ -410,7 +416,7 @@ export function JobTable() {
     });
     
     setFilteredJobs(resultWithSteps);
-  }, [jobs, filters]);
+  }, [jobs, filters, showOnlyCompleted]);
   
   // Save filters to localStorage if saveAsDefault is checked
   useEffect(() => {
@@ -467,6 +473,9 @@ export function JobTable() {
         case 'update':
           setShowUpdateModal(true)
           break
+        case 'meterTest':
+          setShowMeterTestModal(true)
+          break
         default:
           toast({
             title: "Unknown action",
@@ -474,7 +483,6 @@ export function JobTable() {
           })
       }
     } catch (error) {
-      console.error('Error performing bulk action:', error)
       toast({
         title: "Error",
         description: "Failed to perform the selected action. Please try again.",
@@ -492,7 +500,6 @@ export function JobTable() {
       // Clear selection
       setSelectedJobs(new Set())
     } catch (error) {
-      console.error('Error bulk assigning jobs:', error)
       throw error
     }
   }
@@ -507,7 +514,6 @@ export function JobTable() {
       // Clear selection
       setSelectedJobs(new Set())
     } catch (error) {
-      console.error('Error bulk deleting jobs:', error)
       throw error
     }
   }
@@ -528,7 +534,6 @@ export function JobTable() {
       // Clear selection
       setSelectedJobs(new Set())
     } catch (error) {
-      console.error('Error bulk updating jobs:', error)
       throw error
     }
   }
@@ -537,13 +542,13 @@ export function JobTable() {
   const getPriorityColor = (priority: string) => {
     switch (priority.toLowerCase()) {
       case "high":
-        return "bg-red-100 text-red-800 hover:bg-red-100"
+        return "bg-red-100 text-red-800 hover:bg-red-100 dark:bg-red-900/30 dark:text-red-400 dark:hover:bg-red-900/30"
       case "medium":
-        return "bg-amber-100 text-amber-800 hover:bg-amber-100"
+        return "bg-amber-100 text-amber-800 hover:bg-amber-100 dark:bg-amber-900/30 dark:text-amber-400 dark:hover:bg-amber-900/30"
       case "low":
-        return "bg-green-100 text-green-800 hover:bg-green-100"
+        return "bg-green-100 text-green-800 hover:bg-green-100 dark:bg-green-900/30 dark:text-green-400 dark:hover:bg-green-900/30"
       default:
-        return "bg-gray-100 text-gray-800 hover:bg-gray-100"
+        return "bg-gray-100 text-gray-800 hover:bg-gray-100 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-800"
     }
   }
 
@@ -551,190 +556,68 @@ export function JobTable() {
   const getStatusColor = (status: string) => {
     switch (status.toLowerCase()) {
       case "pending":
-        return "bg-yellow-100 text-yellow-800"
+        return "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400"
       case "in-progress":
-        return "bg-blue-100 text-blue-800"
+        return "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400"
       case "completed":
-        return "bg-green-100 text-green-800"
+        return "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400"
       default:
-        return "bg-gray-100 text-gray-800"
+        return "bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300"
     }
   }
 
-  const columns: any[] = [
-    {
-      id: "select",
-      header: ({ table }) => (
-        <Checkbox
-          checked={table.getIsAllPageRowsSelected()}
-          onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
-          aria-label="Select all"
-        />
-      ),
-      cell: ({ row }) => (
-        <Checkbox
-          checked={row.getIsSelected()}
-          onCheckedChange={(value) => row.toggleSelected(!!value)}
-          aria-label="Select row"
-        />
-      ),
-      enableSorting: false,
-      enableHiding: false,
-    },
-    {
-      accessorKey: "title",
-      header: ({ column }) => {
-        return (
-          <Button
-            variant="ghost"
-            onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
-          >
-            Title
-            <ArrowUpDown className="ml-2 h-4 w-4" />
-          </Button>
-        )
-      },
-    },
-    {
-      accessorKey: "client",
-      header: ({ column }) => {
-        return (
-          <Button
-            variant="ghost"
-            onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
-          >
-            Client
-            <ArrowUpDown className="ml-2 h-4 w-4" />
-          </Button>
-        )
-      },
-    },
-    {
-      accessorKey: "site",
-      header: ({ column }) => {
-        return (
-          <Button
-            variant="ghost"
-            onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
-          >
-            Site Name
-            <ArrowUpDown className="ml-2 h-4 w-4" />
-          </Button>
-        )
-      },
-      cell: ({ row }) => {
-        const site = row.original.site
-        return site ? site.name : "N/A"
-      },
-    },
-    {
-      accessorKey: "status",
-      header: ({ column }) => {
-        return (
-          <Button
-            variant="ghost"
-            onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
-          >
-            Status
-            <ArrowUpDown className="ml-2 h-4 w-4" />
-          </Button>
-        )
-      },
-      cell: ({ row }) => {
-        const status = row.original.status
-        return (
-          <Badge className={getStatusColor(status.name)}>
-            {status.name}
-          </Badge>
-        )
-      },
-    },
-    {
-      accessorKey: "priority",
-      header: ({ column }) => {
-        return (
-          <Button
-            variant="ghost"
-            onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
-          >
-            Priority
-            <ArrowUpDown className="ml-2 h-4 w-4" />
-          </Button>
-        )
-      },
-      cell: ({ row }) => {
-        const priority = row.original.priority
-        return (
-          <Badge className={getPriorityColor(priority)}>
-            {priority}
-          </Badge>
-        )
-      },
-    },
-    {
-      accessorKey: "queue",
-      header: ({ column }) => {
-        return (
-          <Button
-            variant="ghost"
-            onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
-          >
-            Queue
-            <ArrowUpDown className="ml-2 h-4 w-4" />
-          </Button>
-        )
-      },
-      cell: ({ row }) => {
-        const queue = row.original.queue
-        return queue ? queue.name : "N/A"
-      },
-    },
-    {
-      accessorKey: "due_date",
-      header: ({ column }) => {
-        return (
-          <Button
-            variant="ghost"
-            onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
-          >
-            Due Date
-            <ArrowUpDown className="ml-2 h-4 w-4" />
-          </Button>
-        )
-      },
-      cell: ({ row }) => {
-        const dueDate = row.original.due_date
-        return dueDate ? format(new Date(dueDate), "MMM d, yyyy") : "No due date"
-      },
-    },
-    {
-      accessorKey: "assigned_to",
-      header: ({ column }) => {
-        return (
-          <Button
-            variant="ghost"
-            onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
-          >
-            Assigned To
-            <ArrowUpDown className="ml-2 h-4 w-4" />
-          </Button>
-        )
-      },
-      cell: ({ row }) => {
-        const assignedTo = row.original.assigned_to
-        return assignedTo ? assignedTo.user.first_name + " " + assignedTo.user.last_name : "Unassigned"
-      },
-    },
-  ]
+  // Get site status display
+  const getSiteStatusDisplay = (siteStatus?: ExtendedJob['siteStatus']) => {
+    if (!siteStatus) return { text: 'N/A', color: 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300' };
+    
+    switch (siteStatus.status) {
+      case 'no_coms':
+        return { 
+          text: `No Coms (${siteStatus.days || 0}d)`, 
+          color: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400' 
+        };
+      case 'zero_read':
+        return { 
+          text: `Zero Read (${siteStatus.days || 0}d)`, 
+          color: 'bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-400' 
+        };
+      case 'healthy':
+        return { 
+          text: 'Healthy', 
+          color: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400' 
+        };
+      case 'loading':
+        return { 
+          text: 'Loading...', 
+          color: 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300' 
+        };
+      case 'error':
+        return { 
+          text: 'Error', 
+          color: 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300' 
+        };
+      default:
+        return { 
+          text: 'Unknown', 
+          color: 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300' 
+        };
+    }
+  }
+
+  // Removed unused columns variable
 
   return (
     <div className="flex flex-col h-full min-h-screen">
       <main className="flex-1 p-4 md:p-6 space-y-6">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-bold">Job Management</h1>
-            <p className="text-muted-foreground">
-              Manage and track all jobs in the system
+            <h1 className="text-2xl font-bold dark:text-white">
+              {showOnlyCompleted ? 'Completed Jobs' : 'Job Management'}
+            </h1>
+            <p className="text-muted-foreground dark:text-gray-400">
+              {showOnlyCompleted 
+                ? 'View all completed jobs' 
+                : 'Manage and track active jobs in the system'}
             </p>
           </div>
           <Button onClick={() => navigate("/jobs/new")} size="sm" className="h-8">
@@ -753,8 +636,8 @@ export function JobTable() {
         />
 
         {selectedJobs.size > 0 && (
-          <div className="flex items-center gap-2 p-2 bg-muted rounded-lg">
-            <span className="text-sm text-muted-foreground">
+          <div className="flex items-center gap-2 p-2 bg-muted dark:bg-gray-800 rounded-lg">
+            <span className="text-sm text-muted-foreground dark:text-gray-400">
               {selectedJobs.size} job{selectedJobs.size === 1 ? '' : 's'} selected
             </span>
             <Button
@@ -778,18 +661,25 @@ export function JobTable() {
             >
               Delete
             </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => handleBulkAction('meterTest')}
+            >
+              Meter Test
+            </Button>
           </div>
         )}
 
         {loading ? (
           <div className="flex items-center justify-center h-64">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 dark:border-gray-100"></div>
           </div>
         ) : error ? (
-          <div className="text-center text-red-500">{error}</div>
+          <div className="text-center text-red-500 dark:text-red-400">{error}</div>
         ) : filteredJobs.length === 0 ? (
           <div className="py-8 text-center">
-            <p className="text-muted-foreground mb-4">No jobs match the current filters</p>
+            <p className="text-muted-foreground dark:text-gray-400 mb-4">No jobs match the current filters</p>
             <Button 
               variant="outline" 
               onClick={() => setFilters({
@@ -798,16 +688,17 @@ export function JobTable() {
                 assignedTo: [],
                 queue: [],
                 search: '',
-                saveAsDefault: false
+                saveAsDefault: false,
+                defaultQueue: null
               })}
             >
               Clear Filters
             </Button>
           </div>
         ) : (
-          <div className="rounded-xl border shadow-lg overflow-hidden bg-white/80">
-            <Table className="min-w-full divide-y divide-gray-200">
-              <TableHeader className="bg-gray-100">
+          <div className="rounded-xl border dark:border-gray-700 shadow-lg overflow-hidden bg-white/80 dark:bg-gray-900/80">
+            <Table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+              <TableHeader className="bg-gray-100 dark:bg-gray-800">
                 <TableRow>
                   <TableHead className="w-[50px]">
                     <Checkbox
@@ -815,38 +706,38 @@ export function JobTable() {
                       onCheckedChange={handleSelectAll}
                     />
                   </TableHead>
-                  <TableHead className="uppercase tracking-wider text-xs text-gray-600">Title</TableHead>
-                  <TableHead className="uppercase tracking-wider text-xs text-gray-600">Client</TableHead>
-                  <TableHead className="uppercase tracking-wider text-xs text-gray-600">Site</TableHead>
-                  <TableHead className="uppercase tracking-wider text-xs text-gray-600">Status</TableHead>
-                  <TableHead className="uppercase tracking-wider text-xs text-gray-600">Priority</TableHead>
-                  <TableHead className="uppercase tracking-wider text-xs text-gray-600">Queue</TableHead>
-                  <TableHead className="uppercase tracking-wider text-xs text-gray-600">Current Step</TableHead>
-                  <TableHead className="uppercase tracking-wider text-xs text-gray-600">Due Date</TableHead>
-                  <TableHead className="uppercase tracking-wider text-xs text-gray-600">Assigned To</TableHead>
+                  <TableHead className="uppercase tracking-wider text-xs text-gray-600 dark:text-gray-300">Title</TableHead>
+                  <TableHead className="uppercase tracking-wider text-xs text-gray-600 dark:text-gray-300">Client</TableHead>
+                  <TableHead className="uppercase tracking-wider text-xs text-gray-600 dark:text-gray-300">Site</TableHead>
+                  <TableHead className="uppercase tracking-wider text-xs text-gray-600 dark:text-gray-300">Status</TableHead>
+                  <TableHead className="uppercase tracking-wider text-xs text-gray-600 dark:text-gray-300">Priority</TableHead>
+                  <TableHead className="uppercase tracking-wider text-xs text-gray-600 dark:text-gray-300">Queue</TableHead>
+                  <TableHead className="uppercase tracking-wider text-xs text-gray-600 dark:text-gray-300">Site Status</TableHead>
+                  <TableHead className="uppercase tracking-wider text-xs text-gray-600 dark:text-gray-300">Current Step</TableHead>
+                  <TableHead className="uppercase tracking-wider text-xs text-gray-600 dark:text-gray-300">Due Date</TableHead>
+                  <TableHead className="uppercase tracking-wider text-xs text-gray-600 dark:text-gray-300">Assigned To</TableHead>
                 </TableRow>
               </TableHeader>
-              <TableBody className="bg-white divide-y divide-gray-100">
+              <TableBody className="bg-white dark:bg-gray-900 divide-y divide-gray-100 dark:divide-gray-800">
                 {filteredJobs.map((job, idx) => (
                   <TableRow
                     key={job.id}
-                    className={`transition-colors cursor-pointer ${idx % 2 === 0 ? 'bg-white' : 'bg-gray-50'} hover:bg-blue-50`}
+                    className={`transition-colors cursor-pointer ${idx % 2 === 0 ? 'bg-white dark:bg-gray-900' : 'bg-gray-50 dark:bg-gray-800/50'} hover:bg-blue-50 dark:hover:bg-gray-700`}
                     onClick={() => navigate(`/jobs/${job.id}`)}
                   >
-                    <TableCell className="px-6 py-4">
+                    <TableCell 
+                      className="px-6 py-4"
+                      onClick={(e) => e.stopPropagation()}
+                    >
                       <Checkbox
                         checked={selectedJobs.has(job.id.toString())}
                         onCheckedChange={(checked) => handleSelectJob(job.id.toString(), checked as boolean)}
                       />
                     </TableCell>
-                    <TableCell className="px-6 py-4 font-medium text-gray-900">{job.title}</TableCell>
-                    <TableCell className="px-6 py-4">{job.client}</TableCell>
-                    <TableCell className="px-6 py-4">
-                      {typeof job.site === 'object' && job.site ? 
-                        (job.site.site_name || job.site.name || 'Unknown Site') : 
-                        typeof job.site === 'number' ? 
-                          `Site ID: ${job.site}` : 
-                          job.site_id ? `Site ID: ${job.site_id}` : 'Unknown Site'}
+                    <TableCell className="px-6 py-4 font-medium text-gray-900 dark:text-gray-100">{job.title}</TableCell>
+                    <TableCell className="px-6 py-4 dark:text-gray-300">{job.client}</TableCell>
+                    <TableCell className="px-6 py-4 dark:text-gray-300">
+                      {(job as any).site_name || 'Unknown Site'}
                     </TableCell>
                     <TableCell className="px-6 py-4">
                       <Badge className={getStatusColor(job.status.name)}>
@@ -858,18 +749,28 @@ export function JobTable() {
                         {job.priority}
                       </Badge>
                     </TableCell>
-                    <TableCell className="px-6 py-4">{job.queue.name}</TableCell>
+                    <TableCell className="px-6 py-4 dark:text-gray-300">{job.queue.name}</TableCell>
                     <TableCell className="px-6 py-4">
+                      {(() => {
+                        const siteStatus = getSiteStatusDisplay(job.siteStatus);
+                        return (
+                          <Badge className={siteStatus.color}>
+                            {siteStatus.text}
+                          </Badge>
+                        );
+                      })()}
+                    </TableCell>
+                    <TableCell className="px-6 py-4 dark:text-gray-300">
                       {job.currentStep ? (
-                        <span className={job.currentStep === "Loading..." ? "text-gray-400 italic" : ""}>
+                        <span className={job.currentStep === "Loading..." ? "text-gray-400 dark:text-gray-500 italic" : ""}>
                           {job.currentStep}
                         </span>
                       ) : "No tasks assigned"}
                     </TableCell>
-                    <TableCell className="px-6 py-4">
+                    <TableCell className="px-6 py-4 dark:text-gray-300">
                       {job.due_date ? format(new Date(job.due_date), "MMM d, yyyy") : "No due date"}
                     </TableCell>
-                    <TableCell className="px-6 py-4">
+                    <TableCell className="px-6 py-4 dark:text-gray-300">
                       {job.assigned_to ? job.assigned_to.user.first_name + " " + job.assigned_to.user.last_name : "Unassigned"}
                     </TableCell>
                   </TableRow>
@@ -904,6 +805,16 @@ export function JobTable() {
         technicians={technicians}
         queues={queues}
         statuses={statuses}
+      />
+      
+      <BulkMeterTestModal
+        isOpen={showMeterTestModal}
+        onClose={() => setShowMeterTestModal(false)}
+        selectedJobs={filteredJobs.filter(job => selectedJobs.has(job.id.toString()))}
+        onComplete={() => {
+          setSelectedJobs(new Set());
+          fetchData();
+        }}
       />
     </div>
   )

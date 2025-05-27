@@ -35,7 +35,6 @@ export const AssignTemplateModal: React.FC<AssignTemplateModalProps> = ({
         const data = await jobService.getTaskTemplates({ is_active: true });
         setTemplates(data);
       } catch (error) {
-        console.error("Failed to fetch templates:", error);
         toast({
           title: "Error",
           description: "Failed to load task templates"
@@ -72,7 +71,6 @@ export const AssignTemplateModal: React.FC<AssignTemplateModalProps> = ({
       onTemplateAssigned();
       onClose();
     } catch (error) {
-      console.error("Failed to assign template:", error);
       toast({
         title: "Error",
         description: "Failed to assign template"

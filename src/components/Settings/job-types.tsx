@@ -36,7 +36,6 @@ export default function JobTypes({ jobQueues }: JobTypesProps) {
       const types = await jobService.getJobTypes();
       setJobTypes(types);
     } catch (error) {
-      console.error("Error loading job types:", error);
       toast({
         title: "Error",
         description: "Failed to load job types"
@@ -77,7 +76,6 @@ export default function JobTypes({ jobQueues }: JobTypesProps) {
       // Refresh the job types list
       await loadJobTypes();
     } catch (error) {
-      console.error("Error adding job type:", error);
       toast({
         title: "Error",
         description: "Failed to add job type"
@@ -101,7 +99,6 @@ export default function JobTypes({ jobQueues }: JobTypesProps) {
       // Refresh the job types list
       await loadJobTypes();
     } catch (error) {
-      console.error("Error deleting job type:", error);
       toast({
         title: "Error",
         description: "Failed to delete job type"

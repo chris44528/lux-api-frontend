@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import SiteLandlordCard from './SiteLandlordCard';
 import ActionsDropdown from './ActionsDropdown';
 import ReadingsTab from './ReadingsTab';
@@ -27,8 +27,10 @@ import { SiteAlert, Meter } from '../../services/api';
 import { Search } from 'lucide-react';
 import { debounce } from 'lodash';
 import TextMessageModal from '../TextMessageModal';
+import EmailTemplateModal from '../EmailTemplateModal';
 import SiteReadingReportModal from '../SiteReadingReportModal';
 import AdvancedMonitoringModal from '../AdvancedMonitoringModal';
+import { useUIPermissionContext } from '../../contexts/UIPermissionContext';
 
 interface Reading {
   date: string;
@@ -139,12 +141,20 @@ interface SiteSearchResult {
   address?: string;
 }
 
+// Define available tabs outside component to prevent recreation
+const AVAILABLE_TABS = [
+  { key: 'readings', label: 'Readings', permission: 'sites.detail.tabs.readings' },
+  { key: 'meter-info', label: 'Meters', permission: 'sites.detail.tabs.meters' },
+  { key: 'jobs', label: 'Jobs', permission: 'sites.detail.tabs.jobs' },
+  { key: 'calls', label: 'Calls', permission: 'sites.detail.tabs.calls' },
+];
+
 const StaffSiteDetailPage: React.FC = () => {
   const { siteId } = useParams<{ siteId: string }>();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState('readings');
+  const [activeTab, setActiveTab] = useState('');
   const [siteData, setSiteData] = useState<SiteDetailApiResponse | null>(null);
   const [showAddNoteModal, setShowAddNoteModal] = useState(false);
   const [departments, setDepartments] = useState<{ id: number; name: string }[]>([]);
@@ -173,8 +183,32 @@ const StaffSiteDetailPage: React.FC = () => {
   const [isSearching, setIsSearching] = useState(false);
   const [searchResults, setSearchResults] = useState<SiteSearchResult[]>([]);
   const [showTextMessageModal, setShowTextMessageModal] = useState(false);
+  const [showEmailTemplateModal, setShowEmailTemplateModal] = useState(false);
   const [showSiteReadingReportModal, setShowSiteReadingReportModal] = useState(false);
   const [showAdvancedMonitoringModal, setShowAdvancedMonitoringModal] = useState(false);
+
+  // Get permissions from context
+  const { permissions, isLoaded } = useUIPermissionContext();
+
+  // Calculate visible tabs based on permissions
+  const visibleTabs = useMemo(() => {
+    // Show all tabs if permissions haven't loaded yet
+    if (!isLoaded) return AVAILABLE_TABS;
+    
+    // Filter tabs based on permissions
+    return AVAILABLE_TABS.filter(tab => {
+      const hasPermission = permissions[tab.permission];
+      // Show tab if permission is true or undefined (undefined means no restriction)
+      return hasPermission !== false;
+    });
+  }, [permissions, isLoaded]);
+
+  // Set initial active tab based on permissions
+  useEffect(() => {
+    if (visibleTabs.length > 0 && !activeTab) {
+      setActiveTab(visibleTabs[0].key);
+    }
+  }, [visibleTabs.length, activeTab]);
 
   useEffect(() => {
     async function fetchSiteData() {
@@ -276,7 +310,6 @@ const StaffSiteDetailPage: React.FC = () => {
       await pollMeterTestStatus(
         task_id,
         async (statusResponse) => {
-          console.log('Meter test status update:', statusResponse.status, statusResponse);
           setMeterTestStatus(statusResponse.status);
           
           // Handle completed status - this is when we have real data
@@ -291,7 +324,6 @@ const StaffSiteDetailPage: React.FC = () => {
               const obisVal = obis['1.0.1.8.0.255'] as Record<string, unknown> ?? {};
               const value = Number(obisVal.value ?? 0);
               
-              console.log('Saving meter test result:', { value, obis });
               
               await api.post('/meter-test/', {
                 site_id: Number(site_id),
@@ -302,12 +334,12 @@ const StaffSiteDetailPage: React.FC = () => {
               });
               
               // Refresh site data to update Meter Test History
-              if (siteId) {
-                const data = await getSiteDetail(siteId.toString());
-                setSiteData(data);
-              }
+              // Commented out to prevent flashing - can be re-enabled if needed
+              // if (siteId) {
+              //   const data = await getSiteDetail(siteId.toString());
+              //   setSiteData(data);
+              // }
             } catch (saveError) {
-              console.error('Error saving meter test result:', saveError);
             }
             
             // Start timeout to auto-hide result bar if details not shown
@@ -328,8 +360,11 @@ const StaffSiteDetailPage: React.FC = () => {
           
           // Keep showing progress for pending/processing status
           if (statusResponse.status === 'pending' || statusResponse.status === 'processing') {
+            // Don't change showResultBar if it's already true to prevent flashing
+            if (!showResultBar) {
+              setShowResultBar(true);
+            }
             setMeterTestLoading(true);
-            setShowResultBar(true);
           }
         }
       );
@@ -497,39 +532,43 @@ const StaffSiteDetailPage: React.FC = () => {
               onManageAlerts={() => setShowManageAlerts(true)}
               onMeterHistory={() => setShowMeterHistory(true)}
               onTextMessage={() => setShowTextMessageModal(true)}
+              onSendEmail={() => setShowEmailTemplateModal(true)}
               onSiteReadingReport={() => setShowSiteReadingReportModal(true)}
               onAdvancedMonitoring={() => setShowAdvancedMonitoringModal(true)}
             />
           </div>
         </div>
         {/* Meter Test Progress/Result UI below header */}
-        {showResultBar && (meterTestLoading || meterTestResult || meterTestError) && (
+        <div className={`transition-all duration-300 ease-in-out ${showResultBar ? 'max-h-screen opacity-100' : 'max-h-0 opacity-0 overflow-hidden'}`}>
           <div className="flex flex-col items-center gap-4 px-8 mt-6 bg-white dark:bg-gray-900 dark:text-gray-100">
-            {meterTestLoading && (
-              <div className="w-full max-w-xl flex flex-col items-center">
-                <LinearProgress
-                  variant="indeterminate"
-                  style={{ height: 16, borderRadius: 8 }}
-                  color="primary"
-                />
-                <div className="mt-4 text-base text-gray-700 dark:text-gray-200 font-semibold animate-pulse">
-                  {getDisplayStatus(meterTestStatus)}
-                </div>
-              </div>
-            )}
-            {meterTestResult && (() => {
+            {showResultBar && (
+              <>
+                {meterTestLoading && !meterTestResult && (
+                  <div className="w-full max-w-xl flex flex-col items-center py-4">
+                    <LinearProgress
+                      variant="indeterminate"
+                      style={{ height: 16, borderRadius: 8 }}
+                      color="primary"
+                    />
+                    <div className="mt-4 text-base text-gray-700 dark:text-gray-200 font-semibold animate-pulse">
+                      {getDisplayStatus(meterTestStatus)}
+                    </div>
+                  </div>
+                )}
+                {meterTestResult && (() => {
               const obis = meterTestResult ? (meterTestResult as unknown as Record<string, Record<string, unknown>>) : {};
               const obisVal = obis['1.0.1.8.0.255'] as Record<string, unknown> ?? {};
               const value = Number(obisVal.value ?? 0);
               // No scaling, value is already in kWh
               const isSuccess = value && meterTestStatus !== 'error';
               return (
-                <div className="w-full max-w-xl flex flex-col items-center relative">
+                <div className="w-full max-w-xl flex flex-col items-center relative py-4">
                   <LinearProgress
                     variant="determinate"
                     value={100}
                     style={{ height: 16, borderRadius: 8, background: isSuccess ? '#e6f4ea' : '#fdecea' }}
                     color={isSuccess ? 'success' : 'error'}
+                    className="dark:opacity-90"
                   />
                   <div className={`mt-4 flex items-center gap-2 text-lg font-semibold ${isSuccess ? 'text-green-700 dark:text-green-400' : 'text-red-700 dark:text-red-400'}`}
                   >
@@ -576,14 +615,16 @@ const StaffSiteDetailPage: React.FC = () => {
                   )}
                 </div>
               );
-            })()}
-            {meterTestError && (
-              <Alert severity="error" className="mt-2 w-64 dark:bg-gray-800 dark:text-red-400">
-                {meterTestError}
-              </Alert>
+                })()}
+                {meterTestError && (
+                  <Alert severity="error" className="mt-2 w-64 dark:bg-gray-800 dark:text-red-400">
+                    {meterTestError}
+                  </Alert>
+                )}
+              </>
             )}
           </div>
-        )}
+        </div>
         <div className="flex flex-col lg:flex-row gap-6 px-8 py-6">
           {/* Left Card: Site + Landlord Details */}
           <div className="w-full lg:w-1/3">
@@ -591,35 +632,38 @@ const StaffSiteDetailPage: React.FC = () => {
           </div>
           {/* Main Content: Tabs */}
           <div className="w-full lg:w-2/3 flex flex-col gap-6">
-            <div className="border-b border-gray-200 dark:border-gray-700 flex mb-0">
-              {[
-                { key: 'readings', label: 'Readings' },
-                { key: 'meter-info', label: 'Meter Info' },
-                { key: 'visualisations', label: 'Visualisations' },
-                { key: 'jobs', label: 'Jobs' },
-                { key: 'calls', label: 'Calls' },
-              ].map(tab => (
-                <button
-                  key={tab.key}
-                  className={`px-6 py-3 -mb-px font-medium border-b-2 transition-colors duration-150 focus:outline-none ${
-                    activeTab === tab.key
-                      ? 'border-green-600 dark:border-green-400 text-green-700 dark:text-green-300 bg-white dark:bg-gray-900'
-                      : 'border-transparent text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-800 hover:text-green-700 dark:hover:text-green-300'
-                  }`}
-                  onClick={() => setActiveTab(tab.key)}
-                  style={{ borderTopLeftRadius: '0.5rem', borderTopRightRadius: '0.5rem' }}
-                >
-                  {tab.label}
-                </button>
-              ))}
-            </div>
-            <div className="bg-white dark:bg-gray-900 rounded-b shadow p-6">
-              {activeTab === 'readings' && <ReadingsTab readings={siteData.readings ?? []} meterTests={siteData.meter_tests ?? []} />}
-              {activeTab === 'meter-info' && <MeterInfoTab meter={siteData.active_meter} sim={siteData.sim} />}
-              {activeTab === 'visualisations' && (<div className="text-gray-400 dark:text-gray-500">Coming soon...</div>)}
-              {activeTab === 'jobs' && <JobsTab siteId={Number(siteId)} />}
-              {activeTab === 'calls' && <CallsTab calls={siteData.calls ?? []} />}
-            </div>
+            {visibleTabs.length === 0 ? (
+              <div className="bg-white dark:bg-gray-900 rounded shadow p-6">
+                <div className="text-center text-gray-500 dark:text-gray-400">
+                  You don't have permission to view any tabs for this site.
+                </div>
+              </div>
+            ) : (
+              <>
+                <div className="border-b border-gray-200 dark:border-gray-700 flex mb-0">
+                  {visibleTabs.map(tab => (
+                    <button
+                      key={tab.key}
+                      className={`px-6 py-3 -mb-px font-medium border-b-2 transition-colors duration-150 focus:outline-none ${
+                        activeTab === tab.key
+                          ? 'border-green-600 dark:border-green-400 text-green-700 dark:text-green-300 bg-white dark:bg-gray-900'
+                          : 'border-transparent text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-800 hover:text-green-700 dark:hover:text-green-300'
+                      }`}
+                      onClick={() => setActiveTab(tab.key)}
+                      style={{ borderTopLeftRadius: '0.5rem', borderTopRightRadius: '0.5rem' }}
+                    >
+                      {tab.label}
+                    </button>
+                  ))}
+                </div>
+                <div className="bg-white dark:bg-gray-900 rounded-b shadow p-6">
+                  {activeTab === 'readings' && <ReadingsTab readings={siteData.readings ?? []} meterTests={siteData.meter_tests ?? []} />}
+                  {activeTab === 'meter-info' && <MeterInfoTab meter={siteData.active_meter} sim={siteData.sim} />}
+                  {activeTab === 'jobs' && <JobsTab siteId={Number(siteId)} />}
+                  {activeTab === 'calls' && <CallsTab calls={siteData.calls ?? []} />}
+                </div>
+              </>
+            )}
           </div>
         </div>
         {/* System Notes Table */}
@@ -661,18 +705,50 @@ const StaffSiteDetailPage: React.FC = () => {
               </div>
               <div className="mb-6">
                 <label className="block font-semibold mb-1">Attachments</label>
-                <div className="flex items-center gap-4">
-                  <label className="w-16 h-16 border-2 border-dashed rounded flex items-center justify-center cursor-pointer">
+                {!noteImage ? (
+                  <label className="flex items-center justify-center w-full px-4 py-6 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-md cursor-pointer hover:border-gray-400 dark:hover:border-gray-500 transition-colors">
+                    <div className="flex flex-col items-center">
+                      <span className="text-3xl text-gray-400 mb-2">📷</span>
+                      <span className="text-sm text-gray-600 dark:text-gray-400">Click to add an image</span>
+                      <span className="text-xs text-gray-500 dark:text-gray-500 mt-1">Only one image can be added per note</span>
+                    </div>
                     <input
                       type="file"
                       accept="image/*"
                       className="hidden"
                       onChange={e => setNoteImage(e.target.files?.[0] || null)}
                     />
-                    <span className="text-2xl text-gray-400">&#128247;+</span>
                   </label>
-                  {noteImage && <span className="text-xs">{noteImage.name}</span>}
-                </div>
+                ) : (
+                  <div className="border border-gray-300 dark:border-gray-600 rounded-md p-3">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center space-x-3">
+                        <span className="text-lg">🖼️</span>
+                        <span className="text-sm text-gray-700 dark:text-gray-300 truncate max-w-xs">
+                          {noteImage.name}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <label className="text-sm text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 cursor-pointer font-medium">
+                          Replace
+                          <input
+                            type="file"
+                            accept="image/*"
+                            className="hidden"
+                            onChange={e => setNoteImage(e.target.files?.[0] || null)}
+                          />
+                        </label>
+                        <button
+                          type="button"
+                          onClick={() => setNoteImage(null)}
+                          className="text-sm text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 font-medium"
+                        >
+                          Remove
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
               {noteError && <div className="text-red-500 mb-2">{noteError}</div>}
               <div className="flex justify-end gap-2">
@@ -712,7 +788,14 @@ const StaffSiteDetailPage: React.FC = () => {
             isOpen={showAddAlert}
             onClose={() => setShowAddAlert(false)}
             siteId={siteId || ''}
-            onSuccess={() => {/* Optionally refresh alerts */}}
+            onSuccess={() => {
+              // Refresh site data to update alerts
+              if (siteId) {
+                getSiteDetail(siteId.toString()).then(data => {
+                  setSiteData(data);
+                }).catch(() => {});
+              }
+            }}
           />
         )}
         {showEditAlert && alertToEdit && (
@@ -720,7 +803,14 @@ const StaffSiteDetailPage: React.FC = () => {
             isOpen={showEditAlert}
             onClose={() => setShowEditAlert(false)}
             alert={alertToEdit}
-            onSuccess={() => {/* Optionally refresh alerts */}}
+            onSuccess={() => {
+              // Refresh site data to update alerts
+              if (siteId) {
+                getSiteDetail(siteId.toString()).then(data => {
+                  setSiteData(data);
+                }).catch(() => {});
+              }
+            }}
           />
         )}
         {showMeterHistory && (
@@ -738,8 +828,19 @@ const StaffSiteDetailPage: React.FC = () => {
             isOpen={showManageAlerts}
             onClose={() => setShowManageAlerts(false)}
             siteId={siteId || ''}
-            onEdit={(alert) => { setAlertToEdit(alert); setShowEditAlert(true); }}
-            onSuccess={() => {/* Optionally refresh alerts */}}
+            onEdit={(alert) => { 
+              setAlertToEdit(alert); 
+              setShowManageAlerts(false); // Close manage modal first
+              setTimeout(() => setShowEditAlert(true), 100); // Show edit modal after a small delay
+            }}
+            onSuccess={() => {
+              // Refresh site data to update alerts
+              if (siteId) {
+                getSiteDetail(siteId.toString()).then(data => {
+                  setSiteData(data);
+                }).catch(() => {});
+              }
+            }}
           />
         )}
         {showTextMessageModal && (
@@ -749,6 +850,15 @@ const StaffSiteDetailPage: React.FC = () => {
             siteId={siteId || ''}
             customer={siteData.customer}
             sim={siteData.sim}
+            site={siteData.site}
+          />
+        )}
+        {showEmailTemplateModal && (
+          <EmailTemplateModal
+            isOpen={showEmailTemplateModal}
+            onClose={() => setShowEmailTemplateModal(false)}
+            siteId={siteId || ''}
+            customer={siteData.customer}
             site={siteData.site}
           />
         )}
@@ -774,4 +884,4 @@ const StaffSiteDetailPage: React.FC = () => {
   );
 };
 
-export default StaffSiteDetailPage; 
+export default React.memo(StaffSiteDetailPage); 

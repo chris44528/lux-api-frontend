@@ -78,13 +78,6 @@ export const TaskWorkflow: React.FC<TaskWorkflowProps> = ({
   useEffect(() => {
     if (activeStep) {
       const currentStep = task.steps.find(s => s.id === activeStep);
-      console.log("Active step changed:", {
-        stepId: activeStep,
-        name: currentStep?.name,
-        is_conditional: currentStep?.is_conditional,
-        successRecordType: currentStep?.success_record_type,
-        successOptions: JSON.stringify(currentStep?.success_options)
-      });
       
       // Reset form values when active step changes
       setSelectedOption("");
@@ -117,7 +110,6 @@ export const TaskWorkflow: React.FC<TaskWorkflowProps> = ({
     
     // For non-conditional steps (except Call homeowner), complete with empty field values
     if (!currentStep.is_conditional && currentStep.name && currentStep.name !== 'Call homeowner') {
-      console.log("Completing non-conditional step");
       await onCompleteStep(task.id, currentStep.id, {});
       return;
     }
@@ -185,7 +177,6 @@ export const TaskWorkflow: React.FC<TaskWorkflowProps> = ({
     
     // Complete the step with the field values
     try {
-      console.log('Completing step with values:', fieldValues);
       await onCompleteStep(task.id, currentStep.id, fieldValues);
       
       // Reset the form values
@@ -197,7 +188,6 @@ export const TaskWorkflow: React.FC<TaskWorkflowProps> = ({
       // Force a reload of the page to show the updated workflow
       window.location.reload();
     } catch (error) {
-      console.error("Error completing step:", error);
       alert(`Error completing step: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   };
@@ -291,15 +281,6 @@ export const TaskWorkflow: React.FC<TaskWorkflowProps> = ({
                           {(() => {
                             // Get the current step once to avoid repeating lookups
                             const currentStep = task.steps.find(s => s.id === activeStep);
-                            console.log("Rendering options for step:", {
-                              stepId: activeStep,
-                              name: currentStep?.name,
-                              isConditional: currentStep?.is_conditional,
-                              successRecordType: currentStep?.success_record_type,
-                              hasSuccessOptions: currentStep?.success_options && currentStep.success_options.length > 0,
-                              successOptionsCount: currentStep?.success_options?.length,
-                              successOptions: currentStep?.success_options
-                            });
                             
                             // If we have success options from the backend, use those
                             if (currentStep?.success_options && currentStep.success_options.length > 0) {
@@ -313,7 +294,6 @@ export const TaskWorkflow: React.FC<TaskWorkflowProps> = ({
                                     className="w-4 h-4 text-blue-600"
                                     checked={selectedOption === option.action}
                                     onChange={() => {
-                                      console.log("Selected option:", option.label, option.action);
                                       setSelectedOption(option.action);
                                     }}
                                   />
@@ -334,7 +314,6 @@ export const TaskWorkflow: React.FC<TaskWorkflowProps> = ({
                                       className="w-4 h-4 text-blue-600"
                                       checked={selectedOption === 'answered'}
                                       onChange={() => {
-                                        console.log("Selected option: answered");
                                         setSelectedOption('answered');
                                       }}
                                     />
@@ -348,7 +327,6 @@ export const TaskWorkflow: React.FC<TaskWorkflowProps> = ({
                                       className="w-4 h-4 text-blue-600"
                                       checked={selectedOption === 'didnt_answer'}
                                       onChange={() => {
-                                        console.log("Selected option: didnt_answer");
                                         setSelectedOption('didnt_answer');
                                       }}
                                     />
@@ -370,7 +348,6 @@ export const TaskWorkflow: React.FC<TaskWorkflowProps> = ({
                                       className="w-4 h-4 text-blue-600"
                                       checked={selectedOption === 'success'}
                                       onChange={() => {
-                                        console.log("Selected option: success");
                                         setSelectedOption('success');
                                       }}
                                     />
@@ -384,7 +361,6 @@ export const TaskWorkflow: React.FC<TaskWorkflowProps> = ({
                                       className="w-4 h-4 text-blue-600"
                                       checked={selectedOption === 'failure'}
                                       onChange={() => {
-                                        console.log("Selected option: failure");
                                         setSelectedOption('failure');
                                       }}
                                     />

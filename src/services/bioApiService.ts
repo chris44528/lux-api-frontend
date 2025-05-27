@@ -12,7 +12,6 @@ const getAuthToken = () => {
     return storedToken;
   }
 
-  console.warn("No auth token found in localStorage");
   return null;
 };
 
@@ -44,8 +43,6 @@ apiClient.interceptors.response.use(
     return response;
   },
   (error) => {
-    // Log the error for debugging
-    console.error("API request failed:", error);
 
     // Pass the error through to be handled by the component
     return Promise.reject(error);
@@ -60,7 +57,6 @@ export const bioSiteService = {
       const response = await apiClient.get("/sites/", { params: filters });
       return response.data;
     } catch (error) {
-      console.error("Error fetching bio sites:", error);
       throw error;
     }
   },
@@ -71,7 +67,6 @@ export const bioSiteService = {
       const response = await apiClient.get(`/sites/${id}/`);
       return response.data;
     } catch (error) {
-      console.error(`Error fetching bio site with ID ${id}:`, error);
       throw error;
     }
   },
@@ -82,7 +77,6 @@ export const bioSiteService = {
       const response = await apiClient.post("/sites/", siteData);
       return response.data;
     } catch (error) {
-      console.error("Error creating bio site:", error);
       throw error;
     }
   },
@@ -93,7 +87,6 @@ export const bioSiteService = {
       const response = await apiClient.put(`/sites/${id}/`, siteData);
       return response.data;
     } catch (error) {
-      console.error(`Error updating bio site with ID ${id}:`, error);
       throw error;
     }
   },
@@ -104,7 +97,6 @@ export const bioSiteService = {
       await apiClient.delete(`/sites/${id}/`);
       return true;
     } catch (error) {
-      console.error(`Error deleting bio site with ID ${id}:`, error);
       throw error;
     }
   },
@@ -115,10 +107,6 @@ export const bioSiteService = {
       const response = await apiClient.get(`/sites/${siteId}/service_records/`);
       return response.data;
     } catch (error) {
-      console.error(
-        `Error fetching service records for site ${siteId}:`,
-        error
-      );
       throw error;
     }
   },
@@ -129,7 +117,6 @@ export const bioSiteService = {
       const response = await apiClient.get(`/sites/${siteId}/remedials/`);
       return response.data;
     } catch (error) {
-      console.error(`Error fetching remedials for site ${siteId}:`, error);
       throw error;
     }
   },
@@ -140,7 +127,6 @@ export const bioSiteService = {
       const response = await apiClient.get(`/sites/${siteId}/payments/`);
       return response.data;
     } catch (error) {
-      console.error(`Error fetching payments for site ${siteId}:`, error);
       throw error;
     }
   },
@@ -153,10 +139,6 @@ export const bioSiteService = {
       );
       return response.data;
     } catch (error) {
-      console.error(
-        `Error fetching fuel store services for site ${siteId}:`,
-        error
-      );
       throw error;
     }
   },
@@ -170,7 +152,6 @@ export const boilerService = {
       const response = await apiClient.get("/boilers/", { params: filters });
       return response.data;
     } catch (error) {
-      console.error("Error fetching boilers:", error);
       throw error;
     }
   },
@@ -181,7 +162,6 @@ export const boilerService = {
       const response = await apiClient.get(`/boilers/${id}/`);
       return response.data;
     } catch (error) {
-      console.error(`Error fetching boiler with ID ${id}:`, error);
       throw error;
     }
   },
@@ -192,7 +172,6 @@ export const boilerService = {
       const response = await apiClient.post("/boilers/", boilerData);
       return response.data;
     } catch (error) {
-      console.error("Error creating boiler:", error);
       throw error;
     }
   },
@@ -203,7 +182,6 @@ export const boilerService = {
       const response = await apiClient.put(`/boilers/${id}/`, boilerData);
       return response.data;
     } catch (error) {
-      console.error(`Error updating boiler with ID ${id}:`, error);
       throw error;
     }
   },
@@ -214,7 +192,6 @@ export const boilerService = {
       await apiClient.delete(`/boilers/${id}/`);
       return true;
     } catch (error) {
-      console.error(`Error deleting boiler with ID ${id}:`, error);
       throw error;
     }
   },
@@ -227,10 +204,6 @@ export const boilerService = {
       );
       return response.data;
     } catch (error) {
-      console.error(
-        `Error fetching service records for boiler ${boilerId}:`,
-        error
-      );
       throw error;
     }
   },
@@ -241,7 +214,6 @@ export const boilerService = {
       const response = await apiClient.get(`/boilers/${boilerId}/remedials/`);
       return response.data;
     } catch (error) {
-      console.error(`Error fetching remedials for boiler ${boilerId}:`, error);
       throw error;
     }
   },
@@ -255,7 +227,6 @@ export const engineerService = {
       const response = await apiClient.get("/engineers/", { params: filters });
       return response.data;
     } catch (error) {
-      console.error("Error fetching engineers:", error);
       throw error;
     }
   },
@@ -266,7 +237,6 @@ export const engineerService = {
       const response = await apiClient.get(`/engineers/${id}/`);
       return response.data;
     } catch (error) {
-      console.error(`Error fetching engineer with ID ${id}:`, error);
       throw error;
     }
   },
@@ -277,7 +247,6 @@ export const engineerService = {
       const response = await apiClient.post("/engineers/", engineerData);
       return response.data;
     } catch (error) {
-      console.error("Error creating engineer:", error);
       throw error;
     }
   },
@@ -288,7 +257,6 @@ export const engineerService = {
       const response = await apiClient.put(`/engineers/${id}/`, engineerData);
       return response.data;
     } catch (error) {
-      console.error(`Error updating engineer with ID ${id}:`, error);
       throw error;
     }
   },
@@ -299,7 +267,6 @@ export const engineerService = {
       await apiClient.delete(`/engineers/${id}/`);
       return true;
     } catch (error) {
-      console.error(`Error deleting engineer with ID ${id}:`, error);
       throw error;
     }
   },
@@ -328,7 +295,6 @@ export const serviceRecordService = {
       });
       return response.data;
     } catch (error) {
-      console.error("Error fetching service records:", error);
       throw error;
     }
   },
@@ -339,7 +305,6 @@ export const serviceRecordService = {
       const response = await apiClient.get(`/service-records/${id}/`);
       return response.data;
     } catch (error) {
-      console.error(`Error fetching service record with ID ${id}:`, error);
       throw error;
     }
   },
@@ -350,7 +315,6 @@ export const serviceRecordService = {
       const response = await apiClient.post("/service-records/", recordData);
       return response.data;
     } catch (error) {
-      console.error("Error creating service record:", error);
       throw error;
     }
   },
@@ -364,7 +328,6 @@ export const serviceRecordService = {
       );
       return response.data;
     } catch (error) {
-      console.error(`Error updating service record with ID ${id}:`, error);
       throw error;
     }
   },
@@ -375,7 +338,6 @@ export const serviceRecordService = {
       await apiClient.delete(`/service-records/${id}/`);
       return true;
     } catch (error) {
-      console.error(`Error deleting service record with ID ${id}:`, error);
       throw error;
     }
   },
@@ -386,7 +348,6 @@ export const serviceRecordService = {
       const response = await apiClient.post(`/service-records/${id}/complete/`);
       return response.data;
     } catch (error) {
-      console.error(`Error completing service record with ID ${id}:`, error);
       throw error;
     }
   },
@@ -413,7 +374,6 @@ export const remedialService = {
       const response = await apiClient.get("/remedials/", { params });
       return response.data;
     } catch (error) {
-      console.error("Error fetching remedials:", error);
       throw error;
     }
   },
@@ -424,7 +384,6 @@ export const remedialService = {
       const response = await apiClient.get(`/remedials/${id}/`);
       return response.data;
     } catch (error) {
-      console.error(`Error fetching remedial with ID ${id}:`, error);
       throw error;
     }
   },
@@ -435,7 +394,6 @@ export const remedialService = {
       const response = await apiClient.post("/remedials/", remedialData);
       return response.data;
     } catch (error) {
-      console.error("Error creating remedial:", error);
       throw error;
     }
   },
@@ -446,7 +404,6 @@ export const remedialService = {
       const response = await apiClient.put(`/remedials/${id}/`, remedialData);
       return response.data;
     } catch (error) {
-      console.error(`Error updating remedial with ID ${id}:`, error);
       throw error;
     }
   },
@@ -457,7 +414,6 @@ export const remedialService = {
       await apiClient.delete(`/remedials/${id}/`);
       return true;
     } catch (error) {
-      console.error(`Error deleting remedial with ID ${id}:`, error);
       throw error;
     }
   },
@@ -468,7 +424,6 @@ export const remedialService = {
       const response = await apiClient.post(`/remedials/${id}/complete/`);
       return response.data;
     } catch (error) {
-      console.error(`Error completing remedial with ID ${id}:`, error);
       throw error;
     }
   },
@@ -482,7 +437,6 @@ export const paymentService = {
       const response = await apiClient.get("/payments/", { params: filters });
       return response.data;
     } catch (error) {
-      console.error("Error fetching payments:", error);
       throw error;
     }
   },
@@ -493,7 +447,6 @@ export const paymentService = {
       const response = await apiClient.get(`/payments/${id}/`);
       return response.data;
     } catch (error) {
-      console.error(`Error fetching payment with ID ${id}:`, error);
       throw error;
     }
   },
@@ -504,7 +457,6 @@ export const paymentService = {
       const response = await apiClient.post("/payments/", paymentData);
       return response.data;
     } catch (error) {
-      console.error("Error creating payment:", error);
       throw error;
     }
   },
@@ -515,7 +467,6 @@ export const paymentService = {
       const response = await apiClient.put(`/payments/${id}/`, paymentData);
       return response.data;
     } catch (error) {
-      console.error(`Error updating payment with ID ${id}:`, error);
       throw error;
     }
   },
@@ -526,7 +477,6 @@ export const paymentService = {
       await apiClient.delete(`/payments/${id}/`);
       return true;
     } catch (error) {
-      console.error(`Error deleting payment with ID ${id}:`, error);
       throw error;
     }
   },
@@ -537,7 +487,6 @@ export const paymentService = {
       const response = await apiClient.post(`/payments/${id}/mark_as_paid/`);
       return response.data;
     } catch (error) {
-      console.error(`Error marking payment with ID ${id} as paid:`, error);
       throw error;
     }
   },
@@ -553,7 +502,6 @@ export const standingOrderService = {
       });
       return response.data;
     } catch (error) {
-      console.error("Error fetching standing orders:", error);
       throw error;
     }
   },
@@ -564,7 +512,6 @@ export const standingOrderService = {
       const response = await apiClient.get(`/standing-orders/${id}/`);
       return response.data;
     } catch (error) {
-      console.error(`Error fetching standing order with ID ${id}:`, error);
       throw error;
     }
   },
@@ -575,7 +522,6 @@ export const standingOrderService = {
       const response = await apiClient.post("/standing-orders/", orderData);
       return response.data;
     } catch (error) {
-      console.error("Error creating standing order:", error);
       throw error;
     }
   },
@@ -589,7 +535,6 @@ export const standingOrderService = {
       );
       return response.data;
     } catch (error) {
-      console.error(`Error updating standing order with ID ${id}:`, error);
       throw error;
     }
   },
@@ -600,7 +545,6 @@ export const standingOrderService = {
       await apiClient.delete(`/standing-orders/${id}/`);
       return true;
     } catch (error) {
-      console.error(`Error deleting standing order with ID ${id}:`, error);
       throw error;
     }
   },
@@ -613,10 +557,6 @@ export const standingOrderService = {
       );
       return response.data;
     } catch (error) {
-      console.error(
-        `Error fetching payments for standing order ${orderId}:`,
-        error
-      );
       throw error;
     }
   },
@@ -632,7 +572,6 @@ export const fuelStoreService = {
       });
       return response.data;
     } catch (error) {
-      console.error("Error fetching fuel store services:", error);
       throw error;
     }
   },
@@ -643,7 +582,6 @@ export const fuelStoreService = {
       const response = await apiClient.get(`/fuel-store-services/${id}/`);
       return response.data;
     } catch (error) {
-      console.error(`Error fetching fuel store service with ID ${id}:`, error);
       throw error;
     }
   },
@@ -657,7 +595,6 @@ export const fuelStoreService = {
       );
       return response.data;
     } catch (error) {
-      console.error("Error creating fuel store service:", error);
       throw error;
     }
   },
@@ -671,7 +608,6 @@ export const fuelStoreService = {
       );
       return response.data;
     } catch (error) {
-      console.error(`Error updating fuel store service with ID ${id}:`, error);
       throw error;
     }
   },
@@ -682,7 +618,6 @@ export const fuelStoreService = {
       await apiClient.delete(`/fuel-store-services/${id}/`);
       return true;
     } catch (error) {
-      console.error(`Error deleting fuel store service with ID ${id}:`, error);
       throw error;
     }
   },
@@ -695,10 +630,6 @@ export const fuelStoreService = {
       );
       return response.data;
     } catch (error) {
-      console.error(
-        `Error completing fuel store service with ID ${id}:`,
-        error
-      );
       throw error;
     }
   },

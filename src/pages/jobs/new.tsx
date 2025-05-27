@@ -12,7 +12,7 @@ import { CheckIcon, ChevronDown } from "lucide-react"
 import { useToast } from "../../hooks/use-toast"
 import jobService, { JobStatus, JobQueue, TaskTemplate, JobCreate } from "../../services/jobService"
 import { searchSites } from "../../services/api"
-import api from "../../services/api"
+import { api } from "../../services/api"
 
 // Define a more comprehensive site type
 interface SiteDetails {
@@ -100,7 +100,6 @@ export default function JobCreatePage() {
           setFormData(prev => ({ ...prev, queue_id: queuesData[0].id.toString() }))
         }
       } catch (error) {
-        console.error("Error fetching form data:", error)
         toast({
           title: "Error",
           description: "Failed to load form data. Please try again."
@@ -128,19 +127,15 @@ export default function JobCreatePage() {
       try {
         // Use the proper API to search for sites
         // Log the search term for debugging
-        console.log("Searching sites with term:", siteSearchTerm);
         
         const response = await searchSites(siteSearchTerm)
-        console.log("Site search response:", response);
         
         if (response && response.results && response.results.length > 0) {
-          console.log("Found sites count:", response.results.length);
           
           // Transform the response to match our SiteDetails interface
           // Fix lint error by using Record<string, any> instead of any
           const transformedSites = response.results.map((site: Record<string, unknown>) => {
             // Log individual site data for debugging
-            console.log("Site data from API:", JSON.stringify(site, null, 2));
             
             // Extract site properties safely to avoid undefined errors
             const siteData: SiteDetails = {
@@ -152,18 +147,14 @@ export default function JobCreatePage() {
               region: typeof site.region === 'string' ? site.region : ''
             }
             
-            console.log("Transformed site data:", siteData);
             return siteData;
           });
           
-          console.log("All transformed sites:", transformedSites);
           setSites(transformedSites)
         } else {
-          console.log("No site results found");
           setSites([])
         }
       } catch (error) {
-        console.error("Error searching sites:", error)
         // Clear sites on error - no fallback to mock data
         setSites([])
       } finally {
@@ -181,36 +172,28 @@ export default function JobCreatePage() {
   }
   
   const handleSiteSelect = (siteId: string) => {
-    console.log(`handleSiteSelect called with siteId: ${siteId}`);
-    console.log(`Available sites:`, sites);
     
     const site = sites.find(site => site.site_id.toString() === siteId);
-    console.log(`Found site:`, site);
     
     if (site) {
       // Update the selected site state
       setSelectedSite(site);
-      console.log(`Selected site set to:`, site);
       
       // Update the form data
       setFormData(prev => {
         const newFormData = { ...prev, site_id: siteId };
-        console.log(`Form data updated:`, newFormData);
         return newFormData;
       });
       
       // Try to fetch additional customer details if not already present
       if (!site.email || !site.phone || !site.mobile || !site.owner) {
-        console.log(`Fetching additional details for site ${siteId}`);
         fetchSiteDetails(site.site_id);
       } else {
-        console.log(`Site already has customer details, skipping fetch`);
       }
       
       // Close dropdown by clearing search term
       setSiteSearchTerm("");
     } else {
-      console.error(`Could not find site with ID ${siteId} in the current sites list`);
     }
   }
   
@@ -218,19 +201,15 @@ export default function JobCreatePage() {
   const fetchSiteDetails = async (siteId: number) => {
     setIsLoadingSiteDetails(true)
     try {
-      console.log("Fetching details for site ID:", siteId);
       
       // Make API call to get site details including customer info
       const response = await api.get(`/site-detail/${siteId}/`);
-      console.log("Site details response:", response.data);
       
       if (response.data) {
         // Handle different API response structures
         const siteData = response.data.site || response.data;
         const customerData = response.data.customer;
         
-        console.log("Site data from API:", siteData);
-        console.log("Customer data from API:", customerData);
         
         // Update the selectedSite with full details
         const updatedSite: SiteDetails = {
@@ -251,7 +230,6 @@ export default function JobCreatePage() {
           updatedSite.email = customerData.email || '';
         }
         
-        console.log("Updated site details:", updatedSite);
         setSelectedSite(updatedSite);
         
         // Also update the site in the sites array
@@ -262,7 +240,6 @@ export default function JobCreatePage() {
         );
       }
     } catch (error) {
-      console.error("Error fetching site details:", error);
       // Silently fail - we already have basic site details
     } finally {
       setIsLoadingSiteDetails(false);
@@ -314,13 +291,6 @@ export default function JobCreatePage() {
       const selectedQueue = queues.find(q => q.id.toString() === formData.queue_id);
       const selectedType = taskTemplates.find(t => t.id.toString() === formData.type_id);
       
-      console.log("Creating job with data:", {
-        site: selectedSite,
-        status: selectedStatus,
-        queue: selectedQueue,
-        type: selectedType,
-        formData
-      });
       
       // Create the job - use the correct ID format for Django foreign keys and the correct field names
       const newJobData: JobCreate = {
@@ -357,7 +327,6 @@ export default function JobCreatePage() {
       // Redirect to the job details page
       navigate(`/jobs/${createdJob.id}`)
     } catch (error) {
-      console.error("Error creating job:", error)
       toast({
         title: "Error",
         description: "Failed to create job. Please try again."
@@ -508,7 +477,6 @@ export default function JobCreatePage() {
                                     formData.site_id === site.site_id.toString() ? 'bg-blue-50 border-blue-400' : ''
                                   }`}
                                   onClick={() => {
-                                    console.log("Site button clicked:", site);
                                     handleSiteSelect(site.site_id.toString());
                                   }}
                                 >
