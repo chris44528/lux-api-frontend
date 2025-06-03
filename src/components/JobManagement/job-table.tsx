@@ -9,6 +9,8 @@ import { Badge } from "../ui/badge"
 import { JobFilter, type JobFilters } from "./job-filter"
 import jobService, { Job, Technician, JobStatus, JobQueue, JobTask, TaskStepInstance } from "../../services/jobService"
 import { getBulkSiteCommunicationStatus } from "../../services/api"
+import { getUsers } from "../../services/userService"
+import { User } from "../../types/user"
 
 // Extended Job interface with current step info
 interface ExtendedJob extends Job {
@@ -66,7 +68,7 @@ export function JobTable({ showOnlyCompleted = false }: JobTableProps) {
   const [error, setError] = useState<string | null>(null)
   const [filteredJobs, setFilteredJobs] = useState<ExtendedJob[]>([])
   // Removed unused loadingSteps state
-  const [technicians, setTechnicians] = useState<Technician[]>([])
+  const [allUsers, setAllUsers] = useState<User[]>([])
   const [statuses, setStatuses] = useState<JobStatus[]>([])
   const [queues, setQueues] = useState<JobQueue[]>([])
   const [selectedJobs, setSelectedJobs] = useState<Set<string>>(new Set())
@@ -284,17 +286,17 @@ export function JobTable({ showOnlyCompleted = false }: JobTableProps) {
       try {
         // Mock data for development if API fails
         let jobsData: Job[] = [];
-        let techniciansData: Technician[] = [];
         let statusesData: JobStatus[] = [];
         let queuesData: JobQueue[] = [];
         
         // Try to fetch real data first
         try {
-          const [jobsResponse, techniciansResponse, statusesResponse, queuesResponse] = await Promise.all([
+          const [jobsResponse, techniciansResponse, statusesResponse, queuesResponse, usersResponse] = await Promise.all([
             jobService.getJobs(),
             jobService.getTechnicians(),
             jobService.getJobStatuses(),
-            jobService.getJobQueues()
+            jobService.getJobQueues(),
+            getUsers()
           ]);
 
           if (!isMounted) return;
@@ -307,9 +309,14 @@ export function JobTable({ showOnlyCompleted = false }: JobTableProps) {
           } else {
             jobsData = [];
           }
-          techniciansData = techniciansResponse;
+          // Note: techniciansResponse is not used anymore since we're using all users
           statusesData = statusesResponse;
           queuesData = queuesResponse;
+          
+          // Handle users response (it's paginated)
+          if (usersResponse && usersResponse.results) {
+            setAllUsers(usersResponse.results);
+          }
         } catch (err) {
           if (err.response?.status === 401) {
             if (isMounted) {
@@ -331,7 +338,6 @@ export function JobTable({ showOnlyCompleted = false }: JobTableProps) {
         
         if (isMounted) {
           setJobs(jobsData);
-          setTechnicians(techniciansData);
           setStatuses(statusesData);
           setQueues(queuesData);
           setError(null);
@@ -629,7 +635,17 @@ export function JobTable({ showOnlyCompleted = false }: JobTableProps) {
         <JobFilter 
           filters={filters} 
           onFiltersChange={handleFiltersChange} 
-          technicians={technicians}
+          technicians={allUsers.map(user => ({
+            id: user.id,
+            user: {
+              id: user.id,
+              first_name: user.first_name,
+              last_name: user.last_name,
+              username: user.username
+            },
+            full_name: `${user.first_name} ${user.last_name}`.trim() || user.username,
+            is_active: user.is_active
+          } as Technician))}
           statuses={statuses}
           queues={queues}
           loading={loading}
@@ -706,6 +722,7 @@ export function JobTable({ showOnlyCompleted = false }: JobTableProps) {
                       onCheckedChange={handleSelectAll}
                     />
                   </TableHead>
+                  <TableHead className="uppercase tracking-wider text-xs text-gray-600 dark:text-gray-300">Type</TableHead>
                   <TableHead className="uppercase tracking-wider text-xs text-gray-600 dark:text-gray-300">Title</TableHead>
                   <TableHead className="uppercase tracking-wider text-xs text-gray-600 dark:text-gray-300">Client</TableHead>
                   <TableHead className="uppercase tracking-wider text-xs text-gray-600 dark:text-gray-300">Site</TableHead>
@@ -733,6 +750,9 @@ export function JobTable({ showOnlyCompleted = false }: JobTableProps) {
                         checked={selectedJobs.has(job.id.toString())}
                         onCheckedChange={(checked) => handleSelectJob(job.id.toString(), checked as boolean)}
                       />
+                    </TableCell>
+                    <TableCell className="px-6 py-4 dark:text-gray-300">
+                      {job.type ? job.type.name : '-'}
                     </TableCell>
                     <TableCell className="px-6 py-4 font-medium text-gray-900 dark:text-gray-100">{job.title}</TableCell>
                     <TableCell className="px-6 py-4 dark:text-gray-300">{job.client}</TableCell>
@@ -786,7 +806,17 @@ export function JobTable({ showOnlyCompleted = false }: JobTableProps) {
         isOpen={showAssignModal}
         onClose={() => setShowAssignModal(false)}
         onAssign={handleBulkAssign}
-        technicians={technicians}
+        technicians={allUsers.map(user => ({
+          id: user.id,
+          user: {
+            id: user.id,
+            first_name: user.first_name,
+            last_name: user.last_name,
+            username: user.username
+          },
+          full_name: `${user.first_name} ${user.last_name}`.trim() || user.username,
+          is_active: user.is_active
+        } as Technician))}
         selectedCount={selectedJobs.size}
       />
       
@@ -802,7 +832,17 @@ export function JobTable({ showOnlyCompleted = false }: JobTableProps) {
         onClose={() => setShowUpdateModal(false)}
         onUpdate={handleBulkUpdate}
         selectedCount={selectedJobs.size}
-        technicians={technicians}
+        technicians={allUsers.map(user => ({
+          id: user.id,
+          user: {
+            id: user.id,
+            first_name: user.first_name,
+            last_name: user.last_name,
+            username: user.username
+          },
+          full_name: `${user.first_name} ${user.last_name}`.trim() || user.username,
+          is_active: user.is_active
+        } as Technician))}
         queues={queues}
         statuses={statuses}
       />

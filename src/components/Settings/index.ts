@@ -7,6 +7,5 @@ export { default as DepartmentsSettings } from './departments';
 export { default as GroupDataFilters } from './GroupDataFilters';
 export { UserManagement } from './UserManagement';
 export { GroupManagement } from './GroupManagement';
-export { PermissionsManagement } from './PermissionsManagement';
 export { UIPermissionsManagement } from './UIPermissionsManagement';
 export { default as EmailTemplatesSettings } from './EmailTemplatesSettings'; 

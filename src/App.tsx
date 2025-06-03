@@ -1,6 +1,6 @@
 import { Routes, Route, Navigate } from 'react-router-dom';
 import StaffLayout from './layouts/StaffLayout';
-// import EngineerLayout from './layouts/EngineerLayout'; // TODO: Add engineer layout support
+import EngineerLayout from './layouts/EngineerLayout';
 import Login from './components/Login';
 import Register from './components/Register';
 import LandingPage from './components/LandingPage';
@@ -32,10 +32,14 @@ import HolidayRequestPage from './pages/holidays/HolidayRequestPage';
 import MyRequestsPage from './pages/holidays/MyRequestsPage';
 import EntitlementsPage from './pages/holidays/EntitlementsPage';
 import ApprovalsPage from './pages/holidays/ApprovalsPage';
+// Engineer imports
+import RouteAllocationPage from './pages/engineer/RouteAllocationPage';
+import FormBuilderPage from './pages/engineer/FormBuilderPage';
 
 function App() {
   const { user, loading } = useAuth();
 
+  // Don't render routes until auth is checked
   if (loading) {
     return (
       <div className="flex justify-center items-center min-h-screen">
@@ -47,18 +51,47 @@ function App() {
     );
   }
 
+  // Check if user should use engineer interface
+  const isEngineerUser = user?.role === 'engineer';
+
   return (
     <ErrorBoundary>
       <Routes>
-        {/* Public routes */}
-        <Route path="/login" element={user ? <Navigate to="/dashboard" replace /> : <Login />} />
-        <Route path="/register" element={user ? <Navigate to="/dashboard" replace /> : <Register />} />
+        {/* Public routes - These must come first and be outside any layout */}
+        <Route path="/login" element={
+          user ? (
+            // If user is logged in, redirect based on role
+            <Navigate to={user.role === 'engineer' ? "/engineer/dashboard" : "/dashboard"} replace />
+          ) : (
+            <Login />
+          )
+        } />
+        <Route path="/register" element={user ? <Navigate to={isEngineerUser ? "/engineer/dashboard" : "/dashboard"} replace /> : <Register />} />
         <Route path="/forgot-password" element={<ForgotPasswordPage />} />
-        <Route path="/reset-password/:uidb64/:token" element={<ResetPasswordPage />} />
+        <Route path="/reset-password/:uid/:token" element={<ResetPasswordPage />} />
         
-        {/* Protected routes */}
-        <Route path="/" element={<ProtectedRoute><StaffLayout /></ProtectedRoute>}>
-          <Route index element={<Navigate to="/dashboard" replace />} />
+        {/* Engineer routes */}
+        <Route path="/engineer/*" element={
+          <ProtectedRoute>
+            <EngineerLayout />
+          </ProtectedRoute>
+        } />
+        
+        {/* Root redirect */}
+        <Route path="/" element={
+          <ProtectedRoute>
+            {user ? (
+              user.role === 'engineer' ? 
+                <Navigate to="/engineer/dashboard" replace /> : 
+                <Navigate to="/dashboard" replace />
+            ) : (
+              <Navigate to="/login" replace />
+            )}
+          </ProtectedRoute>
+        } />
+        
+        {/* Staff routes with layout */}
+        <Route element={<ProtectedRoute><StaffLayout /></ProtectedRoute>}>
           <Route path="dashboard" element={<NewDashboardPage />} />
           <Route path="sites" element={<SitesPage />} />
           <Route path="site/:siteId" element={<SiteDetailPage />} />
@@ -94,12 +127,18 @@ function App() {
           <Route path="imports/readings" element={<div>Import Readings Page</div>} />
           <Route path="imports/sites" element={<div>Import Sites Page</div>} />
           
+          {/* Engineer Management Routes for Admin/Management */}
+          <Route path="engineer/forms/builder" element={<FormBuilderPage />} />
+          <Route path="engineer/routes/builder" element={<RouteAllocationPage />} />
+          <Route path="engineer/job-allocation" element={<RouteAllocationPage />} />
+          
           {/* Settings */}
           <Route path="settings" element={<ModernSettingsPage />} />
           
-          {/* Catch-all */}
-          <Route path="*" element={<NotFound />} />
         </Route>
+        
+        {/* Global catch-all for 404s - must be last */}
+        <Route path="*" element={<NotFound />} />
       </Routes>
     </ErrorBoundary>
   );

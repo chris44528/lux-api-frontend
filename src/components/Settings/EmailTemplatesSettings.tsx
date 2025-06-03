@@ -74,6 +74,11 @@ const EmailTemplatesSettings: React.FC = () => {
   
   // Filter templates when search or category changes
   useEffect(() => {
+    if (!Array.isArray(templates)) {
+      setFilteredTemplates([]);
+      return;
+    }
+    
     let filtered = templates;
     
     if (searchTerm) {
@@ -99,14 +104,24 @@ const EmailTemplatesSettings: React.FC = () => {
         emailTemplateService.getVariables()
       ]);
       
-      setTemplates(templatesData);
-      setCategories(categoriesData);
-      setVariables(variablesData);
+      console.log('Settings - Templates data:', templatesData);
+      console.log('Settings - Categories data:', categoriesData);
+      console.log('Settings - Variables data:', variablesData);
+      
+      // Ensure we have arrays
+      setTemplates(Array.isArray(templatesData) ? templatesData : []);
+      setCategories(Array.isArray(categoriesData) ? categoriesData : []);
+      setVariables(Array.isArray(variablesData) ? variablesData : []);
     } catch (error) {
+      console.error('Error loading email templates data:', error);
       toast({
         title: 'Error',
         description: 'Failed to load email templates data'
       });
+      // Set empty arrays on error
+      setTemplates([]);
+      setCategories([]);
+      setVariables([]);
     } finally {
       setLoading(false);
     }
@@ -372,7 +387,7 @@ const EmailTemplatesSettings: React.FC = () => {
   const extractVariables = (text: string): string[] => {
     const regex = /@@(\w+)@@/g;
     const matches = text.match(regex) || [];
-    return [...new Set(matches.map(m => m.replace(/@@/g, '')))];
+    return [...new Set(matches.map((m: string) => m.replace(/@@/g, '')))];
   };
   
   if (loading) {
@@ -423,7 +438,7 @@ const EmailTemplatesSettings: React.FC = () => {
                 onChange={(e) => setSelectedCategory(e.target.value === 'all' ? 'all' : Number(e.target.value))}
               >
                 <option value="all">All Categories</option>
-                {categories.map(cat => (
+                {Array.isArray(categories) && categories.map(cat => (
                   <option key={cat.id} value={cat.id}>{cat.name}</option>
                 ))}
               </select>
@@ -458,12 +473,12 @@ const EmailTemplatesSettings: React.FC = () => {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredTemplates.map(template => (
+                {Array.isArray(filteredTemplates) && filteredTemplates.map(template => (
                   <TableRow key={template.id}>
                     <TableCell className="font-medium">{template.name}</TableCell>
                     <TableCell>
                       <Badge variant="secondary">
-                        {categories.find(c => c.id === template.category)?.name || 'Unknown'}
+                        {Array.isArray(categories) ? categories.find(c => c.id === template.category)?.name || 'Unknown' : 'Unknown'}
                       </Badge>
                     </TableCell>
                     <TableCell className="max-w-xs truncate">{template.subject}</TableCell>
@@ -536,7 +551,7 @@ const EmailTemplatesSettings: React.FC = () => {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {categories.map(category => (
+                {Array.isArray(categories) && categories.map(category => (
                   <TableRow key={category.id}>
                     <TableCell className="font-medium">{category.name}</TableCell>
                     <TableCell>{category.description}</TableCell>
@@ -599,7 +614,7 @@ const EmailTemplatesSettings: React.FC = () => {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {variables.map(variable => (
+                {Array.isArray(variables) && variables.map(variable => (
                   <TableRow key={variable.id}>
                     <TableCell className="font-mono">{variable.formatted_name}</TableCell>
                     <TableCell>{variable.description}</TableCell>
@@ -672,7 +687,7 @@ const EmailTemplatesSettings: React.FC = () => {
                   onChange={(e) => setTemplateForm({ ...templateForm, category: Number(e.target.value) })}
                 >
                   <option value={0}>Select a category</option>
-                  {categories.map(cat => (
+                  {Array.isArray(categories) && categories.map(cat => (
                     <option key={cat.id} value={cat.id}>{cat.name}</option>
                   ))}
                 </select>

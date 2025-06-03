@@ -89,6 +89,12 @@ export interface QuickActionsWidgetConfig extends WidgetConfig {
   }>;
 }
 
+// Recently Visited Sites Widget
+export interface RecentVisitedSitesWidgetConfig extends WidgetConfig {
+  type: "recentVisitedSites";
+  limit?: number;
+}
+
 // Union type of all widget configurations
 export type WidgetConfigUnion =
   | SystemOverviewWidgetConfig
@@ -100,7 +106,8 @@ export type WidgetConfigUnion =
   | JobQueueWidgetConfig
   | BioBoilerStatusWidgetConfig
   | CustomReportWidgetConfig
-  | QuickActionsWidgetConfig;
+  | QuickActionsWidgetConfig
+  | RecentVisitedSitesWidgetConfig;
 
 // Dashboard configuration
 export interface DashboardConfig {

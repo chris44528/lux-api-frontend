@@ -1,0 +1,31 @@
+{
+  "name": "LUX Engineer Management",
+  "short_name": "LUX Engineer",
+  "description": "Field engineer management application with offline support",
+  "start_url": "/engineer",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#16a34a",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "/Logo.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/Logo.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ],
+  "categories": ["business", "productivity"],
+  "permissions": [
+    "geolocation",
+    "camera",
+    "microphone"
+  ],
+  "prefer_related_applications": false,
+  "related_applications": []
+}

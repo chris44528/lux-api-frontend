@@ -29,6 +29,8 @@ export const Login = () => {
 
     try {
       // Use the login function from the auth context
+      // Note: The password is sent in the request body which is visible in browser DevTools.
+      // This is expected behavior - ensure HTTPS is always used to encrypt the connection.
       const response = await login(username, password);
       
       // Check if MFA is required (useAuth hook handles setting mfaSessionId)
@@ -40,10 +42,35 @@ export const Login = () => {
       } else {
         // MFA not required, login successful
         // Auth state change will trigger routing in App.tsx
-        // setIsLoading(false); // useAuth sets loading to false
+        setIsLoading(false);
       }
-    } catch (error) {
-      setError('Invalid username or password');
+    } catch (error: any) {
+      // Extract error message from the backend response
+      let errorMessage = 'An error occurred during login';
+      
+      if (error.response?.data) {
+        // Handle different error formats from backend
+        if (error.response.data.non_field_errors) {
+          errorMessage = error.response.data.non_field_errors[0];
+        } else if (error.response.data.detail) {
+          errorMessage = error.response.data.detail;
+        } else if (error.response.data.error) {
+          errorMessage = error.response.data.error;
+        } else if (error.response.data.message) {
+          errorMessage = error.response.data.message;
+        } else if (typeof error.response.data === 'string') {
+          errorMessage = error.response.data;
+        }
+        
+        // Special handling for MFA-related errors
+        if (errorMessage.includes('email') || errorMessage.includes('MFA')) {
+          errorMessage += '. Please contact your administrator.';
+        }
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+      
+      setError(errorMessage);
       setIsLoading(false);
       // Ensure MFA session is cleared on login error
       setMfaSessionId(null); 
@@ -139,8 +166,19 @@ export const Login = () => {
               </div>
 
               {error && (
-                <div className="text-red-600 dark:text-red-400 text-sm">
-                  {error}
+                <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-md p-3">
+                  <div className="flex">
+                    <div className="flex-shrink-0">
+                      <svg className="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
+                        <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                      </svg>
+                    </div>
+                    <div className="ml-3">
+                      <p className="text-sm font-medium text-red-800 dark:text-red-200">
+                        {error}
+                      </p>
+                    </div>
+                  </div>
                 </div>
               )}
 

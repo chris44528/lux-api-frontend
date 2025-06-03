@@ -1,8 +1,8 @@
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo, useRef } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import useRestrictedNavigation from "../hooks/useRestrictedNavigation";
 import { useUIPermissionContext } from "../contexts/UIPermissionContext";
-import api, { getNotifications } from "../services/api";
+import api, { getNotifications, markNotificationAsRead } from "../services/api";
 import { useTheme } from "../contexts/ThemeContext";
 import {
   Bell,
@@ -21,6 +21,10 @@ import {
   Menu,
   X,
   Palmtree,
+  Wrench,
+  Route,
+  ClipboardList,
+  Users,
 } from "lucide-react";
 import { Avatar, AvatarFallback } from "./ui/avatar";
 
@@ -65,6 +69,17 @@ function UserSettingsModal({
         <div className="space-y-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-200">
+              Username
+            </label>
+            <input
+              className="w-full mt-1 p-2 border rounded dark:bg-gray-800 dark:text-gray-100 bg-gray-100 dark:bg-gray-700"
+              value={form.username}
+              readOnly
+              disabled
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-200">
               Name
             </label>
             <input
@@ -94,7 +109,7 @@ function UserSettingsModal({
             <div className="text-green-600 text-sm mt-1">{saveSuccess}</div>
           )}
           <button
-            className="w-full bg-primary text-white py-2 rounded hover:bg-primary/90 dark:bg-blue-700 dark:hover:bg-blue-800"
+            className="w-full bg-blue-600 text-white py-2 rounded hover:bg-blue-700 dark:bg-blue-700 dark:hover:bg-blue-800"
             onClick={async () => {
               setSaveError("");
               setSaveSuccess("");
@@ -143,7 +158,7 @@ function UserSettingsModal({
               </div>
             )}
             <button
-              className="w-full mt-2 bg-primary text-white py-2 rounded hover:bg-primary/90"
+              className="w-full mt-2 bg-blue-600 text-white py-2 rounded hover:bg-blue-700 dark:bg-blue-700 dark:hover:bg-blue-800"
               onClick={async () => {
                 setPasswordError("");
                 setPasswordSuccess("");
@@ -191,6 +206,8 @@ function UserSettingsModal({
 
 // Notifications modal component
 function NotificationsModal({ open, onClose, notifications, onMarkAsRead }) {
+  const navigate = useNavigate();
+  
   if (!open) return null;
 
   return (
@@ -240,12 +257,29 @@ function NotificationsModal({ open, onClose, notifications, onMarkAsRead }) {
                     )}
                   </div>
                   {notification.report_url && (
-                    <a
-                      href={notification.report_url}
+                    <Link
+                      to={notification.report_url}
                       className="text-xs text-blue-600 hover:underline dark:text-blue-400 mt-2 inline-block"
+                      onClick={(e) => {
+                        // Log the URL for debugging
+                        console.log('Modal navigating to:', notification.report_url);
+                        
+                        // Check if it's a valid internal route
+                        const validRoutes = ['/reports/', '/jobs/', '/site/', '/holidays/'];
+                        const isValidRoute = validRoutes.some(route => notification.report_url.startsWith(route));
+                        
+                        if (!isValidRoute) {
+                          e.preventDefault();
+                          console.error('Invalid report URL:', notification.report_url);
+                          // Navigate to dashboard as fallback
+                          navigate('/dashboard');
+                        }
+                        
+                        onClose();
+                      }}
                     >
                       View details →
-                    </a>
+                    </Link>
                   )}
                 </div>
               ))}
@@ -305,7 +339,11 @@ const Sidebar = () => {
   const [userSettingsOpen, setUserSettingsOpen] = useState(false);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [notifications, setNotifications] = useState<any[]>([]);
+  const [showNotificationPopup, setShowNotificationPopup] = useState(false);
+  const [latestNotification, setLatestNotification] = useState<any>(null);
   const { darkMode, toggleDarkMode } = useTheme();
+  const notificationButtonRef = useRef<HTMLButtonElement>(null);
+  const notificationPopupRef = useRef<HTMLDivElement>(null);
 
   // Track which submenus are expanded
   const [expandedMenus, setExpandedMenus] = useState<Record<string, boolean>>({
@@ -313,6 +351,7 @@ const Sidebar = () => {
     reports: false,
     imports: false,
     holidays: false,
+    engineer: false,
   });
 
   // Function to toggle a submenu
@@ -323,25 +362,80 @@ const Sidebar = () => {
     }));
   };
 
-  // User info
+  // User info - get from stored user object
   const username = localStorage.getItem("username") || "User";
-  const email = localStorage.getItem("email") || "";
+  const getUserEmail = () => {
+    try {
+      const storedUser = localStorage.getItem("user");
+      if (storedUser) {
+        const user = JSON.parse(storedUser);
+        return user.email || "No email found";
+      }
+      return "No email found";
+    } catch (error) {
+      return "No email found";
+    }
+  };
+  const email = getUserEmail();
 
   // Fetch notifications
   useEffect(() => {
     const fetchNotifications = async () => {
       try {
         const data = await getNotifications();
-        setNotifications(data);
-        setUnreadCount(data.filter((n) => !n.is_read).length);
+        const newUnreadCount = data.filter((n) => !n.is_read).length;
+        
+        // Use functional state update to get previous count
+        setNotifications(prevNotifications => {
+          const previousUnreadCount = prevNotifications.filter((n) => !n.is_read).length;
+          
+          // Check if there's a new notification
+          if (newUnreadCount > previousUnreadCount && data.length > 0) {
+            const unreadNotifications = data.filter((n) => !n.is_read);
+            if (unreadNotifications.length > 0) {
+              const latestNotif = unreadNotifications[0];
+              console.log('Latest notification report_url:', latestNotif.report_url); // Debug log
+              setLatestNotification(latestNotif);
+              setShowNotificationPopup(true);
+              // Auto-hide popup after 5 seconds
+              setTimeout(() => setShowNotificationPopup(false), 5000);
+            }
+          }
+          
+          return data;
+        });
+        
+        setUnreadCount(newUnreadCount);
       } catch (error) {
         console.error('Failed to fetch notifications:', error);
       }
     };
     fetchNotifications();
-    const interval = setInterval(fetchNotifications, 30000); // Poll every 30s
+    const interval = setInterval(fetchNotifications, 60000); // Poll every 60s (1 minute)
     return () => clearInterval(interval);
-  }, []);
+  }, []); // Empty dependency array - only run once on mount
+
+  // Close popup when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        notificationPopupRef.current &&
+        !notificationPopupRef.current.contains(event.target as Node) &&
+        notificationButtonRef.current &&
+        !notificationButtonRef.current.contains(event.target as Node)
+      ) {
+        setShowNotificationPopup(false);
+      }
+    };
+
+    if (showNotificationPopup) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [showNotificationPopup]);
 
   // Dark mode is now handled by ThemeContext
 
@@ -355,8 +449,10 @@ const Sidebar = () => {
   // Handle mark notification as read
   const handleMarkAsRead = async (notificationId: number) => {
     try {
-      // TODO: Add API call to mark notification as read
-      // For now, just update local state
+      // Call API to mark notification as read
+      await markNotificationAsRead(notificationId);
+      
+      // Update local state
       setNotifications(prev => 
         prev.map(n => n.id === notificationId ? { ...n, is_read: true } : n)
       );
@@ -414,7 +510,7 @@ const Sidebar = () => {
       <ul className="space-y-2">
         {/* Dashboard */}
         {(navigationItems?.some((item) => item.path === "/dashboard") || 
-          uiPermissions['dashboard.module.root']) && (
+          uiPermissions['dashboard.module.root'] === true) && (
           <li>
             <Link
               to="/dashboard"
@@ -431,7 +527,7 @@ const Sidebar = () => {
         )}
 
         {/* Sites */}
-        {uiPermissions['sites.module.root'] !== false && (
+        {uiPermissions['sites.module.root'] === true && (
           <li>
             <Link
               to="/sites"
@@ -449,7 +545,7 @@ const Sidebar = () => {
 
         {/* Bio-mass */}
         {(navigationItems?.some((item) => item.path === "/bio-mass") ||
-        uiPermissions['bio.module.root']) && (
+        uiPermissions['bio.module.root'] === true) && (
           <li>
             <Link
               to="/bio-mass"
@@ -467,7 +563,7 @@ const Sidebar = () => {
 
         {/* Analysis */}
         {(navigationItems?.some((item) => item.path === "/analysis") ||
-        uiPermissions['analysis.module.root']) && (
+        uiPermissions['analysis.module.root'] === true) && (
           <li>
             <Link
               to="/analysis"
@@ -484,7 +580,7 @@ const Sidebar = () => {
         )}
 
         {/* Job Management */}
-        {uiPermissions['jobs.module.root'] && (
+        {uiPermissions['jobs.module.root'] === true && (
           <li>
             <div className="space-y-1">
               <button
@@ -554,7 +650,7 @@ const Sidebar = () => {
         )}
 
         {/* Reports */}
-        {uiPermissions['reports.module.root'] && (
+        {uiPermissions['reports.module.root'] === true && (
           <li>
             <div className="space-y-1">
               <button
@@ -634,7 +730,7 @@ const Sidebar = () => {
         )}
 
         {/* Imports */}
-        {uiPermissions['imports.module.root'] && (
+        {uiPermissions['imports.module.root'] === true && (
           <li>
             <div className="space-y-1">
               <button
@@ -683,8 +779,68 @@ const Sidebar = () => {
           </li>
         )}
 
+        {/* Engineer Management */}
+        {uiPermissions['jobs.module.root'] === true && (
+          <li>
+            <div className="space-y-1">
+              <button
+                onClick={() => toggleSubmenu("engineer")}
+                className={`flex items-center justify-between w-full px-3 py-2 rounded-md text-sm transition-colors ${
+                  location.pathname.startsWith("/engineer")
+                    ? "bg-green-50 text-green-700 font-medium"
+                    : "text-gray-700 hover:bg-gray-100"
+                }`}
+              >
+                <div className="flex items-center">
+                  <Wrench className="mr-2 h-5 w-5" />
+                  Engineer
+                </div>
+                <ChevronDown
+                  className={`h-4 w-4 transition-transform ${
+                    expandedMenus.engineer ? "rotate-180" : ""
+                  }`}
+                />
+              </button>
+              {expandedMenus.engineer && (
+                <div className="ml-9 space-y-1">
+                  <Link
+                    to="/engineer/forms/builder"
+                    className={`block px-3 py-1 rounded-md text-sm ${
+                      location.pathname === "/engineer/forms/builder"
+                        ? "text-green-700 font-medium"
+                        : "text-gray-600 hover:text-gray-900"
+                    }`}
+                  >
+                    Form Builder
+                  </Link>
+                  <Link
+                    to="/engineer/routes/builder"
+                    className={`block px-3 py-1 rounded-md text-sm ${
+                      location.pathname === "/engineer/routes/builder"
+                        ? "text-green-700 font-medium"
+                        : "text-gray-600 hover:text-gray-900"
+                    }`}
+                  >
+                    Route Builder
+                  </Link>
+                  <Link
+                    to="/engineer/job-allocation"
+                    className={`block px-3 py-1 rounded-md text-sm ${
+                      location.pathname === "/engineer/job-allocation"
+                        ? "text-green-700 font-medium"
+                        : "text-gray-600 hover:text-gray-900"
+                    }`}
+                  >
+                    Job Allocation
+                  </Link>
+                </div>
+              )}
+            </div>
+          </li>
+        )}
+
         {/* Holiday Management */}
-        {uiPermissions['holidays.module.root'] && (
+        {uiPermissions['holidays.module.root'] === true && (
           <li>
             <div className="space-y-1">
               <button
@@ -747,7 +903,7 @@ const Sidebar = () => {
                   >
                     Team View
                   </Link>
-                  {uiPermissions['holidays.entitlements.approve'] && (
+                  {uiPermissions['holidays.entitlements.approve'] === true && (
                     <Link
                       to="/holidays/approvals"
                       className={`block px-3 py-1 rounded-md text-sm ${
@@ -759,7 +915,7 @@ const Sidebar = () => {
                       Approvals
                     </Link>
                   )}
-                  {uiPermissions['holidays.policies.manage'] && (
+                  {uiPermissions['holidays.policies.manage'] === true && (
                     <>
                       <Link
                         to="/holidays/policies"
@@ -823,8 +979,7 @@ const Sidebar = () => {
           ))}
 
         {/* Settings */}
-        {(navigationItems?.some((item) => item.path === "/settings") ||
-        uiPermissions['settings.module.root']) && (
+        {uiPermissions['settings.module.root'] === true && (
           <li>
             <Link
               to="/settings"
@@ -879,18 +1034,103 @@ const Sidebar = () => {
       {/* Bottom actions section */}
       <div className="border-t p-4 space-y-2">
         {/* Notifications */}
-        <button 
-          className="flex items-center w-full px-3 py-2 text-sm text-gray-700 hover:bg-gray-100 rounded-md relative"
-          onClick={() => setNotificationsOpen(true)}
-        >
-          <Bell className="mr-2 h-5 w-5" />
-          Notifications
-          {unreadCount > 0 && (
-            <span className="absolute left-6 top-1.5 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-[10px] text-white">
-              {unreadCount}
-            </span>
+        <div className="relative">
+          <button 
+            ref={notificationButtonRef}
+            className="flex items-center w-full px-3 py-2 text-sm text-gray-700 hover:bg-gray-100 rounded-md relative"
+            onClick={() => setNotificationsOpen(true)}
+          >
+            <div className="relative mr-2">
+              <Bell className="h-5 w-5" />
+              {unreadCount > 0 && (
+                <span className="absolute -bottom-1 -right-1 flex h-3 w-3 items-center justify-center rounded-full bg-red-500 text-[8px] text-white font-semibold">
+                  {unreadCount > 9 ? '9+' : unreadCount}
+                </span>
+              )}
+            </div>
+            Notifications
+          </button>
+          
+          {/* Notification Popup */}
+          {showNotificationPopup && latestNotification && (
+            <div 
+              ref={notificationPopupRef}
+              className="absolute left-full ml-2 top-0 w-72 transform transition-all duration-300 ease-out origin-left"
+              style={{
+                animation: showNotificationPopup ? 'slideOut 0.3s ease-out' : 'slideIn 0.3s ease-out',
+              }}
+            >
+              <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 p-4">
+                <div className="flex justify-between items-start mb-2">
+                  <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100">
+                    New Notification
+                  </h3>
+                  <button
+                    onClick={() => setShowNotificationPopup(false)}
+                    className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 text-xs"
+                  >
+                    ✕
+                  </button>
+                </div>
+                <p className="text-sm text-gray-700 dark:text-gray-300 mb-2">
+                  {latestNotification.message}
+                </p>
+                <p className="text-xs text-gray-500 dark:text-gray-400">
+                  {new Date(latestNotification.created_at).toLocaleTimeString()}
+                </p>
+                {latestNotification.report_url && (
+                  <Link
+                    to={latestNotification.report_url}
+                    className="text-xs text-blue-600 hover:underline dark:text-blue-400 mt-2 inline-block"
+                    onClick={(e) => {
+                      // Log the URL for debugging
+                      console.log('Navigating to:', latestNotification.report_url);
+                      
+                      // Check if it's a valid internal route
+                      const validRoutes = ['/reports/', '/jobs/', '/site/', '/holidays/'];
+                      const isValidRoute = validRoutes.some(route => latestNotification.report_url.startsWith(route));
+                      
+                      if (!isValidRoute) {
+                        e.preventDefault();
+                        console.error('Invalid report URL:', latestNotification.report_url);
+                        // Optionally navigate to a default page
+                        navigate('/dashboard');
+                      }
+                      
+                      setShowNotificationPopup(false);
+                    }}
+                  >
+                    View details →
+                  </Link>
+                )}
+              </div>
+            </div>
           )}
-        </button>
+        </div>
+        
+        <style>{`
+          @keyframes slideOut {
+            from {
+              opacity: 0;
+              transform: scaleX(0);
+            }
+            to {
+              opacity: 1;
+              transform: scaleX(1);
+            }
+          }
+          
+          @keyframes slideIn {
+            from {
+              opacity: 1;
+              transform: scaleX(1);
+            }
+            to {
+              opacity: 0;
+              transform: scaleX(0);
+            }
+          }
+        `}</style>
 
         {/* User Settings */}
         <button

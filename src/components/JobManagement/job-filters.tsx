@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Calendar } from "@/components/ui/calendar"
+// import { Calendar } from "@/components/ui/calendar" - replaced with native date input
 import {
   Dialog,
   DialogContent,
@@ -17,10 +17,9 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog"
 import { CalendarIcon, Filter, Plus, Search } from "lucide-react"
-import { format } from "date-fns"
 
 export function JobFilters() {
-  const [date, setDate] = useState<Date>()
+  const [date, setDate] = useState<string>("")
   const [isFiltersOpen, setIsFiltersOpen] = useState(false)
 
   return (
@@ -91,17 +90,16 @@ export function JobFilters() {
               </div>
               <div className="space-y-1">
                 <Label htmlFor="date">Due Date</Label>
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Button id="date" variant="outline" className="w-full justify-start text-left font-normal">
-                      <CalendarIcon className="mr-2 h-4 w-4" />
-                      {date ? format(date, "PPP") : <span>Pick a date</span>}
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0">
-                    <Calendar mode="single" selected={date} onSelect={setDate} initialFocus />
-                  </PopoverContent>
-                </Popover>
+                <div className="relative">
+                  <CalendarIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-500" />
+                  <Input
+                    id="date"
+                    type="date"
+                    value={date}
+                    onChange={(e) => setDate(e.target.value)}
+                    className="pl-10"
+                  />
+                </div>
               </div>
             </div>
             <div className="flex items-center justify-between">
@@ -158,17 +156,14 @@ export function JobFilters() {
             </div>
             <div className="space-y-2">
               <Label htmlFor="due-date">Due Date</Label>
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button id="due-date" variant="outline" className="w-full justify-start text-left font-normal">
-                    <CalendarIcon className="mr-2 h-4 w-4" />
-                    <span>Select due date</span>
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0">
-                  <Calendar mode="single" initialFocus />
-                </PopoverContent>
-              </Popover>
+              <div className="relative">
+                <CalendarIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-500" />
+                <Input
+                  id="due-date"
+                  type="date"
+                  className="pl-10"
+                />
+              </div>
             </div>
             <div className="space-y-2">
               <Label htmlFor="assigned">Assign To</Label>

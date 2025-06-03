@@ -22,7 +22,9 @@ interface AuthProviderProps {
 
 // Helper function to determine role from groups - will be replaced by API call
 const determineRole = async (groups: UserGroup[]): Promise<'staff' | 'engineer' | 'unknown'> => {
-  if (!groups || !Array.isArray(groups) || groups.length === 0) return 'unknown';
+  if (!groups || !Array.isArray(groups) || groups.length === 0) {
+    return 'staff'; // Changed from 'unknown' to 'staff' as default
+  }
   
   try {
     // Call the API to get the user's view type
@@ -100,6 +102,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         setUser(null); // Ensure user is null during MFA step
         localStorage.removeItem('access_token'); // Clear any old token
         localStorage.removeItem('user');
+        setLoading(false); // Set loading to false so MFA screen can show
+        return response;
       } else if (response.token && response.user) {
         // Login successful, MFA not required or already handled
         const role = await determineRole(response.user.groups);
@@ -115,18 +119,17 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           console.warn('Failed to preload UI permissions:', error);
         }
         
-        // Handle intended route redirect
-        const intendedRoute = localStorage.getItem('intendedRoute');
-        if (intendedRoute && intendedRoute !== '/login') {
-          localStorage.removeItem('intendedRoute');
-          window.location.href = intendedRoute;
-        }
+        // Clear any intended route - React Router will handle navigation
+        localStorage.removeItem('intendedRoute');
         
       } else {
         // Handle unexpected response
          throw new Error('Login failed: Invalid response from server');
       }
-      setLoading(false);
+      // Only set loading to false if MFA is not required
+      if (!response.requiresMfa) {
+        setLoading(false);
+      }
       return response; // Return full response for component handling (e.g., MFA flow)
     } catch (error) {
       setUser(null);
@@ -167,15 +170,19 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         const fullUser = { ...response.user, role };
         setUser(fullUser);
         
-        // Store user data in localStorage
+        // Store authentication data in localStorage
+        localStorage.setItem('access_token', response.token);
         localStorage.setItem('user', JSON.stringify(response.user));
         
-        // Handle intended route redirect
-        const intendedRoute = localStorage.getItem('intendedRoute');
-        if (intendedRoute && intendedRoute !== '/login') {
-          localStorage.removeItem('intendedRoute');
-          window.location.href = intendedRoute;
+        // Preload UI permissions after successful MFA verification
+        try {
+          await uiPermissionService.loadPermissions();
+        } catch (error) {
+          console.warn('Failed to preload UI permissions:', error);
         }
+        
+        // Clear any intended route - React Router will handle navigation
+        localStorage.removeItem('intendedRoute');
         
       } else {
         throw new Error('MFA verification failed: Invalid response from server');

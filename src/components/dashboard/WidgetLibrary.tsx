@@ -16,6 +16,7 @@ import {
   Flame,
   FileText,
   Zap,
+  MapPin,
 } from "lucide-react";
 
 interface WidgetLibraryProps {
@@ -120,6 +121,14 @@ export const WidgetLibrary: React.FC<WidgetLibraryProps> = ({
       icon: <Zap className="h-8 w-8 text-yellow-500" />,
       defaultSize: "2x1",
       category: "operations",
+    },
+    {
+      type: "recentVisitedSites",
+      title: "Recently Visited Sites",
+      description: "Shows your recently visited sites",
+      icon: <MapPin className="h-8 w-8 text-indigo-500" />,
+      defaultSize: "2x2",
+      category: "metrics",
     },
   ];
 
@@ -243,6 +252,15 @@ export const WidgetLibrary: React.FC<WidgetLibraryProps> = ({
               url: "/reports",
             },
           ],
+        };
+        break;
+      case "recentVisitedSites":
+        newWidget = {
+          id: uuidv4(),
+          type: "recentVisitedSites",
+          title: widgetTitle || selectedWidget.title,
+          size: selectedWidget.defaultSize,
+          limit: 5, // Default limit
         };
         break;
       default:

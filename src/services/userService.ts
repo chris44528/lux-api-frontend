@@ -2,9 +2,16 @@ import { User, UserFormData, UserGroup, Permission, GroupPermission, PaginatedRe
 import { api } from './api';
 
 // User related functions
-export const getUsers = async (page: number = 1): Promise<PaginatedResponse<User>> => {
+export const getUsers = async (page: number = 1, params?: { search?: string }): Promise<PaginatedResponse<User>> => {
   try {
-    const response = await api.get(`/users/users/?page=${page}`);
+    const queryParams = new URLSearchParams();
+    queryParams.append('page', page.toString());
+    
+    if (params?.search) {
+      queryParams.append('search', params.search);
+    }
+    
+    const response = await api.get(`/users/users/?${queryParams.toString()}`);
     return response.data;
   } catch (error) {
     throw error;
@@ -233,9 +240,9 @@ export const requestPasswordReset = async (email: string): Promise<void> => {
   }
 };
 
-export const confirmPasswordReset = async (uidb64: string, token: string, newPassword: string): Promise<void> => {
+export const confirmPasswordReset = async (uid: string, token: string, newPassword: string): Promise<void> => {
   try {
-    await api.post(`/users/password-reset/${uidb64}/${token}/`, {
+    await api.post(`/users/password-reset/${uid}/${token}/`, {
       new_password: newPassword
     });
   } catch (error) {

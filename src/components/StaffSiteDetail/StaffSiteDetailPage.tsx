@@ -5,6 +5,8 @@ import ReadingsTab from './ReadingsTab';
 import MeterInfoTab from './MeterInfoTab';
 import CallsTab from './CallsTab';
 import JobsTab from './JobsTab';
+import AdditionalDetailsTab from './AdditionalDetailsTab';
+import LegalTab from './LegalTab';
 import SystemNotesTable from './SystemNotesTable';
 import { useParams, useNavigate } from 'react-router-dom';
 import { getSiteDetail, createNote, api, startMeterTest, pollMeterTestStatus, searchSites } from '../../services/api';
@@ -75,6 +77,15 @@ interface SiteDetailApiResponse {
   calls?: CallRecord[];
   notes?: Note[];
   active_alerts?: SiteAlert[];
+  act_additional_fields?: {
+    id: number;
+    survey_date: string;
+    survey_returned_date: string;
+    home_visit_date: string;
+    home_visitor_name: string;
+    lightweight: boolean;
+    number_of_pannels: string;
+  } | null;
 }
 
 interface ApiNote {
@@ -147,6 +158,8 @@ const AVAILABLE_TABS = [
   { key: 'meter-info', label: 'Meters', permission: 'sites.detail.tabs.meters' },
   { key: 'jobs', label: 'Jobs', permission: 'sites.detail.tabs.jobs' },
   { key: 'calls', label: 'Calls', permission: 'sites.detail.tabs.calls' },
+  { key: 'additional-details', label: 'Additional Details', permission: 'sites.detail.tabs.additional_details' },
+  { key: 'legal', label: 'Legal', permission: 'sites.detail.tabs.legal' },
 ];
 
 const StaffSiteDetailPage: React.FC = () => {
@@ -198,8 +211,8 @@ const StaffSiteDetailPage: React.FC = () => {
     // Filter tabs based on permissions
     return AVAILABLE_TABS.filter(tab => {
       const hasPermission = permissions[tab.permission];
-      // Show tab if permission is true or undefined (undefined means no restriction)
-      return hasPermission !== false;
+      // Only show tab if permission is explicitly true
+      return hasPermission === true;
     });
   }, [permissions, isLoaded]);
 
@@ -535,6 +548,7 @@ const StaffSiteDetailPage: React.FC = () => {
               onSendEmail={() => setShowEmailTemplateModal(true)}
               onSiteReadingReport={() => setShowSiteReadingReportModal(true)}
               onAdvancedMonitoring={() => setShowAdvancedMonitoringModal(true)}
+              siteId={siteId}
             />
           </div>
         </div>
@@ -661,6 +675,8 @@ const StaffSiteDetailPage: React.FC = () => {
                   {activeTab === 'meter-info' && <MeterInfoTab meter={siteData.active_meter} sim={siteData.sim} />}
                   {activeTab === 'jobs' && <JobsTab siteId={Number(siteId)} />}
                   {activeTab === 'calls' && <CallsTab calls={siteData.calls ?? []} />}
+                  {activeTab === 'additional-details' && <AdditionalDetailsTab additionalFields={siteData.act_additional_fields} />}
+                  {activeTab === 'legal' && <LegalTab siteId={siteId || ''} />}
                 </div>
               </>
             )}

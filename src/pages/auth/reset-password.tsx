@@ -17,18 +17,18 @@ export default function ResetPasswordPage() {
   const [isValidToken, setIsValidToken] = useState(true);
   const { toast } = useToast();
   const navigate = useNavigate();
-  const { uidb64, token } = useParams();
+  const { uid, token } = useParams();
 
   useEffect(() => {
     // Validate token on component mount
-    if (!uidb64 || !token) {
+    if (!uid || !token) {
       setIsValidToken(false);
       toast({
         title: "Error",
         description: "Invalid or missing reset token.",
       });
     }
-  }, [uidb64, token, toast]);
+  }, [uid, token, toast]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -52,11 +52,11 @@ export default function ResetPasswordPage() {
     setIsLoading(true);
 
     try {
-      if (!uidb64 || !token) {
+      if (!uid || !token) {
         throw new Error("Missing reset token");
       }
       
-      await confirmPasswordReset(uidb64, token, newPassword);
+      await confirmPasswordReset(uid, token, newPassword);
       toast({
         title: "Success",
         description: "Your password has been reset successfully.",

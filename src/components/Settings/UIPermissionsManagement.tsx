@@ -351,8 +351,8 @@ export function UIPermissionsManagement() {
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+              <div className="relative flex items-center">
+                <Search className="absolute left-3 pointer-events-none z-10 text-gray-400 h-4 w-4" />
                 <Input
                   placeholder="Search permissions..."
                   value={searchQuery}

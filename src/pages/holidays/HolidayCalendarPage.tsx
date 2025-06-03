@@ -34,10 +34,29 @@ export default function HolidayCalendarPage() {
   const [loading, setLoading] = useState(true);
   const [filterDepartment, setFilterDepartment] = useState<string>('all');
   const [filterType, setFilterType] = useState<string>('all');
+  const [departments, setDepartments] = useState<any[]>([]);
+  const [holidayTypes, setHolidayTypes] = useState<any[]>([]);
 
   useEffect(() => {
     loadCalendarData();
   }, [date, filterDepartment, filterType]);
+
+  useEffect(() => {
+    loadDropdownData();
+  }, []);
+
+  const loadDropdownData = async () => {
+    try {
+      const [deptResponse, typeResponse] = await Promise.all([
+        holidayService.getDepartments(),
+        holidayService.getHolidayTypes()
+      ]);
+      setDepartments(deptResponse.results || []);
+      setHolidayTypes(typeResponse.results || []);
+    } catch (error) {
+      console.error('Failed to load dropdown data:', error);
+    }
+  };
 
   const loadCalendarData = async () => {
     try {
@@ -226,9 +245,11 @@ export default function HolidayCalendarPage() {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">All Departments</SelectItem>
-                    <SelectItem value="1">Engineering</SelectItem>
-                    <SelectItem value="2">Sales</SelectItem>
-                    <SelectItem value="3">HR</SelectItem>
+                    {departments.map((dept) => (
+                      <SelectItem key={dept.id} value={dept.id.toString()}>
+                        {dept.name}
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>
@@ -241,9 +262,11 @@ export default function HolidayCalendarPage() {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">All Types</SelectItem>
-                    <SelectItem value="annual">Annual Leave</SelectItem>
-                    <SelectItem value="sick">Sick Leave</SelectItem>
-                    <SelectItem value="public">Public Holidays</SelectItem>
+                    {holidayTypes.map((type) => (
+                      <SelectItem key={type.id} value={type.id.toString()}>
+                        {type.name}
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>

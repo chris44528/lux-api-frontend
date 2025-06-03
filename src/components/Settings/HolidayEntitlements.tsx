@@ -4,13 +4,13 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { PaginatedUserSelect } from '@/components/ui/paginated-user-select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Search, Plus, Edit2, Trash2, AlertCircle } from 'lucide-react';
 import { holidayService, HolidayType, HolidayEntitlement } from '@/services/holidayService';
-import userService from '@/services/userService';
 
 interface User {
   id: number;
@@ -24,7 +24,6 @@ export default function HolidayEntitlements() {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
   const [entitlements, setEntitlements] = useState<HolidayEntitlement[]>([]);
-  const [users, setUsers] = useState<User[]>([]);
   const [holidayTypes, setHolidayTypes] = useState<HolidayType[]>([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingEntitlement, setEditingEntitlement] = useState<HolidayEntitlement | null>(null);
@@ -45,14 +44,12 @@ export default function HolidayEntitlements() {
   const loadData = async () => {
     setLoading(true);
     try {
-      const [entitlementsData, usersData, typesData] = await Promise.all([
+      const [entitlementsData, typesData] = await Promise.all([
         holidayService.getEntitlements({ year: selectedYear }),
-        userService.getUsers(),
         holidayService.getHolidayTypes()
       ]);
 
       setEntitlements(entitlementsData.results);
-      setUsers(usersData.results);
       setHolidayTypes(typesData.results.filter(ht => ht.is_active));
     } catch (error) {
       console.error('Failed to load data:', error);
@@ -166,8 +163,8 @@ export default function HolidayEntitlements() {
         <CardContent className="p-4">
           <div className="flex gap-4">
             <div className="flex-1">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+              <div className="relative flex items-center">
+                <Search className="absolute left-3 pointer-events-none z-10 text-gray-400 h-4 w-4" />
                 <Input
                   placeholder="Search by user, department, or holiday type..."
                   value={searchQuery}
@@ -306,22 +303,12 @@ export default function HolidayEntitlements() {
           <div className="space-y-4">
             <div>
               <Label htmlFor="user">User</Label>
-              <Select
+              <PaginatedUserSelect
                 value={formData.user_id}
                 onValueChange={(value) => setFormData({ ...formData, user_id: value })}
                 disabled={!!editingEntitlement}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select user" />
-                </SelectTrigger>
-                <SelectContent>
-                  {users.map((user) => (
-                    <SelectItem key={user.id} value={user.id.toString()}>
-                      {user.full_name} ({user.username})
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+                placeholder="Select user"
+              />
             </div>
 
             <div>

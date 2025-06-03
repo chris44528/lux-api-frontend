@@ -56,6 +56,12 @@ const dashboardReducer = (
       );
       if (!activeDashboard) return state;
 
+      // Check if dashboard already has 10 widgets
+      if ((activeDashboard.widgets || []).length >= 10) {
+        console.warn("Dashboard widget limit reached (10 widgets maximum)");
+        return state;
+      }
+
       const updatedDashboards = state.dashboards.map((dashboard) => {
         if (dashboard.id === state.activeDashboard) {
           return {

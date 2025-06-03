@@ -990,24 +990,27 @@ export const testMeter = async (siteId: string) => {
     const siteData = await getSiteDetail(siteId);
     console.log('Site data received:', siteData);
     
-    // Check different possible locations for meter data
-    const meters = siteData.meter || siteData.meters || siteData.meter_details || [];
+    // Get active meter data - it's an object, not an array
+    const meter = siteData.active_meter || (siteData.meters && siteData.meters[0]) || null;
     
-    if (!meters || !meters.length) {
+    if (!meter) {
       console.error('No meter found in site data:', siteData);
       throw new Error('No meter found for site');
     }
     
-    const meter = meters[0];
     console.log('Using meter:', meter);
     
-    // Check for SIM details which might contain IP
-    const sim = siteData.sim || siteData.sim_details || [];
-    const simData = sim[0] || {};
+    // Get SIM data - it's an object, not an array
+    const sim = siteData.sim || {};
+    
+    if (!sim.sim_ip) {
+      console.error('No SIM IP found in site data:', siteData);
+      throw new Error('No SIM IP found for site');
+    }
     
     // Start meter test
     const testRequest = {
-      ip: simData.sim_ip || meter.meter_serial || '',
+      ip: sim.sim_ip,
       model: meter.meter_model || '',
       password: meter.meter_password || '',
       site_id: parseInt(siteId)
@@ -1023,10 +1026,12 @@ export const testMeter = async (siteId: string) => {
         (status) => {
           if (status.status === 'completed') {
             resolve(status);
-          } else if (status.status === 'failed') {
+          } else if (status.status === 'failed' || status.status === 'error') {
             reject(new Error(status.error || 'Meter test failed'));
           }
-        }
+        },
+        75, // 150 seconds total (75 * 2 seconds) to handle backend timeout
+        2000 // 2 second intervals
       );
     });
     
@@ -1216,6 +1221,16 @@ export const getNotifications = async (): Promise<Notification[]> => {
     return response.data || [];
   } catch (error) {
     console.error('Error fetching notifications:', error);
+    throw error;
+  }
+};
+
+// Mark a notification as read
+export const markNotificationAsRead = async (notificationId: number): Promise<void> => {
+  try {
+    await api.patch(`/users/notifications/${notificationId}/`, { is_read: true });
+  } catch (error) {
+    console.error('Error marking notification as read:', error);
     throw error;
   }
 };

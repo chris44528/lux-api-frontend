@@ -1,19 +1,122 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { SiteDetailResponse } from '../types/api';
-// Import UI components (Tabs, Button, etc.) - likely from Shadcn/ui or similar
+import engineerService from '../services/engineerService';
+import storageService from '../services/offline/storageService';
+import { Button } from './ui/button';
+import { Alert } from './ui/alert';
+import { Badge } from './ui/badge';
 
 interface EngineerSiteDetailViewProps {
   site: SiteDetailResponse;
-  includeHeader?: boolean; // Optional prop to determine if header should be included
+  includeHeader?: boolean;
+  jobId?: number; // Optional job ID if viewing site in context of a job
 }
 
-function EngineerSiteDetailView({ site, includeHeader = false }: EngineerSiteDetailViewProps) {
+function EngineerSiteDetailView({ site, includeHeader = false, jobId }: EngineerSiteDetailViewProps) {
   const [activeTab, setActiveTab] = useState('site');
+  const [isOffline, setIsOffline] = useState(!navigator.onLine);
+  const [activeJobs, setActiveJobs] = useState<any[]>([]);
+  const [pendingForms, setPendingForms] = useState<any[]>([]);
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    const handleOnline = () => setIsOffline(false);
+    const handleOffline = () => setIsOffline(true);
+    
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+    
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, []);
+
+  useEffect(() => {
+    // Fetch active jobs for this site
+    fetchActiveJobs();
+    fetchPendingForms();
+  }, [site?.site?.id]);
+
+  const fetchActiveJobs = async () => {
+    try {
+      // This would be a real API call
+      // const jobs = await engineerService.getJobsForSite(site?.site?.id);
+      // setActiveJobs(jobs);
+    } catch (error) {
+      console.error('Failed to fetch jobs:', error);
+    }
+  };
+
+  const fetchPendingForms = async () => {
+    try {
+      // Check for pending forms in local storage
+      const pending = await storageService.getPendingOperations();
+      const siteForms = pending.filter(op => 
+        op.operation_type === 'form_submission' && 
+        op.data.site_id === site?.site?.id
+      );
+      setPendingForms(siteForms);
+    } catch (error) {
+      console.error('Failed to fetch pending forms:', error);
+    }
+  };
+
+  const handleTestMeter = () => {
+    navigate(`/engineer/forms/new`, {
+      state: {
+        formType: 'meter_test',
+        siteId: site?.site?.id,
+        jobId: jobId,
+        meterId: site?.meters?.[0]?.id
+      }
+    });
+  };
+
+  const handleAddReading = () => {
+    navigate(`/engineer/forms/new`, {
+      state: {
+        formType: 'meter_reading',
+        siteId: site?.site?.id,
+        jobId: jobId,
+        meterId: site?.meters?.[0]?.id,
+        lastReading: site?.meters?.[0]?.last_reading
+      }
+    });
+  };
+
+  const handleRequestJob = () => {
+    navigate(`/engineer/forms/new`, {
+      state: {
+        formType: 'job_request',
+        siteId: site?.site?.id,
+        siteDetails: {
+          name: site?.site?.site_name,
+          address: site?.site?.address,
+          postcode: site?.site?.postcode
+        }
+      }
+    });
+  };
   
   return (
-    <div className="bg-white rounded shadow overflow-hidden">
-      <div className="bg-gray-50 p-4">
-        <h1 className="text-xl font-bold text-center">{site?.site?.site_name || 'Site Detail'}</h1>
+    <div className="bg-white dark:bg-gray-800 rounded shadow overflow-hidden">
+      {isOffline && (
+        <div className="bg-yellow-100 dark:bg-yellow-900 text-yellow-800 dark:text-yellow-200 p-2 text-center">
+          <span className="text-xs font-medium">📱 Offline - Data will sync when connected</span>
+        </div>
+      )}
+      
+      <div className="bg-gray-50 dark:bg-gray-700 p-4">
+        <h1 className="text-xl font-bold text-center text-gray-900 dark:text-white">
+          {site?.site?.site_name || 'Site Detail'}
+        </h1>
+        {site?.site?.fit_id && (
+          <p className="text-sm text-center text-gray-500 dark:text-gray-400 mt-1">
+            FIT ID: {site.site.fit_id}
+          </p>
+        )}
       </div>
       
       {/* Tab navigation */}
@@ -192,25 +295,70 @@ function EngineerSiteDetailView({ site, includeHeader = false }: EngineerSiteDet
         
         {activeTab === 'jobs' && (
           <div className="space-y-4">
-            <div className="p-4 rounded bg-gray-50 text-center">
-              <p className="text-gray-500">No jobs currently assigned to this site</p>
-            </div>
-            <button className="w-full py-2 bg-green-600 text-white rounded font-medium">
+            {activeJobs.length > 0 ? (
+              <div className="space-y-2">
+                {activeJobs.map((job) => (
+                  <div 
+                    key={job.id}
+                    className="p-3 border rounded cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700"
+                    onClick={() => navigate(`/engineer/job/${job.id}`)}
+                  >
+                    <div className="flex justify-between items-start">
+                      <div>
+                        <h4 className="font-medium">{job.title}</h4>
+                        <p className="text-sm text-gray-500 dark:text-gray-400">
+                          Due: {new Date(job.due_date).toLocaleDateString()}
+                        </p>
+                      </div>
+                      <Badge variant={job.priority === 'high' ? 'destructive' : 'default'}>
+                        {job.priority}
+                      </Badge>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="p-4 rounded bg-gray-50 dark:bg-gray-700 text-center">
+                <p className="text-gray-500 dark:text-gray-400">No jobs currently assigned to this site</p>
+              </div>
+            )}
+            <Button 
+              className="w-full"
+              onClick={handleRequestJob}
+            >
               Request Job
-            </button>
+            </Button>
           </div>
         )}
       </div>
+
+      {/* Pending Forms Alert */}
+      {pendingForms.length > 0 && (
+        <div className="p-4 border-t">
+          <Alert>
+            <p className="text-sm">
+              📋 {pendingForms.length} form{pendingForms.length > 1 ? 's' : ''} pending sync
+            </p>
+          </Alert>
+        </div>
+      )}
       
       {/* Action buttons */}
-      <div className="p-4 border-t bg-gray-50">
+      <div className="p-4 border-t bg-gray-50 dark:bg-gray-700">
         <div className="grid grid-cols-2 gap-2">
-          <button className="py-2 bg-green-600 text-white rounded font-medium">
+          <Button 
+            onClick={handleTestMeter}
+            disabled={!site?.meters?.[0]}
+          >
             Test Meter
-          </button>
-          <button className="py-2 bg-gray-200 text-gray-800 rounded font-medium">
+          </Button>
+          <Button 
+            onClick={handleAddReading}
+            variant="outline"
+            disabled={!site?.meters?.[0]}
+          >
             Add Reading
-          </button>
+          </Button>
         </div>
       </div>
     </div>

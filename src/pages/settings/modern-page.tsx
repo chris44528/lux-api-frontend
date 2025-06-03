@@ -2,23 +2,22 @@ import { useState } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Input } from "@/components/ui/input";
-import { Search, Settings2, Users, Shield, Filter, Building, Calendar, Palmtree } from "lucide-react";
+import { Settings2, Users, Shield, Filter, Building, Palmtree } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 // Import existing components
 import { GroupDataFilters } from "@/components/Settings/GroupDataFilters";
-import MenuPermissionsSettings from "@/components/Settings/MenuPermissionsSettings";
 import DepartmentsSettings from "@/components/Settings/departments";
 import CannedMessagesSettings from "@/components/Settings/CannedMessagesSettings";
-import { JobStatuses, JobTypes, JobCategories, JobTags, TaskTemplates, UserManagement, GroupManagement, PermissionsManagement, UIPermissionsManagement, EmailTemplatesSettings } from "@/components/Settings";
+import { JobStatuses, JobTypes, JobCategories, JobTags, TaskTemplates, UserManagement, GroupManagement, UIPermissionsManagement, EmailTemplatesSettings } from "@/components/Settings";
 import HolidayEntitlements from "@/components/Settings/HolidayEntitlements";
 import HolidayPolicies from "@/components/Settings/HolidayPolicies";
+import PublicHolidays from "@/components/Settings/PublicHolidays";
+import BlackoutPeriods from "@/components/Settings/BlackoutPeriods";
 import { TestPermissions } from "@/components/TestPermissions";
 import { TestBulkUpdate } from "@/components/TestBulkUpdate";
 
 const ModernSettingsPage = () => {
-  const [searchQuery, setSearchQuery] = useState("");
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<string | null>(null);
 
@@ -34,11 +33,11 @@ const ModernSettingsPage = () => {
     {
       id: "user-management",
       title: "User Management",
-      description: "Manage users, groups, and permissions",
+      description: "Manage users and groups",
       icon: Users,
       color: "bg-blue-50 border-blue-200",
       iconColor: "text-blue-600",
-      tabs: ["users", "groups", "permissions"]
+      tabs: ["users", "groups"]
     },
     {
       id: "job-settings",
@@ -87,13 +86,11 @@ const ModernSettingsPage = () => {
     { id: "templates", label: "Templates", category: "job-settings" },
     { id: "users", label: "Users", category: "user-management" },
     { id: "groups", label: "Groups", category: "user-management" },
-    { id: "permissions", label: "Permissions", category: "user-management" },
     { id: "holiday-policies", label: "Holiday Policies", category: "holiday-management" },
     { id: "holiday-entitlements", label: "Entitlements", category: "holiday-management" },
     { id: "public-holidays", label: "Public Holidays", category: "holiday-management" },
     { id: "blackout-periods", label: "Blackout Periods", category: "holiday-management" },
     { id: "data-filters", label: "Data Filters", category: "access-control" },
-    { id: "menu-permissions", label: "Menu Permissions", category: "access-control" },
     { id: "ui-permissions", label: "UI Permissions", category: "access-control" },
     { id: "departments", label: "Departments", category: "system-config" },
     { id: "canned-messages", label: "Canned Text Messages", category: "system-config" },
@@ -141,17 +138,6 @@ const ModernSettingsPage = () => {
                 <p className="text-gray-600 dark:text-gray-400 mt-1">
                   {activeCategory ? settingsCategories.find(c => c.id === activeCategory)?.description : 'Configure your system preferences and permissions'}
                 </p>
-              </div>
-            </div>
-            <div className="flex items-center space-x-4">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 dark:text-gray-500 h-4 w-4" />
-                <Input
-                  placeholder="Search settings..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-10 w-64"
-                />
               </div>
             </div>
           </div>
@@ -312,26 +298,12 @@ const ModernSettingsPage = () => {
             <GroupManagement />
           </TabsContent>
 
-          <TabsContent value="permissions">
-            <PermissionsManagement />
-          </TabsContent>
 
           {/* Access Control Tabs */}
           <TabsContent value="data-filters">
             <GroupDataFilters />
           </TabsContent>
 
-          <TabsContent value="menu-permissions">
-            <Card className="bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700">
-              <CardHeader>
-                <CardTitle className="text-gray-900 dark:text-white">Menu Permissions</CardTitle>
-                <CardDescription className="text-gray-600 dark:text-gray-400">Control menu visibility for different user groups</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <MenuPermissionsSettings groups={[]} />
-              </CardContent>
-            </Card>
-          </TabsContent>
 
           <TabsContent value="ui-permissions">
             <UIPermissionsManagement />
@@ -391,33 +363,11 @@ const ModernSettingsPage = () => {
           </TabsContent>
 
           <TabsContent value="public-holidays">
-            <Card className="bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700">
-              <CardHeader>
-                <CardTitle className="text-gray-900 dark:text-white">Public Holidays</CardTitle>
-                <CardDescription className="text-gray-600 dark:text-gray-400">Manage public holidays for your organization</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="text-center py-8">
-                  <Calendar className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                  <p className="text-gray-600 dark:text-gray-400">Public holiday management will be implemented here</p>
-                </div>
-              </CardContent>
-            </Card>
+            <PublicHolidays />
           </TabsContent>
 
           <TabsContent value="blackout-periods">
-            <Card className="bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700">
-              <CardHeader>
-                <CardTitle className="text-gray-900 dark:text-white">Blackout Periods</CardTitle>
-                <CardDescription className="text-gray-600 dark:text-gray-400">Define periods when holidays cannot be taken</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="text-center py-8">
-                  <Shield className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                  <p className="text-gray-600 dark:text-gray-400">Blackout period management will be implemented here</p>
-                </div>
-              </CardContent>
-            </Card>
+            <BlackoutPeriods />
           </TabsContent>
         </Tabs>
         )}

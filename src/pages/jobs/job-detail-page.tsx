@@ -40,28 +40,13 @@ interface JobNote {
   source_type?: string;
 }
 
-// Add a new interface to represent task steps
-interface TaskStepInstance {
-  id: number;
-  name: string;
-  description: string;
-  status: "pending" | "in_progress" | "completed" | "failed" | "skipped";
-  step_order: number;
-}
 
-// Extend the JobTask interface
-interface JobTask {
-  id: number;
-  name: string;
-  status: string;
-  completion_percentage: number;
-  template: {
-    id: number;
-    name: string;
-  };
-  step_instances?: TaskStepInstance[]; // Add step instances
-  current_step?: TaskStepInstance; // Add current step with proper type
-}
+// Import JobTask from service instead of redefining it
+import type { JobTask as ServiceJobTask, TaskStepInstance as ServiceTaskStepInstance } from "../../services/jobService";
+
+// Use the service types
+type JobTask = ServiceJobTask;
+type TaskStepInstance = ServiceTaskStepInstance;
 
 // Add a new interface for the last completed job
 interface LastCompletedJob {
@@ -218,7 +203,7 @@ export default function JobDetailsPage() {
   const fetchJobTasks = async (jobId: string): Promise<JobTask[]> => {
     try {
       // Get all tasks for this job
-      const tasks = await jobService.getJobTasks(jobId);
+      const tasks = await jobService.getJobTasks(parseInt(jobId, 10));
       setTasks(tasks);
 
       if (tasks && tasks.length > 0) {
@@ -279,19 +264,60 @@ export default function JobDetailsPage() {
           }
         }
 
-        // Get the current step from task.current_step or via API
-        if (taskToUse.current_step) {
-          setCurrentStep(taskToUse.current_step);
-          setCurrentTaskId(taskToUse.id);
-        } else {
-          try {
-            const activeStep = await jobService.getActiveStep(taskToUse.id);
-
-            if (activeStep) {
-              setCurrentStep(activeStep);
-              setCurrentTaskId(taskToUse.id);
+        // Get the current step - current_step is a number (ID) in the API
+        if (taskToUse.current_step && taskToUse.step_instances) {
+          // Find the step instance that matches the current_step ID
+          const currentStepInstance = taskToUse.step_instances.find(
+            step => step.id === taskToUse.current_step
+          );
+          
+          if (currentStepInstance) {
+            // Convert to TaskStep format for the modal
+            const mockStep: TaskStep = {
+              id: currentStepInstance.id,
+              name: currentStepInstance.name,
+              description: currentStepInstance.description,
+              status: currentStepInstance.status,
+              is_conditional: currentStepInstance.is_conditional || false,
+              step_order: currentStepInstance.step_order,
+              success_record_type: currentStepInstance.success_record_type || "text",
+              success_options: currentStepInstance.success_options || [],
+            };
+            setCurrentStep(mockStep);
+            setCurrentTaskId(taskToUse.id);
+          }
+        } 
+        
+        // If we don't have a current step set, try to find the first pending or in-progress step
+        if (!currentStep && taskToUse.step_instances && taskToUse.step_instances.length > 0) {
+          const firstActionableStep = taskToUse.step_instances.find(
+            step => step.status === "pending" || step.status === "in_progress"
+          );
+          
+          if (firstActionableStep) {
+            const mockStep: TaskStep = {
+              id: firstActionableStep.id,
+              name: firstActionableStep.name,
+              description: firstActionableStep.description,
+              status: firstActionableStep.status,
+              is_conditional: firstActionableStep.is_conditional || false,
+              step_order: firstActionableStep.step_order,
+              success_record_type: firstActionableStep.success_record_type || "text",
+              success_options: firstActionableStep.success_options || [],
+            };
+            setCurrentStep(mockStep);
+            setCurrentTaskId(taskToUse.id);
+          } else {
+            // If no pending/in-progress steps, try the API
+            try {
+              const activeStep = await jobService.getActiveStep(taskToUse.id);
+              if (activeStep) {
+                setCurrentStep(activeStep);
+                setCurrentTaskId(taskToUse.id);
+              }
+            } catch (error) {
+              console.error("Failed to get active step:", error);
             }
-          } catch (error) {
           }
         }
       } else {
@@ -325,10 +351,11 @@ export default function JobDetailsPage() {
     } else if (
       apiJob.site &&
       typeof apiJob.site === "object" &&
-      "site_id" in apiJob.site
+      "site_id" in apiJob.site &&
+      (apiJob.site as any).site_id
     ) {
       // If site is an object with site_id, use that
-      siteId = apiJob.site.site_id;
+      siteId = (apiJob.site as any).site_id;
     }
 
 
@@ -347,8 +374,8 @@ export default function JobDetailsPage() {
       assignedToName: apiJob.assigned_to
         ? `${apiJob.assigned_to.user.first_name} ${apiJob.assigned_to.user.last_name}`
         : undefined,
-      phone: "+1 (555) 123-4567", // Default as this might not be in API
-      email: "customer@example.com", // Default as this might not be in API
+      phone: "Loading...", // Will be populated from site-detail API
+      email: "Loading...", // Will be populated from site-detail API
       description: apiJob.description,
       notes: [], // Will be populated separately
       jobType: apiJob.type?.name || "Unknown",
@@ -382,31 +409,37 @@ export default function JobDetailsPage() {
   // Add function to fetch site details and update job info
   const fetchSiteDetails = async (siteId: number) => {
     try {
-      // Use authenticated API service to fetch site details
-      const response = await api.get(`/sites/${siteId}/`);
-      const siteData = response.data;
+      // Use site-detail endpoint to get complete site, customer, and meter data
+      const response = await api.get(`/site-detail/${siteId}/?page=1&sort_order=desc`);
+      const data = response.data;
 
-      // Update job with site details
+      // Update job with site and customer details
       setJob((prev) => {
         if (!prev) return prev;
-
 
         return {
           ...prev,
-          systemSize: siteData.panel_size || siteData.panel_type || "Unknown",
-          panelCount: siteData.fco || "Unknown",
-          installDate: siteData.install_date
-            ? new Date(siteData.install_date).toLocaleDateString()
+          // Site details
+          systemSize: data.site?.panel_size || data.site?.panel_type || "Unknown",
+          panelCount: data.site?.fco || "Unknown",
+          installDate: data.site?.install_date
+            ? new Date(data.site.install_date).toLocaleDateString()
             : "Unknown",
-          postcode: siteData.postcode || "Unknown",
-          site_name: siteData.site_name || "Unknown",
+          postcode: data.site?.postcode || "Unknown",
+          site_name: data.site?.site_name || "Unknown",
+          
+          // Customer details - replace dummy data with real customer info
+          phone: data.customer?.phone || data.customer?.mobile || "+1 (555) 123-4567",
+          email: data.customer?.email || "customer@example.com",
+          client: data.customer?.owner || prev.client,
+          address: data.customer?.owner_address || data.site?.address || prev.address,
         };
       });
     } catch (error) {
+      console.error("Failed to fetch site details:", error);
       // Set fallback values if API fails
       setJob((prev) => {
         if (!prev) return prev;
-
 
         return {
           ...prev,
@@ -490,7 +523,7 @@ export default function JobDetailsPage() {
       const response = await jobService.getJobsBySite(
         siteId,
         currentJobId,
-        "Completed"
+        "completed"
       );
 
       // Sort by completed_date in descending order to get the most recent
@@ -587,52 +620,54 @@ export default function JobDetailsPage() {
 
   // Add a function to handle the "Mark as Complete" button click
   const handleMarkAsComplete = () => {
-    if (!currentTaskId && tasks.length > 0) {
-      // If no current task is set but we have tasks, use the first one
-      setCurrentTaskId(tasks[0].id);
+    let taskIdToUse = currentTaskId;
+    let stepToUse = currentStep;
+
+    // If no current task is set but we have tasks, use the first one
+    if (!taskIdToUse && tasks.length > 0) {
+      const firstInProgressTask = tasks.find(t => t.status === "in_progress");
+      taskIdToUse = firstInProgressTask?.id || tasks[0].id;
+      setCurrentTaskId(taskIdToUse);
     }
 
-    // If we have a current task, show the modal
-    if (currentTaskId) {
-      // If we don't have a current step, create a mock one for demo purposes
-      // In a real app, this would come from the API
-      if (!currentStep) {
-        // This is just a fallback if we don't have an active step
-        const mockCurrentStep: TaskStep = {
-          id: 1,
-          name: "Customer Confirmation",
-          description:
-            "Confirm that the customer understands the completed work",
-          status: "in_progress",
-          is_conditional: true,
-          step_order: 4,
-          success_record_type: "dropdown",
-          success_options: [
-            {
-              id: "answered",
-              label: "Customer Answered",
-              action: "next",
-            },
-            {
-              id: "didnt_answer",
-              label: "Customer Didn't Answer",
-              action: "jump",
-              next_step: 3, // Jump back to previous step
-            },
-          ],
+    // If we don't have a current step, try to find one from the task steps
+    if (!stepToUse && taskSteps.length > 0) {
+      const firstActionableStep = taskSteps.find(
+        step => step.status === "pending" || step.status === "in_progress"
+      );
+      
+      if (firstActionableStep) {
+        stepToUse = {
+          id: firstActionableStep.id,
+          name: firstActionableStep.name,
+          description: firstActionableStep.description,
+          status: firstActionableStep.status,
+          is_conditional: firstActionableStep.is_conditional || false,
+          step_order: firstActionableStep.step_order,
+          success_record_type: firstActionableStep.success_record_type || "text",
+          success_options: firstActionableStep.success_options || [],
         };
-
-        // Log the mock data for debugging
-
-        setCurrentStep(mockCurrentStep);
-      } else {
-        // Log the real step data
+        setCurrentStep(stepToUse);
+      } else if (taskSteps.length > 0) {
+        // If no pending/in-progress steps, use the first step
+        const firstStep = taskSteps[0];
+        stepToUse = {
+          id: firstStep.id,
+          name: firstStep.name,
+          description: firstStep.description,
+          status: firstStep.status,
+          is_conditional: firstStep.is_conditional || false,
+          step_order: firstStep.step_order,
+          success_record_type: firstStep.success_record_type || "text",
+          success_options: firstStep.success_options || [],
+        };
+        setCurrentStep(stepToUse);
       }
+    }
 
-      // Open the modal
+    // If we have a task ID and either a step or can proceed without one, show the modal
+    if (taskIdToUse) {
       setCompleteModalOpen(true);
-    } else {
-      // Could show an error toast here
     }
   };
 
@@ -898,7 +933,7 @@ export default function JobDetailsPage() {
                     <Button
                       className="w-40"
                       onClick={handleMarkAsComplete}
-                      disabled={!currentTaskId || !currentStep}
+                      disabled={tasks.length === 0}
                     >
                       Mark as Complete
                     </Button>
@@ -1053,10 +1088,20 @@ export default function JobDetailsPage() {
               </div>
 
               <div className="flex gap-4 mt-6">
-                <Button className="w-1/2 dark:border-gray-600 dark:text-gray-200 dark:hover:bg-gray-700" variant="outline">
+                <Button 
+                  className="w-1/2 dark:border-gray-600 dark:text-gray-200 dark:hover:bg-gray-700" 
+                  variant="outline"
+                  onClick={() => window.location.href = `tel:${job.phone}`}
+                  disabled={job.phone === "Loading..." || job.phone === "+1 (555) 123-4567"}
+                >
                   Call
                 </Button>
-                <Button className="w-1/2 dark:border-gray-600 dark:text-gray-200 dark:hover:bg-gray-700" variant="outline">
+                <Button 
+                  className="w-1/2 dark:border-gray-600 dark:text-gray-200 dark:hover:bg-gray-700" 
+                  variant="outline"
+                  onClick={() => window.location.href = `mailto:${job.email}`}
+                  disabled={job.email === "Loading..." || job.email === "customer@example.com"}
+                >
                   Email
                 </Button>
               </div>

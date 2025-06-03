@@ -53,6 +53,10 @@ export function CompleteStepModal({
       setSelectedOption("");
       setError(null);
       
+      // Debug log to check what data we're receiving
+      console.log("CompleteStepModal - currentStep:", currentStep);
+      console.log("CompleteStepModal - success_options:", currentStep?.success_options);
+      console.log("CompleteStepModal - is_conditional:", currentStep?.is_conditional);
     }
   }, [isOpen, currentStep]);
 
@@ -135,18 +139,21 @@ export function CompleteStepModal({
     }
   };
 
-  // Check if the current step has conditional options
-  const hasConditionalOptions = 
-    // Use the is_conditional property if it exists, or force true for testing
-    (currentStep?.is_conditional || currentStep?.name === 'Call homeowner') && 
-    // Use real success_options if they exist, or provide test options for specific steps
-    (currentStep?.success_options || currentStep?.name === 'Call homeowner') ? true : false;
+  // Use the success_options from the current step, or provide defaults
+  let displayOptions = currentStep?.success_options || [];
   
-  // Mock options for testing if needed
-  const displayOptions = currentStep?.success_options || [
-    { id: "answered", label: "Customer Answered", action: "next" },
-    { id: "didnt_answer", label: "Customer Didn't Answer", action: "jump", next_step: 3 }
-  ];
+  // Check if the current step has conditional options
+  // A step is considered conditional if it's marked as such OR if it has success_options
+  const hasConditionalOptions = currentStep?.is_conditional === true || displayOptions.length > 0;
+  
+  // If this is marked as conditional but no options were provided, add default options
+  if (currentStep?.is_conditional === true && displayOptions.length === 0) {
+    console.warn("Conditional step has no success_options, using defaults");
+    displayOptions = [
+      { id: "success", label: "Completed Successfully", action: "next" },
+      { id: "failed", label: "Failed/Issue Encountered", action: "next" }
+    ];
+  }
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>

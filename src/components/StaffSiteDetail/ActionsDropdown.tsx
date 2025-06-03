@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { useUIPermissionContext } from '../../contexts/UIPermissionContext';
+import { useNavigate } from 'react-router-dom';
 
 interface MenuItem {
   label: string;
@@ -48,6 +49,7 @@ interface ActionsDropdownProps {
   onAdvancedMonitoring?: () => void;
   onCreateJob?: () => void;
   onExportSite?: () => void;
+  siteId?: string;
 }
 
 const ActionsDropdown: React.FC<ActionsDropdownProps> = ({
@@ -65,9 +67,11 @@ const ActionsDropdown: React.FC<ActionsDropdownProps> = ({
   onAdvancedMonitoring,
   onCreateJob,
   onExportSite,
+  siteId,
 }) => {
   const [open, setOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const navigate = useNavigate();
   
   // Get permissions from context
   const { permissions, isLoaded } = useUIPermissionContext();
@@ -76,6 +80,7 @@ const ActionsDropdown: React.FC<ActionsDropdownProps> = ({
   const visibleMenuItems = useMemo(() => {
     if (!isLoaded) return [];
     
+    // Filter items - only show if permission is explicitly true
     return allMenuItems.filter(item => permissions[item.permission] === true);
   }, [permissions, isLoaded]);
   
@@ -102,7 +107,13 @@ const ActionsDropdown: React.FC<ActionsDropdownProps> = ({
     textMessage: () => onTextMessage?.(),
     sendEmail: () => onSendEmail?.(),
     addNote: () => onAddNote?.(),
-    createJob: () => onCreateJob?.(),
+    createJob: () => {
+      if (siteId) {
+        navigate(`/jobs/new?siteId=${siteId}`);
+      } else if (onCreateJob) {
+        onCreateJob();
+      }
+    },
     addAlert: () => onAddAlert?.(),
     manageAlerts: () => onManageAlerts?.(),
     siteReadingReport: () => onSiteReadingReport?.(),

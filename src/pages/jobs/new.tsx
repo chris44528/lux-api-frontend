@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { useNavigate } from "react-router-dom"
+import { useNavigate, useSearchParams } from "react-router-dom"
 import { DashboardHeader } from "../../components/JobManagement/dashboard-header"
 import { Button } from "../../components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/card"
@@ -10,7 +10,7 @@ import { Label } from "../../components/ui/label"
 import { Popover, PopoverContent, PopoverTrigger } from "../../components/ui/popover"
 import { CheckIcon, ChevronDown } from "lucide-react"
 import { useToast } from "../../hooks/use-toast"
-import jobService, { JobStatus, JobQueue, TaskTemplate, JobCreate } from "../../services/jobService"
+import jobService, { JobStatus, JobQueue, TaskTemplate, JobCreate, JobType } from "../../services/jobService"
 import { searchSites } from "../../services/api"
 import { api } from "../../services/api"
 
@@ -50,6 +50,7 @@ export default function JobCreatePage() {
   const [loading, setLoading] = useState(false)
   const [statuses, setStatuses] = useState<JobStatus[]>([])
   const [queues, setQueues] = useState<JobQueue[]>([])
+  const [jobTypes, setJobTypes] = useState<JobType[]>([])
   const [taskTemplates, setTaskTemplates] = useState<TaskTemplate[]>([])
   const [sites, setSites] = useState<SiteDetails[]>([])
   const [siteSearchTerm, setSiteSearchTerm] = useState("")
@@ -74,20 +75,24 @@ export default function JobCreatePage() {
   
   const { toast } = useToast()
   const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
+  const urlSiteId = searchParams.get('siteId')
   
   useEffect(() => {
     const fetchFormData = async () => {
       setLoading(true)
       try {
         // Fetch all the necessary data for the form
-        const [statusesData, queuesData, templatesData] = await Promise.all([
+        const [statusesData, queuesData, typesData, templatesData] = await Promise.all([
           jobService.getJobStatuses(),
           jobService.getJobQueues(),
+          jobService.getJobTypes(),
           jobService.getTaskTemplates()
         ])
         
         setStatuses(statusesData)
         setQueues(queuesData)
+        setJobTypes(typesData)
         setTaskTemplates(templatesData)
         
         // Set default selections if available
@@ -111,6 +116,17 @@ export default function JobCreatePage() {
     
     fetchFormData()
   }, [])
+
+  // Handle pre-populated site from URL
+  useEffect(() => {
+    if (urlSiteId) {
+      // Set the form data with the site ID
+      setFormData(prev => ({ ...prev, site_id: urlSiteId }))
+      
+      // Fetch site details
+      fetchSiteDetails(parseInt(urlSiteId))
+    }
+  }, [urlSiteId])
   
   // Handle site search
   useEffect(() => {
@@ -280,17 +296,19 @@ export default function JobCreatePage() {
       return
     }
     
+    if (!formData.type_id) {
+      toast({
+        title: "Missing Information",
+        description: "Please select a job type"
+      })
+      return
+    }
+    
     setLoading(true)
     
     try {
       // Find the selected site to get its full information
       const selectedSite = sites.find(site => site.site_id.toString() === formData.site_id)
-      
-      // Find selected status and queue objects
-      const selectedStatus = statuses.find(s => s.id.toString() === formData.status_id);
-      const selectedQueue = queues.find(q => q.id.toString() === formData.queue_id);
-      const selectedType = taskTemplates.find(t => t.id.toString() === formData.type_id);
-      
       
       // Create the job - use the correct ID format for Django foreign keys and the correct field names
       const newJobData: JobCreate = {
@@ -387,7 +405,7 @@ export default function JobCreatePage() {
                         className="w-full justify-between"
                       >
                         {formData.site_id
-                          ? sites.find(site => site.site_id.toString() === formData.site_id)?.site_name || "Select site"
+                          ? selectedSite?.site_name || sites.find(site => site.site_id.toString() === formData.site_id)?.site_name || "Select site"
                           : "Select site"}
                         <ChevronDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                       </Button>
@@ -573,7 +591,26 @@ export default function JobCreatePage() {
                 />
               </div>
               
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="type_id">Job Type *</Label>
+                  <select
+                    id="type_id"
+                    name="type_id"
+                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background"
+                    value={formData.type_id || ''}
+                    onChange={handleInputChange}
+                    required
+                  >
+                    <option value="">Select a job type</option>
+                    {Array.isArray(jobTypes) ? jobTypes.map((type) => (
+                      <option key={type.id} value={type.id.toString()}>
+                        {type.name}
+                      </option>
+                    )) : <option value="">No job types available</option>}
+                  </select>
+                </div>
+                
                 <div className="space-y-2">
                   <Label htmlFor="priority">Priority</Label>
                   <select
@@ -590,7 +627,9 @@ export default function JobCreatePage() {
                     ))}
                   </select>
                 </div>
-                
+              </div>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="status_id">Status</Label>
                   <select

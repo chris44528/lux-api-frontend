@@ -101,7 +101,14 @@ class EmailTemplateService {
   // Categories
   async getCategories(): Promise<EmailTemplateCategory[]> {
     const response = await api.get('/email-templates/categories/');
-    return response.data;
+    // Handle both array and paginated responses
+    if (Array.isArray(response.data)) {
+      return response.data;
+    } else if (response.data && Array.isArray(response.data.results)) {
+      return response.data.results;
+    }
+    console.error('Unexpected categories response format:', response.data);
+    return [];
   }
 
   async createCategory(data: { name: string; description: string }): Promise<EmailTemplateCategory> {
@@ -126,7 +133,14 @@ class EmailTemplateService {
     order?: 'most_used' | 'recent';
   }): Promise<EmailTemplate[]> {
     const response = await api.get('/email-templates/templates/', { params });
-    return response.data;
+    // Handle both array and paginated responses
+    if (Array.isArray(response.data)) {
+      return response.data;
+    } else if (response.data && Array.isArray(response.data.results)) {
+      return response.data.results;
+    }
+    console.error('Unexpected templates response format:', response.data);
+    return [];
   }
 
   async getTemplate(id: number): Promise<EmailTemplateDetail> {
@@ -190,7 +204,14 @@ class EmailTemplateService {
   // Variables
   async getVariables(params?: { is_system?: boolean; search?: string }): Promise<EmailTemplateVariable[]> {
     const response = await api.get('/email-templates/variables/', { params });
-    return response.data;
+    // Handle both array and paginated responses
+    if (Array.isArray(response.data)) {
+      return response.data;
+    } else if (response.data && Array.isArray(response.data.results)) {
+      return response.data.results;
+    }
+    console.error('Unexpected variables response format:', response.data);
+    return [];
   }
 
   async createVariable(data: {
@@ -223,7 +244,14 @@ class EmailTemplateService {
     date_to?: string;
   }): Promise<UsageLog[]> {
     const response = await api.get('/email-templates/usage-logs/', { params });
-    return response.data;
+    // Handle both array and paginated responses
+    if (Array.isArray(response.data)) {
+      return response.data;
+    } else if (response.data && Array.isArray(response.data.results)) {
+      return response.data.results;
+    }
+    console.error('Unexpected usage logs response format:', response.data);
+    return [];
   }
 }
 

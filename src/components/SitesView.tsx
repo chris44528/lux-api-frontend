@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { Search, Gauge, WifiOff, Bell } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import { api } from "../services/api";
+import { api, getSystemStatusSummary } from "../services/api";
 import { DashboardResponse, SiteData } from "../types/api";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
@@ -27,6 +27,7 @@ const SitesView = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const [isLoading, setIsLoading] = useState(true);
+  const [metricsLoading, setMetricsLoading] = useState(true);
   const [data, setData] = useState<DashboardResponse>({
     filtered_sites: [],
     total_reads: 0,
@@ -41,6 +42,26 @@ const SitesView = () => {
     },
     metrics_last_updated: null,
   });
+
+  // Fetch system metrics separately
+  const fetchMetrics = useCallback(async () => {
+    try {
+      setMetricsLoading(true);
+      const systemStatus = await getSystemStatusSummary();
+      
+      setData(prev => ({
+        ...prev,
+        total_reads: systemStatus.metrics.totalSites,
+        no_comms: systemStatus.metrics.offlineSites,
+        zero_reads: systemStatus.metrics.sitesWithIssues,
+        metrics_last_updated: systemStatus.lastUpdated,
+      }));
+    } catch (error) {
+      console.error("Failed to fetch metrics:", error);
+    } finally {
+      setMetricsLoading(false);
+    }
+  }, []);
 
   const fetchSites = useCallback(
     async (term = "", page = 1) => {
@@ -82,9 +103,9 @@ const SitesView = () => {
 
           const transformedData: DashboardResponse = {
             filtered_sites: transformedSites,
-            total_reads: response.data.count || 0,
-            no_comms: 0,
-            zero_reads: 0,
+            total_reads: data.total_reads || response.data.count || 0, // Use metrics total_reads if available
+            no_comms: data.no_comms, // Preserve the metrics from fetchMetrics
+            zero_reads: data.zero_reads, // Preserve the metrics from fetchMetrics
             current_filter: "all",
             pagination: {
               current_page: page,
@@ -92,7 +113,7 @@ const SitesView = () => {
               has_next: !!response.data.next,
               has_previous: !!response.data.previous,
             },
-            metrics_last_updated: new Date().toISOString(),
+            metrics_last_updated: data.metrics_last_updated || new Date().toISOString(),
           };
 
           setData(transformedData);
@@ -130,7 +151,8 @@ const SitesView = () => {
       return;
     }
     fetchSites();
-  }, [fetchSites, navigate]);
+    fetchMetrics(); // Fetch metrics when component loads
+  }, [fetchSites, fetchMetrics, navigate]);
 
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;

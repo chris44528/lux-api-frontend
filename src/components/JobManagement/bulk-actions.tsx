@@ -64,14 +64,14 @@ export const BulkAssignModal: React.FC<BulkAssignModalProps> = ({
         <DialogHeader>
           <DialogTitle>Assign Jobs</DialogTitle>
           <DialogDescription>
-            Select a technician to assign {selectedCount} selected job{selectedCount === 1 ? '' : 's'} to.
+            Select a user to assign {selectedCount} selected job{selectedCount === 1 ? '' : 's'} to.
           </DialogDescription>
         </DialogHeader>
 
         <div className="grid gap-4 py-4">
           <div className="grid grid-cols-4 items-center gap-4">
             <Label htmlFor="technician" className="text-right">
-              Technician
+              User
             </Label>
             <div className="col-span-3">
               <Select
@@ -80,7 +80,7 @@ export const BulkAssignModal: React.FC<BulkAssignModalProps> = ({
                 disabled={isAssigning || techniciansArray.length === 0}
               >
                 <SelectTrigger id="technician">
-                  <SelectValue placeholder="Select a technician" />
+                  <SelectValue placeholder="Select a user" />
                 </SelectTrigger>
                 <SelectContent>
                   {techniciansArray.map(tech => (
@@ -95,7 +95,7 @@ export const BulkAssignModal: React.FC<BulkAssignModalProps> = ({
         </div>
 
         {techniciansArray.length === 0 && (
-          <p className="text-center text-sm text-muted-foreground">No technicians found</p>
+          <p className="text-center text-sm text-muted-foreground">No users found</p>
         )}
 
         <DialogFooter>

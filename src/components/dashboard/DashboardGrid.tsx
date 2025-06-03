@@ -8,7 +8,8 @@ import {
   RecentActivityWidgetConfig,
   EnergyProductionWidgetConfig,
   SiteDistributionWidgetConfig,
-  QuickActionsWidgetConfig
+  QuickActionsWidgetConfig,
+  RecentVisitedSitesWidgetConfig
 } from "../../types/dashboard";
 import { Widget } from "./Widget";
 import { PlusCircle, RefreshCw } from "lucide-react";
@@ -43,6 +44,7 @@ import {
 } from '@dnd-kit/sortable';
 import { SortableWidget } from './SortableWidget';
 import { createPortal } from 'react-dom';
+import { RecentVisitedSitesWidget } from '@/pages/dashboard/RecentVisitedSitesWidget';
 
 interface DashboardGridProps {
   dashboardId?: string;
@@ -168,23 +170,40 @@ export const DashboardGrid: React.FC<DashboardGridProps> = ({
           {isEditing && (
             <Dialog>
               <DialogTrigger asChild>
-                <Button variant="default" className="flex items-center gap-1 text-sm">
+                <Button 
+                  variant="default" 
+                  className="flex items-center gap-1 text-sm"
+                  disabled={(dashboard.widgets || []).length >= 10}
+                  title={(dashboard.widgets || []).length >= 10 ? "Widget limit reached (10 maximum)" : "Add a new widget"}
+                >
                   <PlusCircle className="h-4 w-4" />
-                  Add Widget
+                  Add Widget ({(dashboard.widgets || []).length}/10)
                 </Button>
               </DialogTrigger>
               <DialogContent className="sm:max-w-[600px]">
                 <DialogHeader>
                   <DialogTitle>Add Widget</DialogTitle>
                 </DialogHeader>
-                <WidgetLibrary onAddWidget={(widget) => {
-                  addWidget(widget);
-                  // Auto-save after adding a widget
-                  setTimeout(() => {
-                    saveDashboard().catch(error => {
-                    });
-                  }, 500);
-                }} />
+                {(dashboard.widgets || []).length >= 10 ? (
+                  <div className="text-center py-8">
+                    <p className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-2">
+                      Widget Limit Reached
+                    </p>
+                    <p className="text-sm text-gray-600 dark:text-gray-400">
+                      You've reached the maximum of 10 widgets per dashboard. 
+                      Please remove a widget or create a new dashboard to add more.
+                    </p>
+                  </div>
+                ) : (
+                  <WidgetLibrary onAddWidget={(widget) => {
+                    addWidget(widget);
+                    // Auto-save after adding a widget
+                    setTimeout(() => {
+                      saveDashboard().catch(error => {
+                      });
+                    }, 500);
+                  }} />
+                )}
               </DialogContent>
             </Dialog>
           )}
@@ -242,6 +261,12 @@ const WidgetRenderer: React.FC<WidgetRendererProps> = ({ config }) => {
       return <SiteDistributionWidget config={config} />;
     case "quickActions":
       return <QuickActionsWidget config={config} />;
+    case "recentVisitedSites":
+      return (
+        <Widget config={config}>
+          <RecentVisitedSitesWidget />
+        </Widget>
+      );
     // Add more widget types as needed
     default:
       return (

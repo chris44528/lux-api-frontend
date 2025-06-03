@@ -21,6 +21,7 @@ export const UserManagement: React.FC = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [totalUsers, setTotalUsers] = useState(0);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const [searchTimeout, setSearchTimeout] = useState<NodeJS.Timeout | null>(null);
   
   // Modal states
   const [isAddUserModalOpen, setIsAddUserModalOpen] = useState(false);
@@ -49,10 +50,35 @@ export const UserManagement: React.FC = () => {
     loadGroups();
   }, []);
 
-  const loadUsers = async (page = 1) => {
+  // Handle search with debouncing
+  useEffect(() => {
+    // Clear previous timeout
+    if (searchTimeout) {
+      clearTimeout(searchTimeout);
+    }
+
+    // Set new timeout for search
+    const timeout = setTimeout(() => {
+      setCurrentPage(1); // Reset to first page when searching
+      loadUsers(1, searchQuery);
+    }, 300); // 300ms debounce
+
+    setSearchTimeout(timeout);
+
+    // Cleanup
+    return () => {
+      if (timeout) {
+        clearTimeout(timeout);
+      }
+    };
+  }, [searchQuery]);
+
+  const loadUsers = async (page = 1, search = '') => {
     try {
-      setLoading(true);
-      const response = await userService.getUsers(page);
+      if (page === 1) {
+        setLoading(true);
+      }
+      const response = await userService.getUsers(page, search ? { search } : undefined);
       if (page === 1) {
         setUsers(response.results);
       } else {
@@ -87,7 +113,7 @@ export const UserManagement: React.FC = () => {
 
   const handleLoadMore = () => {
     setIsLoadingMore(true);
-    loadUsers(currentPage + 1);
+    loadUsers(currentPage + 1, searchQuery);
   };
 
   const handleCreateUser = async () => {
@@ -223,15 +249,7 @@ export const UserManagement: React.FC = () => {
     }
   };
 
-  const filteredUsers = users.filter(user => {
-    const searchLower = searchQuery.toLowerCase();
-    return (
-      user.username.toLowerCase().includes(searchLower) ||
-      user.email.toLowerCase().includes(searchLower) ||
-      user.first_name.toLowerCase().includes(searchLower) ||
-      user.last_name.toLowerCase().includes(searchLower)
-    );
-  });
+  // No need for client-side filtering anymore - using server-side search
 
   if (loading) {
     return (
@@ -252,8 +270,8 @@ export const UserManagement: React.FC = () => {
       </div>
 
       <div className="flex gap-4">
-        <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+        <div className="relative flex-1 flex items-center">
+          <Search className="absolute left-3 pointer-events-none text-gray-400 h-4 w-4 z-10" />
           <Input
             placeholder="Search users..."
             value={searchQuery}
@@ -276,7 +294,14 @@ export const UserManagement: React.FC = () => {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {filteredUsers.map((user) => (
+            {users.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={6} className="text-center py-8 text-gray-500">
+                  {searchQuery ? `No users found matching "${searchQuery}"` : 'No users found'}
+                </TableCell>
+              </TableRow>
+            ) : (
+              users.map((user) => (
               <TableRow key={user.id}>
                 <TableCell className="font-medium">
                   {user.first_name} {user.last_name}
@@ -346,16 +371,23 @@ export const UserManagement: React.FC = () => {
                   </div>
                 </TableCell>
               </TableRow>
-            ))}
+            ))
+            )}
           </TableBody>
         </Table>
       </div>
 
-      {!isLoadingMore && filteredUsers.length < totalUsers && (
+      {!isLoadingMore && users.length < totalUsers && (
         <div className="flex justify-center">
           <Button variant="outline" onClick={handleLoadMore}>
             Load More
           </Button>
+        </div>
+      )}
+      
+      {isLoadingMore && (
+        <div className="flex justify-center">
+          <Loader2 className="h-6 w-6 animate-spin" />
         </div>
       )}
 

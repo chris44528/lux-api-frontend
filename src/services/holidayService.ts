@@ -103,8 +103,14 @@ export interface BlackoutPeriod {
   name: string;
   start_date: string;
   end_date: string;
-  reason: string;
-  allow_emergency_override: boolean;
+  reason?: string;
+  department_id?: number | null;
+  department?: {
+    id: number;
+    name: string;
+  };
+  applies_to_all: boolean;
+  allow_emergency_override?: boolean;
 }
 
 export interface DepartmentApprover {
@@ -151,7 +157,7 @@ export interface DepartmentSummary {
 
 // API Service
 class HolidayService {
-  private baseUrl = '/api/v1/holidays';
+  private baseUrl = '/holidays';
 
   // Holiday Types
   async getHolidayTypes() {
@@ -201,6 +207,7 @@ class HolidayService {
     start_half_day?: boolean;
     end_half_day?: boolean;
     reason?: string;
+    department?: string;
   }) {
     const response = await apiClient.post<HolidayRequest>(`${this.baseUrl}/requests/`, data);
     return response.data;
@@ -430,10 +437,28 @@ class HolidayService {
   // Helper method to get departments
   async getDepartments(): Promise<{ results: any[] }> {
     try {
-      const response = await apiClient.get('/api/v1/departments/');
+      // Try the departments endpoint first
+      const response = await apiClient.get('/departments/');
       return response.data;
     } catch (error) {
-      // Fallback mock data if endpoint doesn't exist
+      try {
+        // If departments endpoint doesn't exist, try to get from groups
+        const groupsResponse = await apiClient.get('/users/groups/');
+        const departments = groupsResponse.data.results
+          .filter((group: any) => group.name.toLowerCase().includes('department') || group.is_department)
+          .map((group: any) => ({
+            id: group.id,
+            name: group.name.replace('Department', '').trim()
+          }));
+        
+        if (departments.length > 0) {
+          return { results: departments };
+        }
+      } catch (groupError) {
+        console.error('Failed to fetch departments from groups:', groupError);
+      }
+      
+      // Final fallback mock data
       return {
         results: [
           { id: 1, name: 'Engineering' },
