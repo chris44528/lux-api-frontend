@@ -233,7 +233,7 @@ const SitesView = () => {
                       {siteData.site.site_name}
                     </h3>
                     <p className="text-gray-600 dark:text-gray-400">{siteData.site.address}</p>
-                    <p className="text-gray-500 dark:text-gray-500">{siteData.site.postcode}</p>
+                    <p className="text-gray-500 dark:text-gray-400">{siteData.site.postcode}</p>
                   </div>
                   <div className="mb-4">
                     <p className="text-sm text-gray-600 dark:text-gray-400">
@@ -245,7 +245,7 @@ const SitesView = () => {
                         ? `${Number(siteData.latest_read).toFixed(2)} kWh`
                         : "No data"}
                     </p>
-                    <p className="text-xs text-gray-500 dark:text-gray-500 mt-1">
+                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
                       Last Updated:{" "}
                       {new Date(siteData.last_updated).toLocaleDateString()}
                     </p>

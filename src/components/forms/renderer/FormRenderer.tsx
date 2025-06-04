@@ -452,6 +452,85 @@ const FormRenderer: React.FC<FormRendererProps> = ({
       case 'divider':
         return <hr key={element.id} className="my-4" />;
       
+      case 'multi_input':
+        return (
+          <div key={element.id} className="space-y-2">
+            <label className="font-medium">
+              {element.label}
+              {element.required && <span className="text-red-500 ml-1">*</span>}
+            </label>
+            <div className="border rounded-lg p-4 space-y-4">
+              {element.multiInputConfig?.questions.map((question, qIndex) => (
+                <div key={qIndex} className="space-y-2">
+                  <p className="text-sm font-medium">{question}</p>
+                  <div className="flex gap-4 items-center">
+                    <label className="flex items-center gap-2">
+                      <input
+                        type="radio"
+                        value="yes"
+                        {...register(`${element.name}.${qIndex}.answer`, {
+                          required: element.required ? `Please select Yes or No for "${question}"` : false,
+                          validate: (value) => {
+                            if (element.required && !value) {
+                              return `Please select Yes or No for "${question}"`;
+                            }
+                            return true;
+                          }
+                        })}
+                      />
+                      <span className="text-sm">Yes</span>
+                    </label>
+                    <label className="flex items-center gap-2">
+                      <input
+                        type="radio"
+                        value="no"
+                        {...register(`${element.name}.${qIndex}.answer`, {
+                          required: element.required ? `Please select Yes or No for "${question}"` : false,
+                          validate: (value) => {
+                            // Check if "No" is selected and comment is required
+                            const answer = watch(`${element.name}.${qIndex}.answer`);
+                            const comment = watch(`${element.name}.${qIndex}.comment`);
+                            if (answer === 'no' && (!comment || comment.trim() === '')) {
+                              // We'll validate this in the comment field
+                              return true;
+                            }
+                            return true;
+                          }
+                        })}
+                      />
+                      <span className="text-sm">No</span>
+                    </label>
+                  </div>
+                  <textarea
+                    {...register(`${element.name}.${qIndex}.comment`, {
+                      validate: (value) => {
+                        const answer = watch(`${element.name}.${qIndex}.answer`);
+                        // Require comment when answer is "no"
+                        if (answer === 'no' && (!value || value.trim() === '')) {
+                          return 'Please provide details when selecting "No"';
+                        }
+                        return true;
+                      }
+                    })}
+                    placeholder={watch(`${element.name}.${qIndex}.answer`) === 'no' ? "Please provide details (required)" : "Additional comments (optional)"}
+                    rows={2}
+                    className="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 text-sm"
+                  />
+                  {errors[element.name]?.[qIndex]?.answer && (
+                    <p className="text-sm text-red-500">{errors[element.name][qIndex].answer.message}</p>
+                  )}
+                  {errors[element.name]?.[qIndex]?.comment && (
+                    <p className="text-sm text-red-500">{errors[element.name][qIndex].comment.message}</p>
+                  )}
+                </div>
+              ))}
+            </div>
+            {element.help_text && (
+              <p className="text-sm text-gray-500">{element.help_text}</p>
+            )}
+          </div>
+        );
+      
       default:
         return null;
     }

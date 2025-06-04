@@ -647,7 +647,7 @@ const StaffSiteDetailPage: React.FC = () => {
           {/* Main Content: Tabs */}
           <div className="w-full lg:w-2/3 flex flex-col gap-6">
             {visibleTabs.length === 0 ? (
-              <div className="bg-white dark:bg-gray-900 rounded shadow p-6">
+              <div className="bg-white dark:bg-gray-800 rounded shadow p-6">
                 <div className="text-center text-gray-500 dark:text-gray-400">
                   You don't have permission to view any tabs for this site.
                 </div>
@@ -660,8 +660,8 @@ const StaffSiteDetailPage: React.FC = () => {
                       key={tab.key}
                       className={`px-6 py-3 -mb-px font-medium border-b-2 transition-colors duration-150 focus:outline-none ${
                         activeTab === tab.key
-                          ? 'border-green-600 dark:border-green-400 text-green-700 dark:text-green-300 bg-white dark:bg-gray-900'
-                          : 'border-transparent text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-800 hover:text-green-700 dark:hover:text-green-300'
+                          ? 'border-green-600 dark:border-green-400 text-green-700 dark:text-green-300 bg-white dark:bg-gray-800'
+                          : 'border-transparent text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-700 hover:text-green-700 dark:hover:text-green-300'
                       }`}
                       onClick={() => setActiveTab(tab.key)}
                       style={{ borderTopLeftRadius: '0.5rem', borderTopRightRadius: '0.5rem' }}
@@ -670,7 +670,7 @@ const StaffSiteDetailPage: React.FC = () => {
                     </button>
                   ))}
                 </div>
-                <div className="bg-white dark:bg-gray-900 rounded-b shadow p-6">
+                <div className="bg-transparent dark:bg-transparent rounded-b">
                   {activeTab === 'readings' && <ReadingsTab readings={siteData.readings ?? []} meterTests={siteData.meter_tests ?? []} />}
                   {activeTab === 'meter-info' && <MeterInfoTab meter={siteData.active_meter} sim={siteData.sim} />}
                   {activeTab === 'jobs' && <JobsTab siteId={Number(siteId)} />}
@@ -693,7 +693,7 @@ const StaffSiteDetailPage: React.FC = () => {
         {/* Add Note Modal Placeholder */}
         {showAddNoteModal && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
-            <div className="bg-white dark:bg-gray-900 rounded shadow-lg p-8 w-full max-w-lg relative">
+            <div className="bg-white dark:bg-gray-800 rounded shadow-lg p-8 w-full max-w-lg relative">
               <button className="absolute top-4 right-4 text-gray-400 hover:text-black text-2xl" onClick={() => setShowAddNoteModal(false)}>&times;</button>
               <h2 className="text-2xl font-bold mb-1">Add New Note</h2>
               <div className="text-gray-500 dark:text-gray-300 mb-6">Create a new note for this site. Tag it with a department for easier filtering.</div>

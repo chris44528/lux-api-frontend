@@ -203,7 +203,7 @@ export default function HolidayRequestForm({ requestId, onSuccess }: HolidayRequ
   return (
     <Card className="max-w-2xl mx-auto">
       <CardHeader>
-        <CardTitle>{requestId ? 'Edit' : 'New'} Holiday Request</CardTitle>
+        <CardTitle className="dark:text-gray-100">{requestId ? 'Edit' : 'New'} Holiday Request</CardTitle>
       </CardHeader>
       <CardContent className="space-y-6">
         {validationErrors.length > 0 && (
@@ -221,7 +221,7 @@ export default function HolidayRequestForm({ requestId, onSuccess }: HolidayRequ
 
         <div className="space-y-4">
           <div>
-            <Label htmlFor="holiday_type">Holiday Type</Label>
+            <Label htmlFor="holiday_type" className="dark:text-gray-200">Holiday Type</Label>
             <Select
               value={formData.holiday_type_id}
               onValueChange={(value) => setFormData({ ...formData, holiday_type_id: value })}
@@ -241,7 +241,7 @@ export default function HolidayRequestForm({ requestId, onSuccess }: HolidayRequ
               </SelectTrigger>
               <SelectContent>
                 {holidayTypes.map((type) => (
-                  <SelectItem key={type.id} value={type.id.toString()}>
+                  <SelectItem key={type.id} value={type.id.toString()} className="dark:text-gray-100 dark:hover:bg-gray-700">
                     <div className="flex items-center gap-2">
                       <div 
                         className="w-3 h-3 rounded-full" 
@@ -249,7 +249,7 @@ export default function HolidayRequestForm({ requestId, onSuccess }: HolidayRequ
                       />
                       <span>{type.name}</span>
                       {type.max_days_per_year && (
-                        <span className="text-muted-foreground text-sm ml-2">
+                        <span className="text-muted-foreground dark:text-gray-400 text-sm ml-2">
                           (Max {type.max_days_per_year} days/year)
                         </span>
                       )}
@@ -261,7 +261,7 @@ export default function HolidayRequestForm({ requestId, onSuccess }: HolidayRequ
           </div>
 
           <div>
-            <Label htmlFor="department">Department</Label>
+            <Label htmlFor="department" className="dark:text-gray-200">Department</Label>
             <Select
               value={formData.department_id}
               onValueChange={(value) => setFormData({ ...formData, department_id: value })}
@@ -271,7 +271,7 @@ export default function HolidayRequestForm({ requestId, onSuccess }: HolidayRequ
               </SelectTrigger>
               <SelectContent>
                 {departments.map((dept) => (
-                  <SelectItem key={dept.id} value={dept.id.toString()}>
+                  <SelectItem key={dept.id} value={dept.id.toString()} className="dark:text-gray-100 dark:hover:bg-gray-700">
                     <div className="flex items-center gap-2">
                       {dept.icon && <span>{dept.icon}</span>}
                       <span>{dept.name}</span>
@@ -284,7 +284,7 @@ export default function HolidayRequestForm({ requestId, onSuccess }: HolidayRequ
 
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <Label htmlFor="start_date">Start Date</Label>
+              <Label htmlFor="start_date" className="dark:text-gray-200">Start Date</Label>
               <div className="w-full">
                 <DatePicker
                   selected={formData.start_date ? new Date(formData.start_date) : null}
@@ -295,7 +295,7 @@ export default function HolidayRequestForm({ requestId, onSuccess }: HolidayRequ
                   }}
                   minDate={new Date()}
                   dateFormat="dd/MM/yyyy"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-800 dark:text-gray-100"
                   placeholderText="Select start date"
                   showMonthDropdown
                   showYearDropdown
@@ -310,14 +310,14 @@ export default function HolidayRequestForm({ requestId, onSuccess }: HolidayRequ
                     setFormData({ ...formData, start_half_day: checked as boolean })
                   }
                 />
-                <Label htmlFor="start_half_day" className="ml-2 text-sm">
+                <Label htmlFor="start_half_day" className="ml-2 text-sm dark:text-gray-300">
                   Start on afternoon
                 </Label>
               </div>
             </div>
 
             <div>
-              <Label htmlFor="end_date">End Date</Label>
+              <Label htmlFor="end_date" className="dark:text-gray-200">End Date</Label>
               <div className="w-full">
                 <DatePicker
                   selected={formData.end_date ? new Date(formData.end_date) : null}
@@ -328,7 +328,7 @@ export default function HolidayRequestForm({ requestId, onSuccess }: HolidayRequ
                   }}
                   minDate={formData.start_date ? new Date(formData.start_date) : new Date()}
                   dateFormat="dd/MM/yyyy"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-800 dark:text-gray-100"
                   placeholderText="Select end date"
                   showMonthDropdown
                   showYearDropdown
@@ -343,7 +343,7 @@ export default function HolidayRequestForm({ requestId, onSuccess }: HolidayRequ
                     setFormData({ ...formData, end_half_day: checked as boolean })
                   }
                 />
-                <Label htmlFor="end_half_day" className="ml-2 text-sm">
+                <Label htmlFor="end_half_day" className="ml-2 text-sm dark:text-gray-300">
                   End at lunch
                 </Label>
               </div>
@@ -360,7 +360,7 @@ export default function HolidayRequestForm({ requestId, onSuccess }: HolidayRequ
           )}
 
           <div>
-            <Label htmlFor="reason">Reason (Optional)</Label>
+            <Label htmlFor="reason" className="dark:text-gray-200">Reason (Optional)</Label>
             <Textarea
               id="reason"
               value={formData.reason}
@@ -399,6 +399,7 @@ export default function HolidayRequestForm({ requestId, onSuccess }: HolidayRequ
             variant="outline"
             onClick={() => navigate(-1)}
             disabled={loading}
+            className="dark:border-gray-600 dark:text-gray-100 dark:hover:bg-gray-700 dark:hover:text-gray-100"
           >
             Cancel
           </Button>
@@ -406,12 +407,14 @@ export default function HolidayRequestForm({ requestId, onSuccess }: HolidayRequ
             variant="outline"
             onClick={() => handleSubmit(true)}
             disabled={loading || !formData.holiday_type_id || !formData.department_id || !formData.start_date || !formData.end_date}
+            className="dark:border-gray-600 dark:text-gray-100 dark:hover:bg-gray-700 dark:hover:text-gray-100 disabled:dark:text-gray-500 disabled:dark:border-gray-700"
           >
             Save as Draft
           </Button>
           <Button
             onClick={() => handleSubmit(false)}
             disabled={loading || !formData.holiday_type_id || !formData.department_id || !formData.start_date || !formData.end_date}
+            className="dark:bg-blue-600 dark:hover:bg-blue-700 dark:text-white disabled:dark:bg-gray-700 disabled:dark:text-gray-500"
           >
             Submit Request
           </Button>

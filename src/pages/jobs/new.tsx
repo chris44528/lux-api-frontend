@@ -360,8 +360,8 @@ export default function JobCreatePage() {
       <main className="flex-1 p-4 md:p-6 space-y-6">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-bold">Create New Job</h1>
-            <p className="text-muted-foreground">
+            <h1 className="text-2xl font-bold dark:text-gray-100">Create New Job</h1>
+            <p className="text-muted-foreground dark:text-gray-400">
               Fill in the details to create a new job
             </p>
           </div>
@@ -421,7 +421,7 @@ export default function JobCreatePage() {
                             value={siteSearchTerm}
                             onChange={e => setSiteSearchTerm(e.target.value)}
                             placeholder="Search by site name, postcode or address..."
-                            className="flex-1 bg-transparent outline-none"
+                            className="flex-1 bg-transparent outline-none dark:text-gray-100"
                           />
                           {siteSearchTerm && (
                             <button
@@ -449,8 +449,8 @@ export default function JobCreatePage() {
                         {/* No results message */}
                         {!isSearchingSites && sites.length === 0 && siteSearchTerm && siteSearchTerm.length >= 2 && (
                           <div className="py-6 text-center text-sm">
-                            <p className="text-gray-500 mb-2">No sites found.</p>
-                            <div className="text-xs text-gray-400">
+                            <p className="text-gray-500 dark:text-gray-400 mb-2">No sites found.</p>
+                            <div className="text-xs text-gray-400 dark:text-gray-500">
                               <p>Try searching for:</p>
                               <ul className="mt-1 space-y-1">
                                 <li>• Site name (e.g., "Smith Residence")</li>
@@ -464,8 +464,8 @@ export default function JobCreatePage() {
                         {/* Minimum search length guidance */}
                         {siteSearchTerm && siteSearchTerm.length < 2 && (
                           <div className="py-6 text-center text-sm">
-                            <p className="text-gray-500">Enter at least 2 characters to search.</p>
-                            <p className="text-xs text-gray-400 mt-1">
+                            <p className="text-gray-500 dark:text-gray-400">Enter at least 2 characters to search.</p>
+                            <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
                               You can search by site name, postcode, or address
                             </p>
                           </div>
@@ -474,7 +474,7 @@ export default function JobCreatePage() {
                         {/* Empty state guidance */}
                         {!siteSearchTerm && (
                           <div className="py-6 text-center text-sm">
-                            <p className="text-gray-500">
+                            <p className="text-gray-500 dark:text-gray-400">
                               Start typing to search for sites.
                             </p>
                           </div>
@@ -483,7 +483,7 @@ export default function JobCreatePage() {
                         {/* Site results list */}
                         {sites.length > 0 && (
                           <div className="overflow-y-auto max-h-[300px]">
-                            <div className="text-xs font-medium text-gray-500 mb-1 px-1">
+                            <div className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1 px-1">
                               Site Results ({sites.length})
                             </div>
                             <div className="space-y-1">
@@ -491,15 +491,15 @@ export default function JobCreatePage() {
                                 <button
                                   key={site.site_id}
                                   type="button"
-                                  className={`w-full text-left px-2 py-2 rounded hover:bg-blue-50 ${
-                                    formData.site_id === site.site_id.toString() ? 'bg-blue-50 border-blue-400' : ''
+                                  className={`w-full text-left px-2 py-2 rounded hover:bg-blue-50 dark:hover:bg-gray-700 ${
+                                    formData.site_id === site.site_id.toString() ? 'bg-blue-50 dark:bg-gray-700 border-blue-400' : ''
                                   }`}
                                   onClick={() => {
                                     handleSiteSelect(site.site_id.toString());
                                   }}
                                 >
-                                  <div className="font-medium">{site.site_name}</div>
-                                  <div className="text-xs text-gray-500">
+                                  <div className="font-medium dark:text-gray-100">{site.site_name}</div>
+                                  <div className="text-xs text-gray-500 dark:text-gray-400">
                                     {site.postcode} - {site.address || 'No address'}
                                   </div>
                                 </button>
@@ -515,10 +515,10 @@ export default function JobCreatePage() {
               
               {/* Site details section - only show when a site is selected */}
               {selectedSite && (
-                <Card className="border border-blue-100 bg-blue-50">
+                <Card className="border border-blue-100 dark:border-blue-900 bg-blue-50 dark:bg-blue-900/20">
                   <CardContent className="pt-4">
                     <div className="flex items-center justify-between mb-2">
-                      <h3 className="text-sm font-medium">Site Details:</h3>
+                      <h3 className="text-sm font-medium dark:text-gray-100">Site Details:</h3>
                       {isLoadingSiteDetails && (
                         <div className="flex items-center text-xs text-blue-600">
                           <svg className="animate-spin -ml-1 mr-2 h-3 w-3" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
@@ -531,22 +531,22 @@ export default function JobCreatePage() {
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
                       <div>
-                        <p className="font-semibold">Address:</p>
-                        <p className="text-gray-600">{selectedSite.address}</p>
+                        <p className="font-semibold dark:text-gray-100">Address:</p>
+                        <p className="text-gray-600 dark:text-gray-400">{selectedSite.address}</p>
                       </div>
                       <div>
-                        <p className="font-semibold">Postcode:</p>
+                        <p className="font-semibold dark:text-gray-100">Postcode:</p>
                         <p className="text-gray-600">{selectedSite.postcode}</p>
                       </div>
                       {selectedSite.fit_id && (
                         <div>
-                          <p className="font-semibold">FIT ID:</p>
+                          <p className="font-semibold dark:text-gray-100">FIT ID:</p>
                           <p className="text-gray-600">{selectedSite.fit_id}</p>
                         </div>
                       )}
                       {selectedSite.region && (
                         <div>
-                          <p className="font-semibold">Region:</p>
+                          <p className="font-semibold dark:text-gray-100">Region:</p>
                           <p className="text-gray-600">{selectedSite.region}</p>
                         </div>
                       )}
@@ -597,7 +597,7 @@ export default function JobCreatePage() {
                   <select
                     id="type_id"
                     name="type_id"
-                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background"
+                    className="flex h-10 w-full rounded-md border border-input bg-background dark:bg-gray-800 dark:text-gray-100 px-3 py-2 text-sm ring-offset-background"
                     value={formData.type_id || ''}
                     onChange={handleInputChange}
                     required
@@ -607,7 +607,7 @@ export default function JobCreatePage() {
                       <option key={type.id} value={type.id.toString()}>
                         {type.name}
                       </option>
-                    )) : <option value="">No job types available</option>}
+                    )) : <option value="" className="dark:bg-gray-800 dark:text-gray-100">No job types available</option>}
                   </select>
                 </div>
                 
@@ -616,7 +616,7 @@ export default function JobCreatePage() {
                   <select
                     id="priority"
                     name="priority"
-                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background"
+                    className="flex h-10 w-full rounded-md border border-input bg-background dark:bg-gray-800 dark:text-gray-100 px-3 py-2 text-sm ring-offset-background"
                     value={formData.priority}
                     onChange={handleInputChange}
                   >
@@ -635,7 +635,7 @@ export default function JobCreatePage() {
                   <select
                     id="status_id"
                     name="status_id"
-                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background"
+                    className="flex h-10 w-full rounded-md border border-input bg-background dark:bg-gray-800 dark:text-gray-100 px-3 py-2 text-sm ring-offset-background"
                     value={formData.status_id}
                     onChange={handleInputChange}
                   >
@@ -643,7 +643,7 @@ export default function JobCreatePage() {
                       <option key={status.id} value={status.id.toString()}>
                         {status.name}
                       </option>
-                    )) : <option value="">No statuses available</option>}
+                    )) : <option value="" className="dark:bg-gray-800 dark:text-gray-100">No statuses available</option>}
                   </select>
                 </div>
                 
@@ -652,7 +652,7 @@ export default function JobCreatePage() {
                   <select
                     id="queue_id"
                     name="queue_id"
-                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background"
+                    className="flex h-10 w-full rounded-md border border-input bg-background dark:bg-gray-800 dark:text-gray-100 px-3 py-2 text-sm ring-offset-background"
                     value={formData.queue_id}
                     onChange={handleInputChange}
                   >
@@ -660,7 +660,7 @@ export default function JobCreatePage() {
                       <option key={queue.id} value={queue.id.toString()}>
                         {queue.name}
                       </option>
-                    )) : <option value="">No queues available</option>}
+                    )) : <option value="" className="dark:bg-gray-800 dark:text-gray-100">No queues available</option>}
                   </select>
                 </div>
               </div>
@@ -690,7 +690,7 @@ export default function JobCreatePage() {
             <CardContent>
               <div className="space-y-4">
                 {!Array.isArray(taskTemplates) || taskTemplates.length === 0 ? (
-                  <div className="text-center py-4 text-muted-foreground">
+                  <div className="text-center py-4 text-muted-foreground dark:text-gray-400">
                     No task templates available
                   </div>
                 ) : (
@@ -698,15 +698,15 @@ export default function JobCreatePage() {
                     {taskTemplates.map(template => (
                       <div
                         key={template.id}
-                        className={`border rounded-md p-4 cursor-pointer hover:bg-gray-100 transition-colors ${
-                          selectedTemplates.includes(template.id) ? 'border-blue-500 bg-blue-50' : ''
+                        className={`border rounded-md p-4 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors ${
+                          selectedTemplates.includes(template.id) ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20' : 'dark:border-gray-600'
                         }`}
                         onClick={() => toggleTaskTemplate(template.id)}
                       >
                         <div className="flex items-start justify-between">
                           <div>
-                            <h4 className="font-medium">{template.name}</h4>
-                            <p className="text-sm text-muted-foreground">{template.description}</p>
+                            <h4 className="font-medium dark:text-gray-100">{template.name}</h4>
+                            <p className="text-sm text-muted-foreground dark:text-gray-400">{template.description}</p>
                             <div className="mt-2 text-xs">
                               <span className="font-medium">Type:</span> {template.job_type.name}
                             </div>
@@ -732,7 +732,7 @@ export default function JobCreatePage() {
             </CardContent>
           </Card>
           
-          <div className="flex justify-end space-x-4 px-6 py-4 bg-gray-50 rounded-md">
+          <div className="flex justify-end space-x-4 px-6 py-4 bg-gray-50 dark:bg-gray-800 rounded-md">
             <Button 
               variant="outline" 
               onClick={() => navigate(-1)}

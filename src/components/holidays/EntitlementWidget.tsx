@@ -28,7 +28,7 @@ export default function EntitlementWidget({ entitlement, className }: Entitlemen
   return (
     <Card className={className}>
       <CardHeader className="pb-3">
-        <CardTitle className="text-lg">{entitlement.holiday_type.name}</CardTitle>
+        <CardTitle className="text-lg dark:text-gray-100">{entitlement.holiday_type.name}</CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="relative">
@@ -61,10 +61,10 @@ export default function EntitlementWidget({ entitlement, className }: Entitlemen
                 />
               </svg>
               <div className="absolute inset-0 flex flex-col items-center justify-center">
-                <span className="text-2xl font-bold">
+                <span className="text-2xl font-bold dark:text-gray-100">
                   {entitlement.days_remaining ?? '∞'}
                 </span>
-                <span className="text-sm text-muted-foreground">days left</span>
+                <span className="text-sm text-muted-foreground dark:text-gray-400">days left</span>
               </div>
             </div>
           </div>
@@ -72,21 +72,21 @@ export default function EntitlementWidget({ entitlement, className }: Entitlemen
 
         <div className="space-y-2">
           <div className="flex justify-between text-sm">
-            <span className="text-muted-foreground">Total Allowance</span>
-            <span className="font-medium">{entitlement.total_days ?? 'Unlimited'} days</span>
+            <span className="text-muted-foreground dark:text-gray-400">Total Allowance</span>
+            <span className="font-medium dark:text-gray-200">{entitlement.total_days ?? 'Unlimited'} days</span>
           </div>
           <div className="flex justify-between text-sm">
-            <span className="text-muted-foreground">Used</span>
-            <span className="font-medium">{entitlement.days_taken} days</span>
+            <span className="text-muted-foreground dark:text-gray-400">Used</span>
+            <span className="font-medium dark:text-gray-200">{entitlement.days_taken} days</span>
           </div>
           <div className="flex justify-between text-sm">
-            <span className="text-muted-foreground">Pending</span>
-            <span className="font-medium text-yellow-600">{entitlement.days_pending} days</span>
+            <span className="text-muted-foreground dark:text-gray-400">Pending</span>
+            <span className="font-medium text-yellow-600 dark:text-yellow-400">{entitlement.days_pending} days</span>
           </div>
           {entitlement.total_days && (
             <div className="flex justify-between text-sm">
-              <span className="text-muted-foreground">Remaining</span>
-              <span className="font-medium text-green-600">{entitlement.days_remaining} days</span>
+              <span className="text-muted-foreground dark:text-gray-400">Remaining</span>
+              <span className="font-medium text-green-600 dark:text-green-400">{entitlement.days_remaining} days</span>
             </div>
           )}
         </div>

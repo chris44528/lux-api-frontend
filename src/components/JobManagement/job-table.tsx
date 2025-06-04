@@ -712,7 +712,7 @@ export function JobTable({ showOnlyCompleted = false }: JobTableProps) {
             </Button>
           </div>
         ) : (
-          <div className="rounded-xl border dark:border-gray-700 shadow-lg overflow-hidden bg-white/80 dark:bg-gray-900/80">
+          <div className="rounded-xl border dark:border-gray-700 shadow-lg overflow-hidden bg-white dark:bg-gray-900">
             <Table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
               <TableHeader className="bg-gray-100 dark:bg-gray-800">
                 <TableRow>
@@ -739,7 +739,7 @@ export function JobTable({ showOnlyCompleted = false }: JobTableProps) {
                 {filteredJobs.map((job, idx) => (
                   <TableRow
                     key={job.id}
-                    className={`transition-colors cursor-pointer ${idx % 2 === 0 ? 'bg-white dark:bg-gray-900' : 'bg-gray-50 dark:bg-gray-800/50'} hover:bg-blue-50 dark:hover:bg-gray-700`}
+                    className={`transition-colors cursor-pointer ${idx % 2 === 0 ? 'bg-white dark:bg-gray-900' : 'bg-gray-50 dark:bg-gray-800'} hover:bg-blue-50 dark:hover:bg-gray-800`}
                     onClick={() => navigate(`/jobs/${job.id}`)}
                   >
                     <TableCell 

@@ -178,7 +178,7 @@ export default function MyRequestsPage() {
   return (
     <div className="container mx-auto py-6">
       <div className="flex justify-between items-center mb-6">
-        <h1 className="text-3xl font-bold">My Holiday Requests</h1>
+        <h1 className="text-3xl font-bold dark:text-gray-100">My Holiday Requests</h1>
         <Button onClick={() => navigate('/holidays/request/new')}>
           <Plus className="w-4 h-4 mr-2" />
           New Request
@@ -206,7 +206,7 @@ export default function MyRequestsPage() {
           <TabsContent value="drafts">
             <Card>
               <CardHeader>
-                <CardTitle>Draft Requests</CardTitle>
+                <CardTitle className="dark:text-gray-100">Draft Requests</CardTitle>
               </CardHeader>
               <CardContent>
                 <RequestTable requests={draftRequests} />
@@ -217,7 +217,7 @@ export default function MyRequestsPage() {
           <TabsContent value="active">
             <Card>
               <CardHeader>
-                <CardTitle>Active Requests</CardTitle>
+                <CardTitle className="dark:text-gray-100">Active Requests</CardTitle>
               </CardHeader>
               <CardContent>
                 <RequestTable requests={activeRequests} />
@@ -228,7 +228,7 @@ export default function MyRequestsPage() {
           <TabsContent value="past">
             <Card>
               <CardHeader>
-                <CardTitle>Past Requests</CardTitle>
+                <CardTitle className="dark:text-gray-100">Past Requests</CardTitle>
               </CardHeader>
               <CardContent>
                 <RequestTable requests={pastRequests} showActions={false} />
@@ -248,14 +248,14 @@ export default function MyRequestsPage() {
           </DialogHeader>
           {selectedRequest && (
             <div className="py-4">
-              <p className="text-sm">
-                <strong>Type:</strong> {selectedRequest.holiday_type.name}
+              <p className="text-sm dark:text-gray-300">
+                <strong className="dark:text-gray-200">Type:</strong> {selectedRequest.holiday_type.name}
               </p>
-              <p className="text-sm">
-                <strong>Dates:</strong> {format(new Date(selectedRequest.start_date), 'dd MMM yyyy')} - {format(new Date(selectedRequest.end_date), 'dd MMM yyyy')}
+              <p className="text-sm dark:text-gray-300">
+                <strong className="dark:text-gray-200">Dates:</strong> {format(new Date(selectedRequest.start_date), 'dd MMM yyyy')} - {format(new Date(selectedRequest.end_date), 'dd MMM yyyy')}
               </p>
-              <p className="text-sm">
-                <strong>Days:</strong> {selectedRequest.total_days}
+              <p className="text-sm dark:text-gray-300">
+                <strong className="dark:text-gray-200">Days:</strong> {selectedRequest.total_days}
               </p>
             </div>
           )}

@@ -42,6 +42,10 @@ export interface FormElement {
   };
   defaultValue?: any;
   readonly?: boolean;
+  multiInputConfig?: {
+    questions: string[];
+    answerType: 'yes_no_comment';
+  };
 }
 
 export interface FormSettings {

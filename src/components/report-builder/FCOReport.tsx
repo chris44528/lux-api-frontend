@@ -204,7 +204,7 @@ const FCOReport: React.FC = () => {
               </SelectTrigger>
               <SelectContent className="dark:bg-gray-800 dark:border-gray-700">
                 {fcoList.map(fco => (
-                  <SelectItem key={fco} value={fco}>{fco}</SelectItem>
+                  <SelectItem key={fco} value={fco} className="dark:text-gray-100 dark:hover:bg-gray-700">{fco}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
@@ -215,7 +215,7 @@ const FCOReport: React.FC = () => {
               </SelectTrigger>
               <SelectContent className="dark:bg-gray-800 dark:border-gray-700">
                 {months.map(month => (
-                  <SelectItem key={month.value} value={month.value}>
+                  <SelectItem key={month.value} value={month.value} className="dark:text-gray-100 dark:hover:bg-gray-700">
                     {month.label}
                   </SelectItem>
                 ))}

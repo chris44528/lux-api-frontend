@@ -2,18 +2,25 @@ import React, { useState } from 'react';
 import { FileText, History, Plus } from 'lucide-react';
 import LegalEnquiryForm from './LegalEnquiryForm';
 import LegalEnquiryHistory from './LegalEnquiryHistory';
+import { LegalEnquiry } from '../../types/legal';
 
 interface LegalTabProps {
   siteId: string;
 }
 
-type ViewMode = 'menu' | 'new-enquiry' | 'history';
+type ViewMode = 'menu' | 'new-enquiry' | 'edit-enquiry' | 'history';
 
 const LegalTab: React.FC<LegalTabProps> = ({ siteId }) => {
   const [viewMode, setViewMode] = useState<ViewMode>('menu');
+  const [editingEnquiry, setEditingEnquiry] = useState<LegalEnquiry | null>(null);
 
   const handleNewEnquirySuccess = () => {
     setViewMode('history'); // Show history after successful creation
+  };
+
+  const handleEditEnquiry = (enquiry: LegalEnquiry) => {
+    setEditingEnquiry(enquiry);
+    setViewMode('edit-enquiry');
   };
 
   if (viewMode === 'new-enquiry') {
@@ -26,11 +33,29 @@ const LegalTab: React.FC<LegalTabProps> = ({ siteId }) => {
     );
   }
 
+  if (viewMode === 'edit-enquiry' && editingEnquiry) {
+    return (
+      <LegalEnquiryForm 
+        siteId={siteId}
+        enquiry={editingEnquiry}
+        onBack={() => {
+          setEditingEnquiry(null);
+          setViewMode('history');
+        }}
+        onSuccess={() => {
+          setEditingEnquiry(null);
+          setViewMode('history');
+        }}
+      />
+    );
+  }
+
   if (viewMode === 'history') {
     return (
       <LegalEnquiryHistory 
         siteId={siteId} 
         onBack={() => setViewMode('menu')}
+        onEdit={handleEditEnquiry}
       />
     );
   }

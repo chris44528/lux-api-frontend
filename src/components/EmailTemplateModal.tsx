@@ -16,6 +16,7 @@ import emailTemplateService, {
 import { api } from '../services/api';
 import { Send, AlertCircle, Plus, Info } from 'lucide-react';
 import { ScrollArea } from './ui/scroll-area';
+import { EmailAccountSelector } from './EmailAccountSelector';
 
 interface EmailTemplateModalProps {
   isOpen: boolean;
@@ -67,6 +68,7 @@ const EmailTemplateModal: React.FC<EmailTemplateModalProps> = ({
   const [subject, setSubject] = useState('');
   const [emailBody, setEmailBody] = useState('');
   const [availableVariables, setAvailableVariables] = useState<VariableInfo[]>([]);
+  const [selectedEmailAccountId, setSelectedEmailAccountId] = useState<number | null>(null);
   
   // System variables that are always available
   const systemVariables: Record<string, { value: string; description: string }> = {
@@ -316,14 +318,22 @@ const EmailTemplateModal: React.FC<EmailTemplateModalProps> = ({
     
     setSending(true);
     try {
-      // Send the email directly
-      await api.post('/email-templates/send-custom/', {
+      // Prepare the request payload
+      const payload: any = {
         recipient_email: recipientEmail,
         cc_emails: ccEmails.split(',').map(e => e.trim()).filter(Boolean),
         subject: subject,
         body: emailBody,
         site_id: parseInt(siteId)
-      });
+      };
+
+      // Add email_account_id if one is selected
+      if (selectedEmailAccountId) {
+        payload.email_account_id = selectedEmailAccountId;
+      }
+
+      // Send the email
+      await api.post('/email-templates/send-custom/', payload);
       
       toast({
         title: 'Success',
@@ -332,10 +342,28 @@ const EmailTemplateModal: React.FC<EmailTemplateModalProps> = ({
       
       onClose();
     } catch (error: any) {
-      toast({
-        title: 'Error',
-        description: error.response?.data?.error || 'Failed to send email'
-      });
+      // Handle specific error cases
+      const errorMessage = error.response?.data?.error || error.response?.data?.message || 'Failed to send email';
+      
+      if (errorMessage.includes('permission')) {
+        toast({
+          title: 'Permission Denied',
+          description: 'You do not have permission to send from this email account',
+          variant: 'destructive'
+        });
+      } else if (errorMessage.includes('limit')) {
+        toast({
+          title: 'Rate Limit Exceeded',
+          description: errorMessage,
+          variant: 'destructive'
+        });
+      } else {
+        toast({
+          title: 'Error',
+          description: errorMessage,
+          variant: 'destructive'
+        });
+      }
     } finally {
       setSending(false);
     }
@@ -349,6 +377,7 @@ const EmailTemplateModal: React.FC<EmailTemplateModalProps> = ({
     setCcEmails('');
     setSubject('');
     setEmailBody('');
+    setSelectedEmailAccountId(null);
     
     onClose();
   };
@@ -379,6 +408,13 @@ const EmailTemplateModal: React.FC<EmailTemplateModalProps> = ({
                 ))}
               </select>
             </div>
+
+            {/* Email Account Selector */}
+            <EmailAccountSelector
+              selectedAccountId={selectedEmailAccountId}
+              onAccountSelect={setSelectedEmailAccountId}
+              disabled={sending}
+            />
             
             {/* Recipients */}
             <div className="grid grid-cols-2 gap-4">

@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Calendar, User, FileText, CreditCard, Home, Info, ArrowLeft, Save } from 'lucide-react';
 import { 
+  LegalEnquiry,
   LegalEnquiryFormData, 
   LEGAL_ENQUIRY_RECEIVERS, 
   LEGAL_ENQUIRY_TYPES, 
@@ -13,9 +14,10 @@ interface LegalEnquiryFormProps {
   siteId: string;
   onBack: () => void;
   onSuccess: () => void;
+  enquiry?: LegalEnquiry;
 }
 
-const LegalEnquiryForm: React.FC<LegalEnquiryFormProps> = ({ siteId, onBack, onSuccess }) => {
+const LegalEnquiryForm: React.FC<LegalEnquiryFormProps> = ({ siteId, onBack, onSuccess, enquiry }) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   
@@ -36,6 +38,28 @@ const LegalEnquiryForm: React.FC<LegalEnquiryFormProps> = ({ siteId, onBack, onS
     documents_information_issued_date: null,
   });
 
+  // Initialize form data from enquiry when editing
+  useEffect(() => {
+    if (enquiry) {
+      setFormData({
+        enquiry_receive_date: enquiry.enquiry_receive_date || '',
+        enquiry_received_by: enquiry.enquiry_received_by || '',
+        enquiry_type: enquiry.enquiry_type || '',
+        enquiry_transaction: enquiry.enquiry_transaction || '',
+        solicitor_email: enquiry.solicitor_email || '',
+        authority_form_sent_date: enquiry.authority_form_sent_date || null,
+        authority_form_received_date: enquiry.authority_form_received_date || null,
+        payment_value: enquiry.payment_value || '',
+        payment_received_date: enquiry.payment_received_date || null,
+        payment_payee: enquiry.payment_payee || '',
+        invoice_request_created_date: enquiry.invoice_request_created_date || null,
+        deed_variation_progress: enquiry.deed_variation_progress || '',
+        deed_variation_progress_date: enquiry.deed_variation_progress_date || null,
+        documents_information_issued_date: enquiry.documents_information_issued_date || null,
+      });
+    }
+  }, [enquiry]);
+
   const handleInputChange = (field: keyof LegalEnquiryFormData, value: string | null) => {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
@@ -53,16 +77,22 @@ const LegalEnquiryForm: React.FC<LegalEnquiryFormProps> = ({ siteId, onBack, onS
 
     setLoading(true);
     try {
-      await legalService.createLegalEnquiry(siteId, formData);
+      if (enquiry) {
+        // Update existing enquiry
+        await legalService.updateLegalEnquiry(enquiry.id, formData);
+      } else {
+        // Create new enquiry
+        await legalService.createLegalEnquiry(siteId, formData);
+      }
       onSuccess();
     } catch (err: any) {
       // Extract error message from the response if available
       const errorMessage = err?.response?.data?.detail || 
                           err?.response?.data?.message || 
                           err?.response?.data?.error ||
-                          'Failed to create legal enquiry. Please try again.';
+                          `Failed to ${enquiry ? 'update' : 'create'} legal enquiry. Please try again.`;
       setError(errorMessage);
-      console.error('Error creating legal enquiry:', err);
+      console.error(`Error ${enquiry ? 'updating' : 'creating'} legal enquiry:`, err);
     } finally {
       setLoading(false);
     }
@@ -119,7 +149,9 @@ const LegalEnquiryForm: React.FC<LegalEnquiryFormProps> = ({ siteId, onBack, onS
           <ArrowLeft className="w-4 h-4" />
           Back to Legal Tab
         </button>
-        <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100">New Legal Enquiry</h2>
+        <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
+          {enquiry ? 'Edit Legal Enquiry' : 'New Legal Enquiry'}
+        </h2>
       </div>
 
       {error && (
@@ -328,7 +360,7 @@ const LegalEnquiryForm: React.FC<LegalEnquiryFormProps> = ({ siteId, onBack, onS
           className="flex items-center gap-2 px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
         >
           <Save className="w-4 h-4" />
-          {loading ? 'Saving...' : 'Save Legal Enquiry'}
+          {loading ? 'Saving...' : enquiry ? 'Update Legal Enquiry' : 'Save Legal Enquiry'}
         </button>
       </div>
     </form>

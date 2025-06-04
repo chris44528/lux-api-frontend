@@ -159,7 +159,7 @@ export default function HolidayCalendarPage() {
 
     const label = () => {
       const date = moment(toolbar.date);
-      return <span className="text-lg font-semibold">{date.format('MMMM YYYY')}</span>;
+      return <span className="text-lg font-semibold dark:text-gray-100">{date.format('MMMM YYYY')}</span>;
     };
 
     return (
@@ -176,10 +176,10 @@ export default function HolidayCalendarPage() {
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="month">Month</SelectItem>
-              <SelectItem value="week">Week</SelectItem>
-              <SelectItem value="day">Day</SelectItem>
-              <SelectItem value="agenda">Agenda</SelectItem>
+              <SelectItem value="month" className="dark:text-gray-100 dark:hover:bg-gray-700">Month</SelectItem>
+              <SelectItem value="week" className="dark:text-gray-100 dark:hover:bg-gray-700">Week</SelectItem>
+              <SelectItem value="day" className="dark:text-gray-100 dark:hover:bg-gray-700">Day</SelectItem>
+              <SelectItem value="agenda" className="dark:text-gray-100 dark:hover:bg-gray-700">Agenda</SelectItem>
             </SelectContent>
           </Select>
         </div>
@@ -190,7 +190,7 @@ export default function HolidayCalendarPage() {
   return (
     <div className="container mx-auto py-6">
       <div className="flex justify-between items-center mb-6">
-        <h1 className="text-3xl font-bold">Holiday Calendar</h1>
+        <h1 className="text-3xl font-bold dark:text-gray-100">Holiday Calendar</h1>
         <Button onClick={() => navigate('/holidays/request/new')}>
           <Plus className="w-4 h-4 mr-2" />
           Request Holiday
@@ -234,19 +234,19 @@ export default function HolidayCalendarPage() {
         <div className="space-y-4">
           <Card>
             <CardHeader>
-              <CardTitle className="text-lg">Filters</CardTitle>
+              <CardTitle className="text-lg dark:text-gray-100">Filters</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               <div>
-                <label className="text-sm font-medium mb-2 block">Department</label>
+                <label className="text-sm font-medium mb-2 block dark:text-gray-200">Department</label>
                 <Select value={filterDepartment} onValueChange={setFilterDepartment}>
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="all">All Departments</SelectItem>
+                    <SelectItem value="all" className="dark:text-gray-100 dark:hover:bg-gray-700">All Departments</SelectItem>
                     {departments.map((dept) => (
-                      <SelectItem key={dept.id} value={dept.id.toString()}>
+                      <SelectItem key={dept.id} value={dept.id.toString()} className="dark:text-gray-100 dark:hover:bg-gray-700">
                         {dept.name}
                       </SelectItem>
                     ))}
@@ -255,15 +255,15 @@ export default function HolidayCalendarPage() {
               </div>
 
               <div>
-                <label className="text-sm font-medium mb-2 block">Holiday Type</label>
+                <label className="text-sm font-medium mb-2 block dark:text-gray-200">Holiday Type</label>
                 <Select value={filterType} onValueChange={setFilterType}>
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="all">All Types</SelectItem>
+                    <SelectItem value="all" className="dark:text-gray-100 dark:hover:bg-gray-700">All Types</SelectItem>
                     {holidayTypes.map((type) => (
-                      <SelectItem key={type.id} value={type.id.toString()}>
+                      <SelectItem key={type.id} value={type.id.toString()} className="dark:text-gray-100 dark:hover:bg-gray-700">
                         {type.name}
                       </SelectItem>
                     ))}
@@ -275,31 +275,31 @@ export default function HolidayCalendarPage() {
 
           <Card>
             <CardHeader>
-              <CardTitle className="text-lg">Legend</CardTitle>
+              <CardTitle className="text-lg dark:text-gray-100">Legend</CardTitle>
             </CardHeader>
             <CardContent className="space-y-2">
               <div className="flex items-center gap-2">
                 <div className="w-4 h-4 rounded" style={{ backgroundColor: '#4CAF50' }}></div>
-                <span className="text-sm">Annual Leave</span>
+                <span className="text-sm dark:text-gray-300">Annual Leave</span>
               </div>
               <div className="flex items-center gap-2">
                 <div className="w-4 h-4 rounded" style={{ backgroundColor: '#FF9800' }}></div>
-                <span className="text-sm">Sick Leave</span>
+                <span className="text-sm dark:text-gray-300">Sick Leave</span>
               </div>
               <div className="flex items-center gap-2">
                 <div className="w-4 h-4 rounded" style={{ backgroundColor: '#9CA3AF' }}></div>
-                <span className="text-sm">Public Holiday</span>
+                <span className="text-sm dark:text-gray-300">Public Holiday</span>
               </div>
               <div className="flex items-center gap-2">
                 <div className="w-4 h-4 rounded opacity-50" style={{ backgroundColor: '#000' }}></div>
-                <span className="text-sm">Rejected</span>
+                <span className="text-sm dark:text-gray-300">Rejected</span>
               </div>
             </CardContent>
           </Card>
 
           <Card>
             <CardHeader>
-              <CardTitle className="text-lg">Quick Actions</CardTitle>
+              <CardTitle className="text-lg dark:text-gray-100">Quick Actions</CardTitle>
             </CardHeader>
             <CardContent className="space-y-2">
               <Button className="w-full" variant="outline" onClick={() => navigate('/holidays/my-requests')}>

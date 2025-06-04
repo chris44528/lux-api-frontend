@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Settings2, Users, Shield, Filter, Building, Palmtree } from "lucide-react";
+import { Settings2, Users, Shield, Filter, Building, Palmtree, Cpu, Mail } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 // Import existing components
@@ -14,6 +14,8 @@ import HolidayEntitlements from "@/components/Settings/HolidayEntitlements";
 import HolidayPolicies from "@/components/Settings/HolidayPolicies";
 import PublicHolidays from "@/components/Settings/PublicHolidays";
 import BlackoutPeriods from "@/components/Settings/BlackoutPeriods";
+import JobAutomationSettings from "@/components/Settings/JobAutomationSettings";
+import EmailAccountManagement from "@/components/Settings/EmailAccountManagement";
 import { TestPermissions } from "@/components/TestPermissions";
 import { TestBulkUpdate } from "@/components/TestBulkUpdate";
 
@@ -46,7 +48,7 @@ const ModernSettingsPage = () => {
       icon: Settings2,
       color: "bg-green-50 border-green-200",
       iconColor: "text-green-600",
-      tabs: ["job-statuses", "job-types", "job-categories", "job-tags", "templates"]
+      tabs: ["job-statuses", "job-types", "job-categories", "job-tags", "templates", "job-automation"]
     },
     {
       id: "holiday-management",
@@ -73,7 +75,7 @@ const ModernSettingsPage = () => {
       icon: Building,
       color: "bg-orange-50 border-orange-200",
       iconColor: "text-orange-600",
-      tabs: ["departments", "canned-messages", "email-templates"]
+      tabs: ["departments", "canned-messages", "email-templates", "email-accounts"]
     }
   ];
 
@@ -84,6 +86,7 @@ const ModernSettingsPage = () => {
     { id: "job-categories", label: "Categories", category: "job-settings" },
     { id: "job-tags", label: "Tags", category: "job-settings" },
     { id: "templates", label: "Templates", category: "job-settings" },
+    { id: "job-automation", label: "Job Automation", category: "job-settings", icon: Cpu },
     { id: "users", label: "Users", category: "user-management" },
     { id: "groups", label: "Groups", category: "user-management" },
     { id: "holiday-policies", label: "Holiday Policies", category: "holiday-management" },
@@ -95,6 +98,7 @@ const ModernSettingsPage = () => {
     { id: "departments", label: "Departments", category: "system-config" },
     { id: "canned-messages", label: "Canned Text Messages", category: "system-config" },
     { id: "email-templates", label: "Email Templates", category: "system-config" },
+    { id: "email-accounts", label: "Email Accounts", category: "system-config", icon: Mail },
   ];
 
   const handleCategoryClick = (categoryId: string, firstTab: string) => {
@@ -289,6 +293,10 @@ const ModernSettingsPage = () => {
             </Card>
           </TabsContent>
 
+          <TabsContent value="job-automation">
+            <JobAutomationSettings />
+          </TabsContent>
+
           {/* User Management Tabs */}
           <TabsContent value="users">
             <UserManagement />
@@ -349,6 +357,18 @@ const ModernSettingsPage = () => {
               </CardHeader>
               <CardContent>
                 <EmailTemplatesSettings />
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="email-accounts">
+            <Card className="bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700">
+              <CardHeader>
+                <CardTitle className="text-gray-900 dark:text-white">Email Accounts</CardTitle>
+                <CardDescription className="text-gray-600 dark:text-gray-400">Configure email accounts for sending notifications and communications</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <EmailAccountManagement />
               </CardContent>
             </Card>
           </TabsContent>

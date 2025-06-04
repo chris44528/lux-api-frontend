@@ -30,14 +30,14 @@ export default function EntitlementsPage() {
   return (
     <div className="container mx-auto py-6">
       <div className="flex justify-between items-center mb-6">
-        <h1 className="text-3xl font-bold">My Holiday Entitlements</h1>
+        <h1 className="text-3xl font-bold dark:text-gray-100">My Holiday Entitlements</h1>
         <Select value={selectedYear.toString()} onValueChange={(value) => setSelectedYear(parseInt(value))}>
           <SelectTrigger className="w-32">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
             {years.map(year => (
-              <SelectItem key={year} value={year.toString()}>{year}</SelectItem>
+              <SelectItem key={year} value={year.toString()} className="dark:text-gray-100 dark:hover:bg-gray-700">{year}</SelectItem>
             ))}
           </SelectContent>
         </Select>
@@ -60,11 +60,11 @@ export default function EntitlementsPage() {
 
           <Card>
             <CardHeader>
-              <CardTitle>Entitlement Details</CardTitle>
+              <CardTitle className="dark:text-gray-100">Entitlement Details</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                <div className="text-sm text-muted-foreground">
+                <div className="text-sm text-gray-600 dark:text-gray-400">
                   <p>• Your holiday entitlement is calculated based on your employment contract and company policy.</p>
                   <p>• Unused annual leave may be carried over to the next year subject to company policy.</p>
                   <p>• Pending requests are included in your usage but may be cancelled if not yet approved.</p>
@@ -87,7 +87,7 @@ export default function EntitlementsPage() {
       ) : (
         <Card>
           <CardContent className="text-center py-12">
-            <p className="text-muted-foreground">No entitlement data available for {selectedYear}</p>
+            <p className="text-gray-600 dark:text-gray-400">No entitlement data available for {selectedYear}</p>
           </CardContent>
         </Card>
       )}

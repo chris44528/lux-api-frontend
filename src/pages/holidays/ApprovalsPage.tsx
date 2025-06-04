@@ -100,7 +100,7 @@ export default function ApprovalsPage() {
         <CardHeader>
           <div className="flex justify-between items-start">
             <div>
-              <CardTitle className="text-lg flex items-center gap-2">
+              <CardTitle className="text-lg flex items-center gap-2 dark:text-gray-100">
                 <User className="w-4 h-4" />
                 {request.user.full_name}
               </CardTitle>
@@ -114,7 +114,7 @@ export default function ApprovalsPage() {
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
             <div>
-              <p className="text-sm font-medium mb-1">Holiday Type</p>
+              <p className="text-sm font-medium mb-1 dark:text-gray-200">Holiday Type</p>
               <div className="flex items-center gap-2">
                 <div 
                   className="w-3 h-3 rounded-full" 
@@ -124,25 +124,25 @@ export default function ApprovalsPage() {
               </div>
             </div>
             <div>
-              <p className="text-sm font-medium mb-1">Duration</p>
+              <p className="text-sm font-medium mb-1 dark:text-gray-200">Duration</p>
               <p className="flex items-center gap-2">
                 <Calendar className="w-4 h-4" />
                 {request.total_days} days
               </p>
             </div>
             <div>
-              <p className="text-sm font-medium mb-1">Start Date</p>
+              <p className="text-sm font-medium mb-1 dark:text-gray-200">Start Date</p>
               <p>{format(new Date(request.start_date), 'dd MMM yyyy')}{request.start_half_day && ' (PM)'}</p>
             </div>
             <div>
-              <p className="text-sm font-medium mb-1">End Date</p>
+              <p className="text-sm font-medium mb-1 dark:text-gray-200">End Date</p>
               <p>{format(new Date(request.end_date), 'dd MMM yyyy')}{request.end_half_day && ' (AM)'}</p>
             </div>
           </div>
 
           {request.reason && (
             <div className="mb-4">
-              <p className="text-sm font-medium mb-1">Reason</p>
+              <p className="text-sm font-medium mb-1 dark:text-gray-200">Reason</p>
               <p className="text-sm text-muted-foreground">{request.reason}</p>
             </div>
           )}
@@ -162,7 +162,7 @@ export default function ApprovalsPage() {
           )}
 
           <div className="text-sm text-muted-foreground mb-4">
-            <p>Submitted: {request.submitted_at ? format(new Date(request.submitted_at), 'dd MMM yyyy HH:mm') : 'Draft'}</p>
+            <p className="dark:text-gray-300">Submitted: {request.submitted_at ? format(new Date(request.submitted_at), 'dd MMM yyyy HH:mm') : 'Draft'}</p>
           </div>
 
           {request.status === 'PENDING' && (
@@ -187,7 +187,7 @@ export default function ApprovalsPage() {
 
           {request.approvals && request.approvals.length > 0 && (
             <div className="mt-4 pt-4 border-t">
-              <p className="text-sm font-medium mb-2">Approval History</p>
+              <p className="text-sm font-medium mb-2 dark:text-gray-200">Approval History</p>
               {request.approvals.map((approval) => (
                 <div key={approval.id} className="text-sm text-muted-foreground mb-2">
                   <p>
@@ -207,7 +207,7 @@ export default function ApprovalsPage() {
   return (
     <div className="container mx-auto py-6">
       <div className="flex justify-between items-center mb-6">
-        <h1 className="text-3xl font-bold">Holiday Approvals</h1>
+        <h1 className="text-3xl font-bold dark:text-gray-100">Holiday Approvals</h1>
         <div className="flex items-center gap-2">
           <Clock className="w-5 h-5 text-muted-foreground" />
           <span className="text-muted-foreground">

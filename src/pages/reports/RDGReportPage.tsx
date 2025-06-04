@@ -168,7 +168,7 @@ const RDGReportPage = () => {
                         key={fco}
                         value={fco}
                         onSelect={() => handleFcoChange(fco)}
-                        className={formData.fco.includes(fco) ? "bg-primary/10 dark:bg-primary/20" : ""}
+                        className={`dark:text-gray-100 dark:hover:bg-gray-700 ${formData.fco.includes(fco) ? "bg-primary/10 dark:bg-primary/20" : ""}`}
                       >
                         {fco}
                       </SelectItem>

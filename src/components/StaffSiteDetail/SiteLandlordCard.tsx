@@ -6,10 +6,10 @@ interface SiteLandlordCardProps {
 }
 
 const SiteLandlordCard: React.FC<SiteLandlordCardProps> = ({ site, customer }) => (
-  <div className="bg-white rounded shadow p-8">
+  <div className="bg-white dark:bg-gray-800 rounded shadow dark:shadow-gray-700 p-8">
     <div className="mb-8">
-      <h2 className="text-lg font-semibold mb-4">Site Details</h2>
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 gap-y-2 text-sm">
+      <h2 className="text-lg font-semibold mb-4 text-gray-900 dark:text-gray-100">Site Details</h2>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 gap-y-2 text-sm text-gray-900 dark:text-gray-100">
         <div className="break-words min-w-0"><strong>Site Name:</strong> {site?.site_name || ''}</div>
         <div className="break-words min-w-0"><strong>Address:</strong> {site?.address || ''}</div>
         <div className="break-words min-w-0"><strong>Postcode:</strong> {site?.postcode || ''}</div>
@@ -25,8 +25,8 @@ const SiteLandlordCard: React.FC<SiteLandlordCardProps> = ({ site, customer }) =
       </div>
     </div>
     <div>
-      <h2 className="text-lg font-semibold mb-4">Landlord Details</h2>
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 gap-y-2 text-sm">
+      <h2 className="text-lg font-semibold mb-4 text-gray-900 dark:text-gray-100">Landlord Details</h2>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 gap-y-2 text-sm text-gray-900 dark:text-gray-100">
         <div className="break-words min-w-0"><strong>Name:</strong> {customer?.owner || ''}</div>
         <div className="break-words min-w-0"><strong>Phone:</strong> {customer?.phone || ''}</div>
         <div className="break-words min-w-0"><strong>Email:</strong> {customer?.email || ''}</div>

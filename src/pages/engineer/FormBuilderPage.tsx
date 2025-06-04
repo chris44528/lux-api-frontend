@@ -22,7 +22,7 @@ import engineerService from '@/services/engineerService';
 
 interface FormField {
   id: string;
-  type: 'text' | 'number' | 'select' | 'checkbox' | 'radio' | 'date' | 'textarea' | 'photo' | 'signature' | 'location';
+  type: 'text' | 'number' | 'select' | 'checkbox' | 'radio' | 'date' | 'textarea' | 'photo' | 'signature' | 'location' | 'multi_input';
   label: string;
   placeholder?: string;
   required: boolean;
@@ -38,6 +38,10 @@ interface FormField {
     showIf: string;
     operator: 'equals' | 'not_equals' | 'contains';
     value: string;
+  };
+  multiInputConfig?: {
+    questions: string[];
+    answerType: 'yes_no_comment';
   };
 }
 
@@ -63,6 +67,7 @@ const FIELD_TYPES = [
   { value: 'photo', label: 'Photo Upload', icon: Upload },
   { value: 'signature', label: 'Signature', icon: Square },
   { value: 'location', label: 'Location', icon: MapPin },
+  { value: 'multi_input', label: 'Multi-Input (Yes/No/Comment)', icon: CheckSquare },
 ];
 
 // Sortable Field Component
@@ -93,33 +98,39 @@ const SortableField: React.FC<{
     <div
       ref={setNodeRef}
       style={style}
-      className="border rounded-lg p-4 bg-white hover:shadow-md transition-shadow"
+      className="border rounded-lg p-4 bg-white dark:bg-gray-800 hover:shadow-md transition-shadow"
     >
       <div className="flex items-start gap-3">
         <div
           {...attributes}
           {...listeners}
-          className="mt-1 cursor-move text-gray-400 hover:text-gray-600"
+          className="mt-1 cursor-move text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-400"
         >
           <GripVertical className="h-5 w-5" />
         </div>
         
         <div className="flex-1">
           <div className="flex items-center gap-2 mb-2">
-            <Icon className="h-4 w-4 text-gray-500" />
-            <h4 className="font-medium">{field.label}</h4>
+            <Icon className="h-4 w-4 text-gray-500 dark:text-gray-400" />
+            <h4 className="font-medium text-gray-900 dark:text-gray-100">{field.label}</h4>
             {field.required && <Badge variant="secondary" className="text-xs">Required</Badge>}
           </div>
           
-          <p className="text-sm text-gray-600 mb-2">{fieldType?.label}</p>
+          <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">{fieldType?.label}</p>
           
           {field.placeholder && (
-            <p className="text-xs text-gray-500 mb-2">Placeholder: {field.placeholder}</p>
+            <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">Placeholder: {field.placeholder}</p>
           )}
           
           {field.options && field.options.length > 0 && (
-            <div className="text-xs text-gray-500 mb-2">
+            <div className="text-xs text-gray-500 dark:text-gray-400 mb-2">
               Options: {field.options.join(', ')}
+            </div>
+          )}
+          
+          {field.multiInputConfig && field.multiInputConfig.questions.length > 0 && (
+            <div className="text-xs text-gray-500 dark:text-gray-400 mb-2">
+              Questions: {field.multiInputConfig.questions.join(', ')}
             </div>
           )}
           
@@ -173,6 +184,7 @@ const FormBuilderPage: React.FC = () => {
   const [fieldPlaceholder, setFieldPlaceholder] = useState('');
   const [fieldRequired, setFieldRequired] = useState(false);
   const [fieldOptions, setFieldOptions] = useState<string[]>(['']);
+  const [multiInputQuestions, setMultiInputQuestions] = useState<string[]>(['']);
 
   // Load forms from API
   useEffect(() => {
@@ -246,6 +258,7 @@ const FormBuilderPage: React.FC = () => {
     setFieldPlaceholder('');
     setFieldRequired(false);
     setFieldOptions(['']);
+    setMultiInputQuestions(['']);
     setIsFieldModalOpen(true);
   };
 
@@ -256,6 +269,7 @@ const FormBuilderPage: React.FC = () => {
     setFieldPlaceholder(field.placeholder || '');
     setFieldRequired(field.required);
     setFieldOptions(field.options || ['']);
+    setMultiInputQuestions(field.multiInputConfig?.questions || ['']);
     setIsFieldModalOpen(true);
   };
 
@@ -267,6 +281,10 @@ const FormBuilderPage: React.FC = () => {
       placeholder: fieldPlaceholder,
       required: fieldRequired,
       options: ['select', 'radio', 'checkbox'].includes(fieldType) ? fieldOptions.filter(o => o) : undefined,
+      multiInputConfig: fieldType === 'multi_input' ? {
+        questions: multiInputQuestions.filter(q => q),
+        answerType: 'yes_no_comment'
+      } : undefined,
     };
 
     if (editingField) {
@@ -433,6 +451,43 @@ const FormBuilderPage: React.FC = () => {
               </div>
             )}
 
+            {fieldType === 'multi_input' && (
+              <div className="space-y-2">
+                <Label>Questions</Label>
+                <p className="text-sm text-gray-600 mb-2">Each question will have Yes/No options and a comment box</p>
+                {multiInputQuestions.map((question, index) => (
+                  <div key={index} className="flex gap-2">
+                    <Input
+                      value={question}
+                      onChange={(e) => {
+                        const newQuestions = [...multiInputQuestions];
+                        newQuestions[index] = e.target.value;
+                        setMultiInputQuestions(newQuestions);
+                      }}
+                      placeholder={`Question ${index + 1}`}
+                    />
+                    {multiInputQuestions.length > 1 && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setMultiInputQuestions(multiInputQuestions.filter((_, i) => i !== index))}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    )}
+                  </div>
+                ))}
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setMultiInputQuestions([...multiInputQuestions, ''])}
+                >
+                  <Plus className="h-4 w-4 mr-1" />
+                  Add Question
+                </Button>
+              </div>
+            )}
+
             <div className="flex items-center space-x-2">
               <Switch
                 checked={fieldRequired}
@@ -466,12 +521,12 @@ const FormBuilderPage: React.FC = () => {
   const renderFormPreview = () => {
     return (
       <div className="space-y-4">
-        <h3 className="text-lg font-semibold">{formName || 'Untitled Form'}</h3>
-        <p className="text-gray-600">{formDescription}</p>
+        <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">{formName || 'Untitled Form'}</h3>
+        <p className="text-gray-600 dark:text-gray-400">{formDescription}</p>
         
         <div className="space-y-4 border rounded-lg p-4">
           {formFields.length === 0 ? (
-            <p className="text-center text-gray-500 py-8">
+            <p className="text-center text-gray-500 dark:text-gray-400 py-8">
               No fields added yet. Switch to the Editor tab to add fields.
             </p>
           ) : (
@@ -511,7 +566,7 @@ const FormBuilderPage: React.FC = () => {
                     {field.options.map((option, index) => (
                       <div key={index} className="flex items-center space-x-2">
                         <input type="checkbox" disabled />
-                        <label>{option}</label>
+                        <label className="text-gray-900 dark:text-gray-100">{option}</label>
                       </div>
                     ))}
                   </div>
@@ -522,7 +577,7 @@ const FormBuilderPage: React.FC = () => {
                     {field.options.map((option, index) => (
                       <div key={index} className="flex items-center space-x-2">
                         <input type="radio" name={field.id} disabled />
-                        <label>{option}</label>
+                        <label className="text-gray-900 dark:text-gray-100">{option}</label>
                       </div>
                     ))}
                   </div>
@@ -530,14 +585,14 @@ const FormBuilderPage: React.FC = () => {
                 
                 {field.type === 'photo' && (
                   <div className="border-2 border-dashed rounded-lg p-4 text-center">
-                    <Upload className="h-8 w-8 mx-auto text-gray-400" />
-                    <p className="text-sm text-gray-500 mt-2">Click to upload photo</p>
+                    <Upload className="h-8 w-8 mx-auto text-gray-400 dark:text-gray-500" />
+                    <p className="text-sm text-gray-500 dark:text-gray-400 mt-2">Click to upload photo</p>
                   </div>
                 )}
                 
                 {field.type === 'signature' && (
-                  <div className="border rounded-lg p-4 h-32 bg-gray-50">
-                    <p className="text-sm text-gray-500 text-center">Signature pad</p>
+                  <div className="border rounded-lg p-4 h-32 bg-gray-50 dark:bg-gray-800">
+                    <p className="text-sm text-gray-500 dark:text-gray-400 text-center">Signature pad</p>
                   </div>
                 )}
                 
@@ -545,6 +600,31 @@ const FormBuilderPage: React.FC = () => {
                   <div className="border rounded-lg p-4">
                     <MapPin className="h-5 w-5 inline mr-2" />
                     <span className="text-sm text-gray-500">Current location will be captured</span>
+                  </div>
+                )}
+                
+                {field.type === 'multi_input' && field.multiInputConfig && (
+                  <div className="border rounded-lg p-4 space-y-3">
+                    {field.multiInputConfig.questions.map((question, index) => (
+                      <div key={index} className="space-y-2">
+                        <p className="text-sm font-medium">{question}</p>
+                        <div className="flex gap-4 items-center">
+                          <label className="flex items-center gap-2">
+                            <input type="radio" name={`${field.id}-${index}`} disabled />
+                            <span className="text-sm">Yes</span>
+                          </label>
+                          <label className="flex items-center gap-2">
+                            <input type="radio" name={`${field.id}-${index}`} disabled />
+                            <span className="text-sm">No</span>
+                          </label>
+                        </div>
+                        <Textarea 
+                          placeholder="Additional comments..." 
+                          disabled 
+                          className="text-sm h-16"
+                        />
+                      </div>
+                    ))}
                   </div>
                 )}
               </div>
@@ -558,7 +638,7 @@ const FormBuilderPage: React.FC = () => {
   return (
     <div className="container mx-auto p-6">
       <div className="flex justify-between items-center mb-6">
-        <h1 className="text-3xl font-bold">Form Builder</h1>
+        <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">Form Builder</h1>
         <Button onClick={handleCreateNew}>
           <Plus className="h-4 w-4 mr-2" />
           New Form
@@ -575,14 +655,14 @@ const FormBuilderPage: React.FC = () => {
             {forms.map(form => (
               <div
                 key={form.id}
-                className={`p-3 border rounded-lg cursor-pointer hover:bg-gray-50 ${
-                  selectedForm?.id === form.id ? 'border-blue-500 bg-blue-50' : ''
+                className={`p-3 border rounded-lg cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700 ${
+                  selectedForm?.id === form.id ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20' : ''
                 }`}
                 onClick={() => handleSelectForm(form)}
               >
                 <div className="flex justify-between items-start">
                   <div>
-                    <h4 className="font-medium">{form.name}</h4>
+                    <h4 className="font-medium text-gray-900 dark:text-gray-100">{form.name}</h4>
                     <p className="text-xs text-gray-500">{form.fields.length} fields</p>
                   </div>
                   <Badge variant={form.type === 'pre_visit' ? 'default' : form.type === 'post_visit' ? 'secondary' : 'outline'}>
@@ -649,7 +729,7 @@ const FormBuilderPage: React.FC = () => {
                   {/* Fields */}
                   <div className="space-y-4">
                     <div className="flex justify-between items-center">
-                      <h3 className="font-semibold">Form Fields</h3>
+                      <h3 className="font-semibold text-gray-900 dark:text-gray-100">Form Fields</h3>
                       <Button onClick={handleAddField} size="sm">
                         <Plus className="h-4 w-4 mr-1" />
                         Add Field

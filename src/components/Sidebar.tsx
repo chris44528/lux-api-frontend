@@ -3,7 +3,6 @@ import { Link, useLocation, useNavigate } from "react-router-dom";
 import useRestrictedNavigation from "../hooks/useRestrictedNavigation";
 import { useUIPermissionContext } from "../contexts/UIPermissionContext";
 import api, { getNotifications, markNotificationAsRead } from "../services/api";
-import { useTheme } from "../contexts/ThemeContext";
 import {
   Bell,
   LogOut,
@@ -36,8 +35,6 @@ function UserSettingsModal({
   email,
   onSave,
   onChangePassword,
-  onToggleDarkMode,
-  darkMode,
 }) {
   const [form, setForm] = useState({ username, email });
   const [currentPassword, setCurrentPassword] = useState("");
@@ -179,23 +176,6 @@ function UserSettingsModal({
               }}
             >
               Change Password
-            </button>
-          </div>
-          <div className="flex items-center justify-between mt-4">
-            <span className="text-gray-700 dark:text-gray-200">Dark Mode</span>
-            <button
-              type="button"
-              className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none ${
-                darkMode ? "bg-primary" : "bg-gray-300"
-              }`}
-              onClick={onToggleDarkMode}
-              aria-pressed={darkMode}
-            >
-              <span
-                className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                  darkMode ? "translate-x-6" : "translate-x-1"
-                }`}
-              />
             </button>
           </div>
         </div>
@@ -341,7 +321,6 @@ const Sidebar = () => {
   const [notifications, setNotifications] = useState<any[]>([]);
   const [showNotificationPopup, setShowNotificationPopup] = useState(false);
   const [latestNotification, setLatestNotification] = useState<any>(null);
-  const { darkMode, toggleDarkMode } = useTheme();
   const notificationButtonRef = useRef<HTMLButtonElement>(null);
   const notificationPopupRef = useRef<HTMLDivElement>(null);
 
@@ -517,7 +496,7 @@ const Sidebar = () => {
               className={`flex items-center px-3 py-2 rounded-md text-sm transition-colors ${
                 location.pathname === "/dashboard"
                   ? "bg-green-50 text-green-700 font-medium"
-                  : "text-gray-700 hover:bg-gray-100"
+                  : "text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700"
               }`}
             >
               <Home className="mr-2 h-5 w-5" />
@@ -534,7 +513,7 @@ const Sidebar = () => {
               className={`flex items-center px-3 py-2 rounded-md text-sm transition-colors ${
                 location.pathname === "/sites"
                   ? "bg-green-50 text-green-700 font-medium"
-                  : "text-gray-700 hover:bg-gray-100"
+                  : "text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700"
               }`}
             >
               <MapPin className="mr-2 h-5 w-5" />
@@ -552,7 +531,7 @@ const Sidebar = () => {
               className={`flex items-center px-3 py-2 rounded-md text-sm transition-colors ${
                 location.pathname === "/bio-mass"
                   ? "bg-green-50 text-green-700 font-medium"
-                  : "text-gray-700 hover:bg-gray-100"
+                  : "text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700"
               }`}
             >
               <Leaf className="mr-2 h-5 w-5" />
@@ -570,7 +549,7 @@ const Sidebar = () => {
               className={`flex items-center px-3 py-2 rounded-md text-sm transition-colors ${
                 location.pathname === "/analysis"
                   ? "bg-green-50 text-green-700 font-medium"
-                  : "text-gray-700 hover:bg-gray-100"
+                  : "text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700"
               }`}
             >
               <BarChart className="mr-2 h-5 w-5" />
@@ -588,7 +567,7 @@ const Sidebar = () => {
                 className={`flex items-center justify-between w-full px-3 py-2 rounded-md text-sm transition-colors ${
                   location.pathname.startsWith("/job")
                     ? "bg-green-50 text-green-700 font-medium"
-                    : "text-gray-700 hover:bg-gray-100"
+                    : "text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700"
                 }`}
               >
                 <div className="flex items-center">
@@ -608,7 +587,7 @@ const Sidebar = () => {
                     className={`block px-3 py-1 rounded-md text-sm ${
                       location.pathname === "/jobs"
                         ? "text-green-700 font-medium"
-                        : "text-gray-600 hover:text-gray-900"
+                        : "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100"
                     }`}
                   >
                     Job List
@@ -618,7 +597,7 @@ const Sidebar = () => {
                     className={`block px-3 py-1 rounded-md text-sm ${
                       location.pathname === "/jobs/new"
                         ? "text-green-700 font-medium"
-                        : "text-gray-600 hover:text-gray-900"
+                        : "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100"
                     }`}
                   >
                     Create Job
@@ -628,7 +607,7 @@ const Sidebar = () => {
                     className={`block px-3 py-1 rounded-md text-sm ${
                       location.pathname === "/completed-jobs"
                         ? "text-green-700 font-medium"
-                        : "text-gray-600 hover:text-gray-900"
+                        : "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100"
                     }`}
                   >
                     Completed Jobs
@@ -638,7 +617,7 @@ const Sidebar = () => {
                     className={`block px-3 py-1 rounded-md text-sm ${
                       location.pathname === "/calendar"
                         ? "text-green-700 font-medium"
-                        : "text-gray-600 hover:text-gray-900"
+                        : "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100"
                     }`}
                   >
                     Calendar
@@ -658,7 +637,7 @@ const Sidebar = () => {
                 className={`flex items-center justify-between w-full px-3 py-2 rounded-md text-sm transition-colors ${
                   location.pathname.startsWith("/reports")
                     ? "bg-green-50 text-green-700 font-medium"
-                    : "text-gray-700 hover:bg-gray-100"
+                    : "text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700"
                 }`}
               >
                 <div className="flex items-center">
@@ -678,7 +657,7 @@ const Sidebar = () => {
                     className={`block px-3 py-1 rounded-md text-sm ${
                       location.pathname === "/reports/builder"
                         ? "text-green-700 font-medium"
-                        : "text-gray-600 hover:text-gray-900"
+                        : "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100"
                     }`}
                   >
                     Report Builder
@@ -688,7 +667,7 @@ const Sidebar = () => {
                     className={`block px-3 py-1 rounded-md text-sm ${
                       location.pathname === "/reports/reading"
                         ? "text-green-700 font-medium"
-                        : "text-gray-600 hover:text-gray-900"
+                        : "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100"
                     }`}
                   >
                     Reading Report
@@ -698,7 +677,7 @@ const Sidebar = () => {
                     className={`block px-3 py-1 rounded-md text-sm ${
                       location.pathname === "/reports/rdg"
                         ? "text-green-700 font-medium"
-                        : "text-gray-600 hover:text-gray-900"
+                        : "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100"
                     }`}
                   >
                     RDG Report
@@ -708,7 +687,7 @@ const Sidebar = () => {
                     className={`block px-3 py-1 rounded-md text-sm ${
                       location.pathname === "/reports/fco"
                         ? "text-green-700 font-medium"
-                        : "text-gray-600 hover:text-gray-900"
+                        : "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100"
                     }`}
                   >
                     FCO Availability Report
@@ -718,7 +697,7 @@ const Sidebar = () => {
                     className={`block px-3 py-1 rounded-md text-sm ${
                       location.pathname === "/reports/job-dashboard"
                         ? "text-green-700 font-medium"
-                        : "text-gray-600 hover:text-gray-900"
+                        : "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100"
                     }`}
                   >
                     Job Report
@@ -738,7 +717,7 @@ const Sidebar = () => {
                 className={`flex items-center justify-between w-full px-3 py-2 rounded-md text-sm transition-colors ${
                   location.pathname.startsWith("/imports")
                     ? "bg-green-50 text-green-700 font-medium"
-                    : "text-gray-700 hover:bg-gray-100"
+                    : "text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700"
                 }`}
               >
                 <div className="flex items-center">
@@ -758,7 +737,7 @@ const Sidebar = () => {
                     className={`block px-3 py-1 rounded-md text-sm ${
                       location.pathname === "/imports/readings"
                         ? "text-green-700 font-medium"
-                        : "text-gray-600 hover:text-gray-900"
+                        : "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100"
                     }`}
                   >
                     Import Readings
@@ -768,7 +747,7 @@ const Sidebar = () => {
                     className={`block px-3 py-1 rounded-md text-sm ${
                       location.pathname === "/imports/sites"
                         ? "text-green-700 font-medium"
-                        : "text-gray-600 hover:text-gray-900"
+                        : "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100"
                     }`}
                   >
                     Import Sites
@@ -788,7 +767,7 @@ const Sidebar = () => {
                 className={`flex items-center justify-between w-full px-3 py-2 rounded-md text-sm transition-colors ${
                   location.pathname.startsWith("/engineer")
                     ? "bg-green-50 text-green-700 font-medium"
-                    : "text-gray-700 hover:bg-gray-100"
+                    : "text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700"
                 }`}
               >
                 <div className="flex items-center">
@@ -808,7 +787,7 @@ const Sidebar = () => {
                     className={`block px-3 py-1 rounded-md text-sm ${
                       location.pathname === "/engineer/forms/builder"
                         ? "text-green-700 font-medium"
-                        : "text-gray-600 hover:text-gray-900"
+                        : "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100"
                     }`}
                   >
                     Form Builder
@@ -818,7 +797,7 @@ const Sidebar = () => {
                     className={`block px-3 py-1 rounded-md text-sm ${
                       location.pathname === "/engineer/routes/builder"
                         ? "text-green-700 font-medium"
-                        : "text-gray-600 hover:text-gray-900"
+                        : "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100"
                     }`}
                   >
                     Route Builder
@@ -828,7 +807,7 @@ const Sidebar = () => {
                     className={`block px-3 py-1 rounded-md text-sm ${
                       location.pathname === "/engineer/job-allocation"
                         ? "text-green-700 font-medium"
-                        : "text-gray-600 hover:text-gray-900"
+                        : "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100"
                     }`}
                   >
                     Job Allocation
@@ -848,7 +827,7 @@ const Sidebar = () => {
                 className={`flex items-center justify-between w-full px-3 py-2 rounded-md text-sm transition-colors ${
                   location.pathname.startsWith("/holidays")
                     ? "bg-green-50 text-green-700 font-medium"
-                    : "text-gray-700 hover:bg-gray-100"
+                    : "text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700"
                 }`}
               >
                 <div className="flex items-center">
@@ -868,7 +847,7 @@ const Sidebar = () => {
                     className={`block px-3 py-1 rounded-md text-sm ${
                       location.pathname === "/holidays/calendar"
                         ? "text-green-700 font-medium"
-                        : "text-gray-600 hover:text-gray-900"
+                        : "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100"
                     }`}
                   >
                     Holiday Calendar
@@ -878,7 +857,7 @@ const Sidebar = () => {
                     className={`block px-3 py-1 rounded-md text-sm ${
                       location.pathname === "/holidays/my-requests"
                         ? "text-green-700 font-medium"
-                        : "text-gray-600 hover:text-gray-900"
+                        : "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100"
                     }`}
                   >
                     My Requests
@@ -888,7 +867,7 @@ const Sidebar = () => {
                     className={`block px-3 py-1 rounded-md text-sm ${
                       location.pathname === "/holidays/entitlements"
                         ? "text-green-700 font-medium"
-                        : "text-gray-600 hover:text-gray-900"
+                        : "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100"
                     }`}
                   >
                     My Entitlements
@@ -898,7 +877,7 @@ const Sidebar = () => {
                     className={`block px-3 py-1 rounded-md text-sm ${
                       location.pathname === "/holidays/team"
                         ? "text-green-700 font-medium"
-                        : "text-gray-600 hover:text-gray-900"
+                        : "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100"
                     }`}
                   >
                     Team View
@@ -909,7 +888,7 @@ const Sidebar = () => {
                       className={`block px-3 py-1 rounded-md text-sm ${
                         location.pathname === "/holidays/approvals"
                           ? "text-green-700 font-medium"
-                          : "text-gray-600 hover:text-gray-900"
+                          : "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100"
                       }`}
                     >
                       Approvals
@@ -922,7 +901,7 @@ const Sidebar = () => {
                         className={`block px-3 py-1 rounded-md text-sm ${
                           location.pathname === "/holidays/policies"
                             ? "text-green-700 font-medium"
-                            : "text-gray-600 hover:text-gray-900"
+                            : "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100"
                         }`}
                       >
                         HR Policies
@@ -932,7 +911,7 @@ const Sidebar = () => {
                         className={`block px-3 py-1 rounded-md text-sm ${
                           location.pathname === "/holidays/public"
                             ? "text-green-700 font-medium"
-                            : "text-gray-600 hover:text-gray-900"
+                            : "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100"
                         }`}
                       >
                         Public Holidays
@@ -969,7 +948,7 @@ const Sidebar = () => {
                 className={`flex items-center px-3 py-2 rounded-md text-sm transition-colors ${
                   location.pathname === item.path
                     ? "bg-green-50 text-green-700 font-medium"
-                    : "text-gray-700 hover:bg-gray-100"
+                    : "text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700"
                 }`}
               >
                 {getNavIcon(item.icon)}
@@ -986,7 +965,7 @@ const Sidebar = () => {
               className={`flex items-center px-3 py-2 rounded-md text-sm transition-colors ${
                 location.pathname === "/settings"
                   ? "bg-green-50 text-green-700 font-medium"
-                  : "text-gray-700 hover:bg-gray-100"
+                  : "text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700"
               }`}
             >
               <Settings className="mr-2 h-5 w-5" />
@@ -1001,12 +980,12 @@ const Sidebar = () => {
   const sidebarContent = (
     <>
       {/* App logo */}
-      <div className="p-4 border-b flex justify-between items-center">
+      <div className="p-4 border-b dark:border-gray-700 flex justify-between items-center">
         <Link to="/" className="flex items-center gap-2">
-          <h1 className="text-xl font-bold">Lux Portal</h1>
+          <h1 className="text-xl font-bold text-gray-900 dark:text-gray-100">Lux Portal</h1>
         </Link>
         <button
-          className="block md:hidden text-gray-500 hover:text-gray-700"
+          className="block md:hidden text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300"
           onClick={() => setMobileMenuOpen(false)}
         >
           <X className="h-6 w-6" />
@@ -1014,14 +993,14 @@ const Sidebar = () => {
       </div>
 
       {/* User profile section near the top */}
-      <div className="p-4 border-b mb-4">
+      <div className="p-4 border-b dark:border-gray-700 mb-4">
         <div className="flex items-center">
           <Avatar className="h-10 w-10">
             <AvatarFallback>{getInitials(username)}</AvatarFallback>
           </Avatar>
           <div className="ml-4">
-            <div className="text-sm font-medium">Welcome, {username}</div>
-            <div className="text-xs text-gray-500">{email}</div>
+            <div className="text-sm font-medium text-gray-900 dark:text-gray-100">Welcome, {username}</div>
+            <div className="text-xs text-gray-500 dark:text-gray-400">{email}</div>
           </div>
         </div>
       </div>
@@ -1032,12 +1011,12 @@ const Sidebar = () => {
       </div>
 
       {/* Bottom actions section */}
-      <div className="border-t p-4 space-y-2">
+      <div className="border-t dark:border-gray-700 p-4 space-y-2">
         {/* Notifications */}
         <div className="relative">
           <button 
             ref={notificationButtonRef}
-            className="flex items-center w-full px-3 py-2 text-sm text-gray-700 hover:bg-gray-100 rounded-md relative"
+            className="flex items-center w-full px-3 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md relative"
             onClick={() => setNotificationsOpen(true)}
           >
             <div className="relative mr-2">
@@ -1134,7 +1113,7 @@ const Sidebar = () => {
 
         {/* User Settings */}
         <button
-          className="flex items-center w-full px-3 py-2 text-sm text-gray-700 hover:bg-gray-100 rounded-md"
+          className="flex items-center w-full px-3 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md"
           onClick={() => setUserSettingsOpen(true)}
         >
           <Settings className="mr-2 h-5 w-5" />
@@ -1185,8 +1164,6 @@ const Sidebar = () => {
           throw new Error(error.response?.data?.error || "Failed to change password");
         }
       }}
-      onToggleDarkMode={toggleDarkMode}
-      darkMode={darkMode}
     />
   );
 

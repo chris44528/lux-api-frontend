@@ -1,14 +1,15 @@
 import React, { useState, useEffect } from 'react';
-import { ArrowLeft, Calendar, FileText, Eye, ChevronDown, ChevronUp } from 'lucide-react';
+import { ArrowLeft, Calendar, FileText, Eye, ChevronDown, ChevronUp, Edit2 } from 'lucide-react';
 import { LegalEnquiry, LEGAL_ENQUIRY_RECEIVERS, LEGAL_ENQUIRY_TYPES, LEGAL_ENQUIRY_TRANSACTIONS, DEED_VARIATION_PROGRESS_OPTIONS } from '../../types/legal';
 import { legalService } from '../../services/legalService';
 
 interface LegalEnquiryHistoryProps {
   siteId: string;
   onBack: () => void;
+  onEdit?: (enquiry: LegalEnquiry) => void;
 }
 
-const LegalEnquiryHistory: React.FC<LegalEnquiryHistoryProps> = ({ siteId, onBack }) => {
+const LegalEnquiryHistory: React.FC<LegalEnquiryHistoryProps> = ({ siteId, onBack, onEdit }) => {
   const [enquiries, setEnquiries] = useState<LegalEnquiry[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -124,6 +125,22 @@ const LegalEnquiryHistory: React.FC<LegalEnquiryHistoryProps> = ({ siteId, onBac
 
                 {isExpanded && (
                   <div className="border-t border-gray-200 dark:border-gray-700 p-4 space-y-4">
+                    {/* Edit Button */}
+                    {onEdit && (
+                      <div className="flex justify-end">
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onEdit(enquiry);
+                          }}
+                          className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-md transition-colors"
+                        >
+                          <Edit2 className="w-4 h-4" />
+                          Edit Enquiry
+                        </button>
+                      </div>
+                    )}
+                    
                     {/* Legal Enquiry Details */}
                     <div>
                       <h4 className="font-medium text-gray-900 dark:text-gray-100 mb-2">Legal Enquiry Details</h4>

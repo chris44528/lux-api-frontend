@@ -67,6 +67,7 @@ export interface SendEmailRequest {
   bcc_emails?: string[];
   variables: Record<string, string>;
   save_log?: boolean;
+  email_account_id?: number;
 }
 
 export interface SendEmailResponse {
