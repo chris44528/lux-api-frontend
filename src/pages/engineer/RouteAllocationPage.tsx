@@ -739,8 +739,10 @@ const RouteAllocationPage: React.FC = () => {
                             return null;
                           }
                           const statusName = String(status.name || '');
+                          // Ensure we have a valid string key
+                          const statusKey = `status-${status.id || statusName}`;
                           return (
-                            <SelectItem key={status.id} value={statusName}>
+                            <SelectItem key={statusKey} value={statusName}>
                               {statusName}
                             </SelectItem>
                           );
@@ -759,10 +761,12 @@ const RouteAllocationPage: React.FC = () => {
                   <SelectValue placeholder="Select region" />
                 </SelectTrigger>
                 <SelectContent>
-                  {regions.map(region => {
+                  {regions.map((region, index) => {
                     const regionStr = String(region || '');
+                    // Use index as fallback for key to ensure uniqueness
+                    const regionKey = regionStr || `region-${index}`;
                     return (
-                      <SelectItem key={regionStr} value={regionStr}>
+                      <SelectItem key={regionKey} value={regionStr}>
                         {regionStr === 'all' ? 'All Regions' : regionStr}
                       </SelectItem>
                     );
@@ -952,8 +956,11 @@ const RouteAllocationPage: React.FC = () => {
                   
                   {routeJobs
                     .sort((a, b) => a.order - b.order)
-                    .map((job, index) => (
-                      <React.Fragment key={job.id}>
+                    .map((job, index) => {
+                      // Ensure we have a unique key that's always a string
+                      const timelineKey = job.is_static ? `timeline-static-${job.static_type}-${index}` : `timeline-job-${job.id}`;
+                      return (
+                        <React.Fragment key={timelineKey}>
                         {index > 0 && job.travel_time && (
                           <div className="flex items-center gap-2 text-xs bg-blue-100 px-3 py-2 rounded-lg whitespace-nowrap">
                             <Truck className="h-4 w-4 text-blue-600" />
@@ -985,7 +992,8 @@ const RouteAllocationPage: React.FC = () => {
                           )}
                         </div>
                       </React.Fragment>
-                    ))}
+                      );
+                    })}
                   
                   <div className="flex items-center gap-2 text-xs bg-red-100 px-3 py-2 rounded-lg whitespace-nowrap">
                     <Clock className="h-4 w-4 text-red-600" />
@@ -1028,12 +1036,18 @@ const RouteAllocationPage: React.FC = () => {
                   <div className="space-y-2">
                     <Label>Select Date</Label>
                     <Select
-                      value={selectedDate ? selectedDate.toISOString().split('T')[0] : ''}
+                      value={selectedDate && selectedDate instanceof Date && !isNaN(selectedDate.getTime()) ? selectedDate.toISOString().split('T')[0] : ''}
                       onValueChange={(value) => {
                         try {
-                          const newDate = new Date(value);
-                          if (!isNaN(newDate.getTime())) {
-                            setSelectedDate(newDate);
+                          // Ensure value is a string
+                          const dateStr = String(value || '');
+                          if (dateStr && dateStr !== 'no-jobs' && dateStr !== 'no-dates') {
+                            const newDate = new Date(dateStr);
+                            if (!isNaN(newDate.getTime())) {
+                              setSelectedDate(newDate);
+                            } else {
+                              console.error('Invalid date value:', dateStr);
+                            }
                           }
                         } catch (e) {
                           console.error('Error parsing date:', e, value);
@@ -1054,15 +1068,18 @@ const RouteAllocationPage: React.FC = () => {
                             No available dates found for selected jobs
                           </SelectItem>
                         ) : (
-                          availableDates.map((dateInfo) => {
+                          availableDates.map((dateInfo, index) => {
                             // Count engineers available on this date
                             const engineersOnDate = availableEngineers.filter(eng =>
                               eng.availability_dates.some(d => d.date === dateInfo.date)
                             );
+                            // Ensure we have a valid string key
+                            const dateKey = dateInfo.date || `date-${index}`;
+                            const dateValue = String(dateInfo.date || '');
                             return (
                               <SelectItem 
-                                key={dateInfo.date} 
-                                value={dateInfo.date}
+                                key={dateKey} 
+                                value={dateValue}
                               >
                                 {(() => {
                                   try {
@@ -1103,7 +1120,7 @@ const RouteAllocationPage: React.FC = () => {
                 </CardHeader>
                 <CardContent>
                   <Select
-                    value={selectedEngineerAvailability?.id.toString()}
+                    value={selectedEngineerAvailability?.id ? String(selectedEngineerAvailability.id) : ''}
                     onValueChange={(value) => {
                       const engineerAvail = availableEngineers.find(e => e.id.toString() === value);
                       setSelectedEngineerAvailability(engineerAvail || null);
@@ -1127,7 +1144,7 @@ const RouteAllocationPage: React.FC = () => {
                     <SelectTrigger>
                       <SelectValue placeholder={
                         selectedJobs.length === 0 ? "Select jobs first" : 
-                        !selectedDate ? "Select date first" : 
+                        (!selectedDate || !(selectedDate instanceof Date)) ? "Select date first" : 
                         "Select engineer"
                       } />
                     </SelectTrigger>
@@ -1190,8 +1207,8 @@ const RouteAllocationPage: React.FC = () => {
                             
                             return (
                               <SelectItem 
-                                key={engineer.id} 
-                                value={engineer.id.toString()}
+                                key={`engineer-${engineer.id}`} 
+                                value={String(engineer.id)}
                                 disabled={!dateInfo.can_accommodate_jobs}
                               >
                                 {displayText}
@@ -1356,9 +1373,11 @@ const RouteAllocationPage: React.FC = () => {
                   <div className="grid grid-cols-2 gap-2">
                     {STATIC_JOBS.map(job => {
                       const Icon = job.icon;
+                      // Ensure job.id is a string
+                      const jobKey = String(job.id);
                       return (
                         <Button
-                          key={job.id}
+                          key={jobKey}
                           variant="outline"
                           size="sm"
                           onClick={() => handleAddStaticJob(job)}
@@ -1392,13 +1411,16 @@ const RouteAllocationPage: React.FC = () => {
                         Select jobs from the left panel to build route
                       </p>
                     ) : (
-                      routeJobs.map((job, index) => (
-                        <div
-                          key={job.id}
-                          className={`rounded-lg border p-3 ${
-                            job.is_static ? 'bg-gray-50' : 'bg-white'
-                          }`}
-                        >
+                      routeJobs.map((job, index) => {
+                        // Ensure we have a unique key that's always a string
+                        const jobKey = job.is_static ? `static-${job.static_type}-${index}` : `job-${job.id}`;
+                        return (
+                          <div
+                            key={jobKey}
+                            className={`rounded-lg border p-3 ${
+                              job.is_static ? 'bg-gray-50' : 'bg-white'
+                            }`}
+                          >
                           <div className="flex items-start gap-3">
                             <span className="flex-shrink-0 w-6 h-6 bg-blue-500 text-white rounded-full flex items-center justify-center text-xs font-bold">
                               {job.order}
@@ -1440,7 +1462,8 @@ const RouteAllocationPage: React.FC = () => {
                             </Button>
                           </div>
                         </div>
-                      ))
+                        );
+                      })}
                     )}
                   </div>
                 </CardContent>
