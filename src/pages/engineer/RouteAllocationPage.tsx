@@ -1463,7 +1463,7 @@ const RouteAllocationPage: React.FC = () => {
                           </div>
                         </div>
                         );
-                      })}
+                      })
                     )}
                   </div>
                 </CardContent>
