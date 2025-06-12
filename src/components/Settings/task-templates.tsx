@@ -211,34 +211,42 @@ export default function TaskTemplates({ jobTypes = [], queues = [] }: TaskTempla
     }
 
     try {
-      // Determine the next step order
+      // Determine the next step order - check both step_order and sequence_number fields
       const nextStepOrder = selectedTemplate.steps?.length 
-        ? Math.max(...selectedTemplate.steps.map(s => s.step_order || 0)) + 1 
+        ? Math.max(...selectedTemplate.steps.map(s => s.step_order || s.sequence_number || 0)) + 1 
         : 1;
 
-      // Create a new step
-      const newStep = await jobService.createTaskStep(selectedTemplate.id, {
-        ...stepForm,
-        step_order: nextStepOrder,
-        // Explicitly include next_step only if it's a jump action
+      // Create a new step - map frontend fields to backend fields
+      const stepData = {
+        name: stepForm.name,
+        description: stepForm.description,
+        step_type: stepForm.instructions || stepForm.action_type, // Backend uses step_type
+        sequence_number: nextStepOrder, // Backend uses sequence_number instead of step_order
+        is_required: stepForm.is_required,
+        is_conditional: stepForm.is_conditional,
+        success_record_type: stepForm.success_record_type,
+        success_options: stepForm.success_options,
+        // Only include next_step if it's a jump action
         ...(stepForm.action_type === 'jump' ? { next_step: stepForm.next_step } : {})
-      });
-
-      // Update the selected template with the new step
-      const updatedTemplate = {
-        ...selectedTemplate,
-        steps: [...(selectedTemplate.steps || []), newStep]
       };
+      
+      await jobService.createTaskStep(selectedTemplate.id, stepData);
 
-      // Update templates state
+      // Fetch the updated template to ensure we have the latest data from the backend
+      const updatedTemplateData = await jobService.getTaskTemplate(selectedTemplate.id);
+      
+      // Update templates state with the fresh data
       setTemplates(templates.map(t => 
-        t.id === selectedTemplate.id ? updatedTemplate : t
+        t.id === selectedTemplate.id ? updatedTemplateData : t
       ));
       
       // Also update filtered templates
       setFilteredTemplates(filteredTemplates.map(t => 
-        t.id === selectedTemplate.id ? updatedTemplate : t
+        t.id === selectedTemplate.id ? updatedTemplateData : t
       ));
+      
+      // Update the selected template for the modal
+      setSelectedTemplate(updatedTemplateData);
 
       // Reset form state
       setStepForm({
@@ -380,12 +388,20 @@ export default function TaskTemplates({ jobTypes = [], queues = [] }: TaskTempla
 
     try {
 
-      // Update the step through the API
-      const updatedStep = await jobService.updateTaskStep(editingStepId, {
-        ...stepForm,
+      // Update the step through the API - map frontend fields to backend fields
+      const updateData = {
+        name: stepForm.name,
+        description: stepForm.description,
+        step_type: stepForm.instructions || stepForm.action_type, // Backend uses step_type
+        is_required: stepForm.is_required,
+        is_conditional: stepForm.is_conditional,
+        success_record_type: stepForm.success_record_type,
+        success_options: stepForm.success_options,
         // Only include next_step if it's a jump action
-        ...(stepForm.action_type === 'jump' ? { next_step: stepForm.next_step } : { next_step: undefined })
-      });
+        ...(stepForm.action_type === 'jump' ? { next_step: stepForm.next_step } : {})
+      };
+      
+      const updatedStep = await jobService.updateTaskStep(editingStepId, updateData);
 
 
       // Update the step in the selected template

@@ -16,6 +16,7 @@ export interface Job {
   site_id?: number; // Add direct site_id property
   site: number; // Now always a number (site ID)
   site_name?: string; // Site name is now a separate field
+  site_fco?: string; // FCO field from the site
   client: string;
   address: string;
   priority: "low" | "medium" | "high";
@@ -271,6 +272,7 @@ export interface TaskTemplate {
     name: string;
     description: string;
     step_order: number;
+    sequence_number?: number; // Backend field name
     action_type: string;
     instructions?: string;
     is_required?: boolean;
@@ -296,6 +298,9 @@ export interface JobFilters {
   technician_id?: string | number;
   search?: string;
   assignedTo?: number[];
+  page?: number;
+  page_size?: number;
+  site_fco?: string[]; // Add FCO filter support
 }
 
 export interface StepStatusData {
@@ -336,6 +341,7 @@ export interface JobType {
   id: number;
   name: string;
   queue?: number;
+  estimated_duration_minutes?: number;
   created_at: string;
   updated_at: string;
 }
@@ -407,6 +413,19 @@ const jobService = {
       // Add site_id filter if provided
       if (filters.site_id) {
         params.append("site_id", filters.site_id.toString());
+      }
+
+      // Add FCO filter if provided
+      if (filters.site_fco?.length) {
+        filters.site_fco.forEach((fco) => params.append("site_fco", fco));
+      }
+
+      // Add pagination parameters
+      if (filters.page) {
+        params.append("page", filters.page.toString());
+      }
+      if (filters.page_size) {
+        params.append("page_size", filters.page_size.toString());
       }
 
       const response = await api.get<PaginatedResponse<Job>>(
@@ -996,9 +1015,23 @@ const jobService = {
   async createJobType(data: {
     name: string;
     queue?: number | null;
+    estimated_duration_minutes?: number;
   }): Promise<JobType> {
     try {
       const response = await api.post(`/job-types/`, data);
+      return response.data;
+    } catch (error) {
+      throw error;
+    }
+  },
+
+  async updateJobType(id: number, data: {
+    name?: string;
+    queue?: number | null;
+    estimated_duration_minutes?: number;
+  }): Promise<JobType> {
+    try {
+      const response = await api.patch(`/job-types/${id}/`, data);
       return response.data;
     } catch (error) {
       throw error;
@@ -1200,6 +1233,48 @@ const jobService = {
   async deleteJobCategory(id: number): Promise<void> {
     try {
       await api.delete(`/job-categories/${id}/`);
+    } catch (error) {
+      throw error;
+    }
+  },
+
+  // Job Status Management
+  async createJobStatus(data: { name: string; color: string; queue?: number | null }): Promise<JobStatus> {
+    try {
+      const response = await api.post(`/job-statuses/`, data);
+      return response.data;
+    } catch (error) {
+      throw error;
+    }
+  },
+
+  async deleteJobStatus(id: number): Promise<void> {
+    try {
+      await api.delete(`/job-statuses/${id}/`);
+    } catch (error) {
+      throw error;
+    }
+  },
+
+  // Task Template Step Management
+  async createTaskStep(templateId: number, data: any): Promise<any> {
+    try {
+      // Include the template ID in the request body as expected by the backend
+      const stepData = {
+        ...data,
+        template: templateId
+      };
+      const response = await api.post(`/task-steps/`, stepData);
+      return response.data;
+    } catch (error) {
+      throw error;
+    }
+  },
+
+  async updateTaskStep(stepId: number, data: any): Promise<any> {
+    try {
+      const response = await api.patch(`/task-steps/${stepId}/`, data);
+      return response.data;
     } catch (error) {
       throw error;
     }

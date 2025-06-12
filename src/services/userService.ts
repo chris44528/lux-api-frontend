@@ -71,6 +71,24 @@ export const deactivateUser = async (id: number): Promise<User> => {
   }
 };
 
+export const approveUser = async (id: number): Promise<User> => {
+  try {
+    const response = await api.post(`/users/${id}/activate/`);
+    return response.data;
+  } catch (error) {
+    throw error;
+  }
+};
+
+export const unapproveUser = async (id: number): Promise<User> => {
+  try {
+    const response = await api.post(`/users/${id}/deactivate/`);
+    return response.data;
+  } catch (error) {
+    throw error;
+  }
+};
+
 export const resetPassword = async (email: string): Promise<void> => {
   try {
     await api.post(`/users/password-reset/`, { email });
@@ -522,6 +540,8 @@ const userService = {
   removeGroupAccess,
   activateUser,
   deactivateUser,
+  approveUser,
+  unapproveUser,
   resetPassword,
   requestPasswordReset,
   confirmPasswordReset,

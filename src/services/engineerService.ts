@@ -59,13 +59,99 @@ interface RouteAllocationData {
   engineer_id: number;
   date: string;
   jobs: any[];
-  start_location: string;
-  end_location: string;
+  start_time?: string;
+  end_time?: string;
+}
+
+interface EngineerAvailability {
+  id: number;
+  name: string;
+  employee_id: string;
+  max_weekly_hours: number;
+  estimated_job_hours: number;
+  availability_dates: Array<{
+    date: string;
+    distance_km: number;
+    remaining_weekly_hours: number;
+    hours_worked_this_week: number;
+    can_accommodate_jobs: boolean;
+    would_cause_overtime: boolean;
+    no_route: boolean;
+  }>;
+}
+
+interface EngineersByLocationResponse {
+  jobs: Array<{ id: number; title: string }>;
+  location: { latitude: number; longitude: number };
+  available_engineers: EngineerAvailability[];
+  total_job_duration_hours: number;
+}
+
+interface RouteTimelineItem {
+  type: 'start' | 'travel' | 'job' | 'break' | 'end';
+  time: string;
+  duration_minutes: number;
+  description: string;
+  location?: string;
+  is_travel: boolean;
+  distance_km?: number;
+  job_id?: number;
+  job_type?: string;
+  priority?: string;
+  is_completed?: boolean;
+}
+
+interface RouteTimelineResponse {
+  timeline: RouteTimelineItem[];
+  summary: {
+    total_work_hours: number;
+    total_travel_hours: number;
+    total_job_hours: number;
+    job_count: number;
+    completion_percentage: number;
+  };
+  engineer: {
+    id: number;
+    name: string;
+    employee_id: string;
+  };
+  weekly_hours: {
+    week_start: string;
+    max_weekly_hours: number;
+    hours_worked: number;
+    remaining_hours: number;
+  };
+}
+
+interface AllocateJobsRequest {
+  engineer_id: number;
+  job_ids: number[];
+  date: string;
+  override_hours_limit?: boolean;
+}
+
+interface AllocateJobsResponse {
+  status: 'success' | 'error';
+  route_id?: number;
+  jobs_allocated?: number;
+  total_duration_hours?: number;
+  weekly_hours_status?: {
+    hours_allocated: number;
+    max_weekly_hours: number;
+    is_overtime: boolean;
+  };
+  error?: string;
+  details?: {
+    remaining_hours: number;
+    required_hours: number;
+    would_cause_overtime: boolean;
+    overtime_hours: number;
+  };
 }
 
 class EngineerService {
   private api: AxiosInstance;
-  private baseURL = '/api/engineer';
+  private baseURL = '/api/v1/engineer';
 
   constructor() {
     this.api = axios.create({
@@ -160,24 +246,79 @@ class EngineerService {
   }
 
   async saveRouteAllocation(allocationData: RouteAllocationData) {
-    // Create a route with the allocated jobs
-    const routeData = {
-      engineer: allocationData.engineer_id,
+    // Extract non-static jobs
+    const nonStaticJobs = allocationData.jobs.filter(j => !j.is_static);
+    
+    // Prepare the payload for route optimization endpoint
+    const optimizationPayload = {
+      engineer_id: allocationData.engineer_id,
       date: allocationData.date,
-      status: 'assigned',
-      start_location: allocationData.start_location,
-      end_location: allocationData.end_location
+      job_ids: nonStaticJobs.map(job => job.id),
+      start_time: allocationData.start_time || '08:00',
+      end_time: allocationData.end_time || '17:00',
+      use_enhanced_optimization: true,
+      include_traffic: true,
+      include_breaks: true,
+      prefer_clusters: true,
+      constraints: {
+        max_distance_km: 200,
+        service_time_minutes: 45,
+        max_hours_per_day: 8,
+        break_interval_hours: 4,
+        break_duration_minutes: 30
+      }
     };
     
-    const routeResponse = await this.api.post('/routes/', routeData);
-    const routeId = routeResponse.data.id;
-    
-    // Add jobs to the route
-    for (const job of allocationData.jobs) {
-      await this.addJobToRoute(routeId, job.id);
+    // If we have optimized route data with coordinates, include start location
+    if (allocationData.jobs.length > 0 && allocationData.jobs[0].arrival_time) {
+      // Route is already optimized, just save it
+      const routeData: any = {
+        engineer_id: allocationData.engineer_id,
+        date: allocationData.date,
+        status: 'planned',
+        notes: `Route created with ${nonStaticJobs.length} jobs`,
+        optimized_order: []
+      };
+      
+      // Calculate total distance and duration
+      let totalDistance = 0;
+      let totalDuration = 0;
+      
+      allocationData.jobs.forEach(job => {
+        if (job.distance_from_previous) {
+          totalDistance += job.distance_from_previous;
+        }
+        if (job.estimated_duration) {
+          totalDuration += job.estimated_duration;
+        }
+        if (job.travel_time) {
+          totalDuration += job.travel_time;
+        }
+      });
+      
+      if (totalDistance > 0) {
+        routeData.total_distance_km = Math.round(totalDistance * 100) / 100;
+      }
+      if (totalDuration > 0) {
+        routeData.estimated_duration_minutes = Math.round(totalDuration);
+      }
+      
+      // Include job order information
+      routeData.job_ids = nonStaticJobs.map(job => job.id);
+      routeData.optimized_order = nonStaticJobs.map((job, index) => ({
+        job_id: job.id,
+        sequence_order: job.order || index + 1,
+        arrival_time: job.arrival_time,
+        departure_time: job.departure_time,
+        travel_time_minutes: job.travel_time,
+        distance_from_previous: job.distance_from_previous
+      }));
     }
     
-    return routeResponse.data;
+    // Post to route optimization endpoint
+    const response = await this.api.post('/route-optimization/', optimizationPayload);
+    
+    return response.data;
   }
 
   // Form Templates
@@ -280,10 +421,57 @@ class EngineerService {
     return response.data;
   }
 
+  // Get engineers by location
+  async getEngineersByLocation(data: {
+    job_ids: number[];
+    date?: string;
+    max_distance_km?: number;
+  }): Promise<EngineersByLocationResponse> {
+    const response = await this.api.post('/engineers-by-location/', data);
+    return response.data;
+  }
+
+  // Get route timeline
+  async getRouteTimeline(routeId: number): Promise<RouteTimelineResponse> {
+    const response = await this.api.get(`/route-timeline/${routeId}/`);
+    return response.data;
+  }
+
+  // Allocate jobs to engineer
+  async allocateJobs(data: AllocateJobsRequest): Promise<AllocateJobsResponse> {
+    const response = await this.api.post('/allocate-jobs/', data);
+    return response.data;
+  }
+
   // Cache management (placeholder - will be implemented with IndexedDB)
   private async getCachedData(url: string): Promise<any> {
     // This will be implemented with IndexedDB storage service
     return null;
+  }
+
+  // Engineer Management
+  async getUsersWithoutProfiles() {
+    const response = await this.api.get('/users-without-profiles/');
+    return response.data;
+  }
+
+  async createEngineerFromUser(data: {
+    user_id: number;
+    employee_id?: string;
+    phone_number?: string;
+    specialization?: string;
+    skills?: string[];
+    certifications?: Array<{ name: string; expiry: string }>;
+    status?: string;
+    home_address?: string;
+  }) {
+    const response = await this.api.post('/create-from-user/', data);
+    return response.data;
+  }
+
+  async updateEngineer(id: number, data: any) {
+    const response = await this.api.patch(`/engineers/${id}/`, data);
+    return response.data;
   }
 }
 

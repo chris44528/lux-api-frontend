@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -10,6 +10,7 @@ import { GroupDataFilters } from "@/components/Settings/GroupDataFilters";
 import DepartmentsSettings from "@/components/Settings/departments";
 import CannedMessagesSettings from "@/components/Settings/CannedMessagesSettings";
 import { JobStatuses, JobTypes, JobCategories, JobTags, TaskTemplates, UserManagement, GroupManagement, UIPermissionsManagement, EmailTemplatesSettings } from "@/components/Settings";
+import EngineerManagement from "@/components/Settings/EngineerManagement";
 import HolidayEntitlements from "@/components/Settings/HolidayEntitlements";
 import HolidayPolicies from "@/components/Settings/HolidayPolicies";
 import PublicHolidays from "@/components/Settings/PublicHolidays";
@@ -19,9 +20,49 @@ import EmailAccountManagement from "@/components/Settings/EmailAccountManagement
 import { TestPermissions } from "@/components/TestPermissions";
 import { TestBulkUpdate } from "@/components/TestBulkUpdate";
 
+// Import jobService to fetch data
+import jobService from "@/services/jobService";
+
 const ModernSettingsPage = () => {
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<string | null>(null);
+  
+  // State for job-related data
+  const [jobStatuses, setJobStatuses] = useState<any[]>([]);
+  const [jobQueues, setJobQueues] = useState<any[]>([]);
+  const [jobTypes, setJobTypes] = useState<any[]>([]);
+  const [jobCategories, setJobCategories] = useState<any[]>([]);
+  const [jobTags, setJobTags] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  // Function to fetch job data
+  const fetchJobData = async () => {
+    try {
+      setLoading(true);
+      const [statuses, queues, types, categories, tags] = await Promise.all([
+        jobService.getJobStatuses(),
+        jobService.getJobQueues(),
+        jobService.getJobTypes(),
+        jobService.getJobCategories(),
+        jobService.getJobTags()
+      ]);
+      
+      setJobStatuses(statuses);
+      setJobQueues(queues);
+      setJobTypes(types);
+      setJobCategories(categories);
+      setJobTags(tags);
+    } catch (error) {
+      console.error("Failed to fetch job configuration data:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Fetch job configuration data when component mounts
+  useEffect(() => {
+    fetchJobData();
+  }, []);
 
   // Mock data for overview stats - this should come from your API
   const overviewStats = [
@@ -35,11 +76,11 @@ const ModernSettingsPage = () => {
     {
       id: "user-management",
       title: "User Management",
-      description: "Manage users and groups",
+      description: "Manage users, groups, and engineers",
       icon: Users,
       color: "bg-blue-50 border-blue-200",
       iconColor: "text-blue-600",
-      tabs: ["users", "groups"]
+      tabs: ["users", "groups", "engineers"]
     },
     {
       id: "job-settings",
@@ -89,6 +130,7 @@ const ModernSettingsPage = () => {
     { id: "job-automation", label: "Job Automation", category: "job-settings", icon: Cpu },
     { id: "users", label: "Users", category: "user-management" },
     { id: "groups", label: "Groups", category: "user-management" },
+    { id: "engineers", label: "Engineers", category: "user-management" },
     { id: "holiday-policies", label: "Holiday Policies", category: "holiday-management" },
     { id: "holiday-entitlements", label: "Entitlements", category: "holiday-management" },
     { id: "public-holidays", label: "Public Holidays", category: "holiday-management" },
@@ -240,7 +282,11 @@ const ModernSettingsPage = () => {
                 <CardDescription className="text-gray-600 dark:text-gray-400">Manage job status configurations</CardDescription>
               </CardHeader>
               <CardContent>
-                <JobStatuses jobStatuses={[]} jobQueues={[]} />
+                {loading ? (
+                  <div className="py-4 text-center">Loading job statuses...</div>
+                ) : (
+                  <JobStatuses jobStatuses={jobStatuses} jobQueues={jobQueues} onRefresh={fetchJobData} />
+                )}
               </CardContent>
             </Card>
           </TabsContent>
@@ -252,7 +298,11 @@ const ModernSettingsPage = () => {
                 <CardDescription className="text-gray-600 dark:text-gray-400">Configure different types of jobs</CardDescription>
               </CardHeader>
               <CardContent>
-                <JobTypes jobTypes={[]} jobQueues={[]} />
+                {loading ? (
+                  <div className="py-4 text-center">Loading job types...</div>
+                ) : (
+                  <JobTypes jobTypes={jobTypes} jobQueues={jobQueues} />
+                )}
               </CardContent>
             </Card>
           </TabsContent>
@@ -264,7 +314,11 @@ const ModernSettingsPage = () => {
                 <CardDescription className="text-gray-600 dark:text-gray-400">Organize jobs by categories</CardDescription>
               </CardHeader>
               <CardContent>
-                <JobCategories jobCategories={[]} jobQueues={[]} />
+                {loading ? (
+                  <div className="py-4 text-center">Loading job categories...</div>
+                ) : (
+                  <JobCategories jobCategories={jobCategories} jobQueues={jobQueues} onRefresh={fetchJobData} />
+                )}
               </CardContent>
             </Card>
           </TabsContent>
@@ -276,7 +330,11 @@ const ModernSettingsPage = () => {
                 <CardDescription className="text-gray-600 dark:text-gray-400">Create tags for job classification</CardDescription>
               </CardHeader>
               <CardContent>
-                <JobTags jobTags={[]} jobQueues={[]} />
+                {loading ? (
+                  <div className="py-4 text-center">Loading job tags...</div>
+                ) : (
+                  <JobTags jobTags={jobTags} jobQueues={jobQueues} onRefresh={fetchJobData} />
+                )}
               </CardContent>
             </Card>
           </TabsContent>
@@ -288,7 +346,11 @@ const ModernSettingsPage = () => {
                 <CardDescription className="text-gray-600 dark:text-gray-400">Manage reusable task templates</CardDescription>
               </CardHeader>
               <CardContent>
-                <TaskTemplates jobTypes={[]} queues={[]} />
+                {loading ? (
+                  <div className="py-4 text-center">Loading task templates...</div>
+                ) : (
+                  <TaskTemplates jobTypes={jobTypes} queues={jobQueues} />
+                )}
               </CardContent>
             </Card>
           </TabsContent>
@@ -306,6 +368,9 @@ const ModernSettingsPage = () => {
             <GroupManagement />
           </TabsContent>
 
+          <TabsContent value="engineers">
+            <EngineerManagement />
+          </TabsContent>
 
           {/* Access Control Tabs */}
           <TabsContent value="data-filters">

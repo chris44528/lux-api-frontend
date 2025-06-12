@@ -3,13 +3,14 @@
 import { useState, useEffect } from "react"
 import { useNavigate } from "react-router-dom"
 import { Button } from "../ui/button"
-import { PlusCircle } from "lucide-react"
+import { PlusCircle, ChevronDown } from "lucide-react"
 import { useToast } from "../../hooks/use-toast"
 import { Badge } from "../ui/badge"
 import { JobFilter, type JobFilters } from "./job-filter"
 import jobService, { Job, Technician, JobStatus, JobQueue, JobTask, TaskStepInstance } from "../../services/jobService"
-import { getBulkSiteCommunicationStatus } from "../../services/api"
-import { getUsers } from "../../services/userService"
+import { useUIPermission } from "../../hooks/useUIPermission"
+import { getBulkSiteCommunicationStatus, getSiteDetail, getFcoList } from "../../services/api"
+import { getUsers, getGroups, getUsersInGroup } from "../../services/userService"
 import { User } from "../../types/user"
 
 // Extended Job interface with current step info
@@ -22,9 +23,11 @@ interface ExtendedJob extends Job {
     last_reading_date?: string;
     last_reading_value?: number;
   };
+  fco?: string;
 }
 import { BulkAssignModal, BulkDeleteModal, BulkUpdateModal } from "./bulk-actions"
 import { BulkMeterTestModal } from "./BulkMeterTestModal"
+import { BulkStatusChangeModal } from "./bulk-status-change"
 import {
   Table,
   TableBody,
@@ -34,7 +37,8 @@ import {
   TableRow,
 } from "../ui/table"
 import { Checkbox } from "../ui/checkbox"
-import { format } from "date-fns"
+import { Popover, PopoverContent, PopoverTrigger } from "../ui/popover"
+import { Label } from "../ui/label"
 
 interface PaginatedResponse<T> {
   count: number
@@ -50,12 +54,21 @@ const defaultFilters: JobFilters = {
   queue: [],
   search: '',
   saveAsDefault: false,
-  defaultQueue: null
+  defaultQueue: null,
+  fco: []
 }
 
 const getSavedFilters = (): JobFilters | null => {
   const savedFilters = localStorage.getItem('jobFilters')
-  return savedFilters ? JSON.parse(savedFilters) : null
+  if (savedFilters) {
+    const parsed = JSON.parse(savedFilters)
+    // Ensure fco is an array, not null
+    if (!parsed.fco || !Array.isArray(parsed.fco)) {
+      parsed.fco = []
+    }
+    return parsed
+  }
+  return null
 }
 
 interface JobTableProps {
@@ -67,6 +80,7 @@ export function JobTable({ showOnlyCompleted = false }: JobTableProps) {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [filteredJobs, setFilteredJobs] = useState<ExtendedJob[]>([])
+  const [totalJobCount, setTotalJobCount] = useState<number>(0)
   // Removed unused loadingSteps state
   const [allUsers, setAllUsers] = useState<User[]>([])
   const [statuses, setStatuses] = useState<JobStatus[]>([])
@@ -77,10 +91,23 @@ export function JobTable({ showOnlyCompleted = false }: JobTableProps) {
   const [showDeleteModal, setShowDeleteModal] = useState(false)
   const [showUpdateModal, setShowUpdateModal] = useState(false)
   const [showMeterTestModal, setShowMeterTestModal] = useState(false)
-  // Removed unused pagination states
+  const [showStatusChangeModal, setShowStatusChangeModal] = useState(false)
+  const [currentPage, setCurrentPage] = useState(1)
+  const [totalPages, setTotalPages] = useState(1)
+  const [pageSize] = useState(10) // Jobs per page
+  const [openHeaderFilter, setOpenHeaderFilter] = useState<string | null>(null)
+  const [availableFCOs, setAvailableFCOs] = useState<string[]>([])
+  const [loadingFCOs, setLoadingFCOs] = useState(false)
   
   const { toast } = useToast()
   const navigate = useNavigate()
+  
+  // UI Permission checks
+  const canChangeJobStatus = useUIPermission('jobs.list.bulk_status_change')
+  const canBulkUpdateJobs = useUIPermission('jobs.list.bulk_update')
+  const canDeleteJobs = useUIPermission('jobs.list.bulk_delete')
+  const canAssignJobs = useUIPermission('jobs.list.bulk_assign')
+
 
   // Function to get the current step for each job
   const fetchJobsWithSteps = async (jobsList: Job[]) => {
@@ -90,7 +117,8 @@ export function JobTable({ showOnlyCompleted = false }: JobTableProps) {
       const extendedJobs: ExtendedJob[] = jobsList.map(job => ({
         ...job,
         currentStep: "Loading...",
-        siteStatus: { status: 'loading' }
+        siteStatus: { status: 'loading' },
+        fco: job.site_fco // Use FCO from backend response
       }))
       
       // Update the jobs state immediately with loading state
@@ -100,18 +128,15 @@ export function JobTable({ showOnlyCompleted = false }: JobTableProps) {
       const siteIds = jobsList
         .filter(job => job.site !== null && job.site !== undefined)
         .map(job => {
-          // Handle both cases: site as number or site as object
-          if (typeof job.site === 'number') {
-            return job.site;
-          } else if (typeof job.site === 'object' && job.site.site_id) {
-            return job.site.site_id;
-          }
-          return null;
+          // Site is always a number (site ID)
+          return typeof job.site === 'number' ? job.site : null;
         })
         .filter(id => id !== null) as number[];
       
       const uniqueSiteIds = [...new Set(siteIds)];
       const siteStatuses = await getBulkSiteCommunicationStatus(uniqueSiteIds);
+      
+      // Don't fetch FCO data during initial load - it will be loaded lazily
       
       // For each job, fetch its tasks and update state
       const jobsWithSteps = await Promise.all(
@@ -186,11 +211,9 @@ export function JobTable({ showOnlyCompleted = false }: JobTableProps) {
             let siteStatus: ExtendedJob['siteStatus'] = { status: 'loading' };
             let siteId: number | null = null;
             
-            // Extract site ID from either number or object format
+            // Site is always a number (site ID)
             if (typeof job.site === 'number') {
               siteId = job.site;
-            } else if (typeof job.site === 'object' && job.site && job.site.site_id) {
-              siteId = job.site.site_id;
             }
             
             if (siteId !== null) {
@@ -211,7 +234,8 @@ export function JobTable({ showOnlyCompleted = false }: JobTableProps) {
               ...job,
               currentStep: currentStepName,
               tasks,
-              siteStatus
+              siteStatus,
+              fco: job.site_fco // FCO now comes from backend
             }
           } catch (error) {
             // Return job with error message
@@ -237,11 +261,16 @@ export function JobTable({ showOnlyCompleted = false }: JobTableProps) {
       setLoading(true)
       // Adapt filters to match service interface
       const serviceFilters = {
-        status: filters.status,
+        status: showOnlyCompleted 
+          ? ['completed'] 
+          : (filters.status.length > 0 ? filters.status : undefined), // If no status filter and not showing completed, backend should exclude completed
         priority: filters.priority,
         queue: filters.queue,
         assignedTo: filters.assignedTo.map(id => id === 'unassigned' ? -1 : parseInt(id)),
-        search: filters.search || ''
+        search: filters.search || '',
+        page: currentPage,
+        page_size: pageSize,
+        site_fco: filters.fco && filters.fco.length > 0 ? filters.fco : undefined
       }
       
       const response = await jobService.getJobs(serviceFilters)
@@ -250,10 +279,12 @@ export function JobTable({ showOnlyCompleted = false }: JobTableProps) {
       if (response && typeof response === 'object' && 'results' in response) {
         const paginatedResponse = response as unknown as PaginatedResponse<Job>
         jobsList = paginatedResponse.results
-        // setTotalPages(Math.ceil(paginatedResponse.count / 10))
+        setTotalJobCount(paginatedResponse.count)
+        setTotalPages(Math.ceil(paginatedResponse.count / pageSize))
       } else if (Array.isArray(response)) {
         jobsList = response
-        // setTotalPages(1)
+        setTotalJobCount(response.length)
+        setTotalPages(1)
       }
       
       // First update with basic job data
@@ -270,159 +301,109 @@ export function JobTable({ showOnlyCompleted = false }: JobTableProps) {
 
   useEffect(() => {
     fetchData()
-  }, [filters])
+  }, [filters, currentPage, showOnlyCompleted])
 
-  // Load all data from API
+  // Remove FCO lazy loading - no longer needed since backend provides FCO
+
+  // Fetch available FCO values for the filter dropdown
+  useEffect(() => {
+    const fetchAvailableFCOs = async () => {
+      setLoadingFCOs(true);
+      try {
+        // Get ALL FCO values from the system
+        const fcoList = await getFcoList();
+        if (fcoList && Array.isArray(fcoList)) {
+          setAvailableFCOs(fcoList.filter(fco => fco && fco !== ''));
+        } else if (fcoList && fcoList.fcos && Array.isArray(fcoList.fcos)) {
+          setAvailableFCOs(fcoList.fcos.filter(fco => fco && fco !== ''));
+        } else {
+          setAvailableFCOs([]);
+        }
+      } catch (error) {
+        console.error('Failed to fetch FCO list:', error);
+        setAvailableFCOs([]);
+      } finally {
+        setLoadingFCOs(false);
+      }
+    };
+
+    fetchAvailableFCOs();
+  }, [])
+
+  // Load initial data (statuses, queues, users)
   useEffect(() => {
     let isMounted = true;
-    let abortController = new AbortController();
 
-    const fetchData = async () => {
+    const fetchInitialData = async () => {
       if (!isMounted) return;
-      
-      setLoading(true);
-      setError(null);
 
       try {
-        // Mock data for development if API fails
-        let jobsData: Job[] = [];
-        let statusesData: JobStatus[] = [];
-        let queuesData: JobQueue[] = [];
+        const [statusesResponse, queuesResponse, groupsResponse] = await Promise.all([
+          jobService.getJobStatuses(),
+          jobService.getJobQueues(),
+          getGroups()
+        ]);
+
+        if (!isMounted) return;
+
+        setStatuses(statusesResponse);
+        setQueues(queuesResponse);
         
-        // Try to fetch real data first
-        try {
-          const [jobsResponse, techniciansResponse, statusesResponse, queuesResponse, usersResponse] = await Promise.all([
-            jobService.getJobs(),
-            jobService.getTechnicians(),
-            jobService.getJobStatuses(),
-            jobService.getJobQueues(),
-            getUsers()
-          ]);
-
-          if (!isMounted) return;
-
-          // Handle both array and paginated response
-          if (Array.isArray(jobsResponse)) {
-            jobsData = jobsResponse;
-          } else if (jobsResponse && typeof jobsResponse === 'object' && 'results' in jobsResponse) {
-            jobsData = (jobsResponse as PaginatedResponse<Job>).results;
-          } else {
-            jobsData = [];
+        // Find the technician group (case insensitive)
+        const technicianGroup = groupsResponse.find(
+          group => group.name.toLowerCase() === 'technician'
+        );
+        
+        if (technicianGroup) {
+          // Get only users in the technician group
+          try {
+            const technicianUsers = await getUsersInGroup(technicianGroup.id);
+            setAllUsers(technicianUsers);
+          } catch (err) {
+            // Fallback to all users if we can't get technician group users
+            const usersResponse = await getUsers();
+            if (usersResponse && usersResponse.results) {
+              setAllUsers(usersResponse.results);
+            }
           }
-          // Note: techniciansResponse is not used anymore since we're using all users
-          statusesData = statusesResponse;
-          queuesData = queuesResponse;
-          
-          // Handle users response (it's paginated)
+        } else {
+          // Fallback to all users if no technician group found
+          const usersResponse = await getUsers();
           if (usersResponse && usersResponse.results) {
             setAllUsers(usersResponse.results);
           }
-        } catch (err) {
-          if (err.response?.status === 401) {
-            if (isMounted) {
-              setError('Authentication failed. Please log in again.');
-              toast({
-                title: "Authentication Error",
-                description: "Your session has expired. Please log in again.",
-              });
-            }
-            return;
-          }
-          // If API fails, show error and return
-          setError(`Failed to load data: ${err.message || 'Unknown error'}`);
-          toast({
-            title: "Error",
-            description: "Failed to load job data. Please try again."
-          });
         }
-        
-        if (isMounted) {
-          setJobs(jobsData);
-          setStatuses(statusesData);
-          setQueues(queuesData);
-          setError(null);
-          
-          if (jobsData.length > 0 && jobsData[0].id === 1) {
+      } catch (err) {
+        if (err.response?.status === 401) {
+          if (isMounted) {
+            setError('Authentication failed. Please log in again.');
             toast({
-              title: "Using mock data",
-              description: "Could not connect to API. Using sample data instead.",
+              title: "Authentication Error",
+              description: "Your session has expired. Please log in again.",
             });
           }
+          return;
         }
-      } catch (error) {
-        if (isMounted) {
-          setError('Failed to load data. Please try again later.');
-          toast({
-            title: "Error",
-            description: "Failed to load data. Please try again later.",
-          });
-        }
-      } finally {
-        if (isMounted) {
-          setLoading(false);
-        }
+        toast({
+          title: "Error",
+          description: "Failed to load configuration data. Please try again."
+        });
       }
     };
 
-    fetchData();
+    fetchInitialData();
 
     return () => {
       isMounted = false;
-      abortController.abort();
     };
   }, []);
+  
 
-  // Apply filters when they change or when jobs change
+  // Set filtered jobs when jobs change
+  // All filtering is now done server-side via API parameters
   useEffect(() => {
-    if (!jobs.length) return;
-
-    let result = [...jobs];
-    
-    // Apply route-based filtering first
-    if (showOnlyCompleted) {
-      // Show only completed jobs
-      result = result.filter(job => job.status.name.toLowerCase() === 'completed');
-    } else {
-      // Default view: exclude completed jobs unless explicitly filtered
-      if (filters.status.length === 0) {
-        result = result.filter(job => job.status.name.toLowerCase() !== 'completed');
-      }
-    }
-    
-    if (filters.status.length > 0) {
-      result = result.filter(job => filters.status.includes(job.status.name));
-    }
-    
-    if (filters.priority.length > 0) {
-      result = result.filter(job => filters.priority.includes(job.priority));
-    }
-    
-    if (filters.assignedTo.length > 0) {
-      result = result.filter(job => {
-        if (filters.assignedTo.includes('unassigned') && !job.assigned_to) {
-          return true;
-        }
-        return job.assigned_to && filters.assignedTo.includes(String(job.assigned_to.id));
-      });
-    }
-    
-    if (filters.queue.length > 0) {
-      result = result.filter(job => filters.queue.includes(job.queue.name));
-    }
-    
-    // Keep the extended job data (particularly currentStep) when filtering
-    const resultWithSteps = result.map(job => {
-      // Find the corresponding job with currentStep in the jobs array
-      const jobWithSteps = jobs.find(j => j.id === job.id);
-      // If found, merge the currentStep
-      if (jobWithSteps && jobWithSteps.currentStep) {
-        return { ...job, currentStep: jobWithSteps.currentStep, tasks: jobWithSteps.tasks };
-      }
-      return job;
-    });
-    
-    setFilteredJobs(resultWithSteps);
-  }, [jobs, filters, showOnlyCompleted]);
+    setFilteredJobs(jobs);
+  }, [jobs]);
   
   // Save filters to localStorage if saveAsDefault is checked
   useEffect(() => {
@@ -434,6 +415,7 @@ export function JobTable({ showOnlyCompleted = false }: JobTableProps) {
 
   const handleFiltersChange = (newFilters: JobFilters) => {
     setFilters(newFilters)
+    setCurrentPage(1) // Reset to first page when filters change
     if (newFilters.saveAsDefault) {
       localStorage.setItem('useDefaultJobFilters', 'true')
     } else {
@@ -478,6 +460,9 @@ export function JobTable({ showOnlyCompleted = false }: JobTableProps) {
           break
         case 'update':
           setShowUpdateModal(true)
+          break
+        case 'statusChange':
+          setShowStatusChangeModal(true)
           break
         case 'meterTest':
           setShowMeterTestModal(true)
@@ -533,6 +518,20 @@ export function JobTable({ showOnlyCompleted = false }: JobTableProps) {
   }) => {
     try {
       await jobService.bulkUpdateJobs(Array.from(selectedJobs), updates)
+      
+      // Refresh the jobs list
+      fetchData()
+      
+      // Clear selection
+      setSelectedJobs(new Set())
+    } catch (error) {
+      throw error
+    }
+  }
+
+  const handleBulkStatusChange = async (statusId: number) => {
+    try {
+      await jobService.bulkUpdateJobs(Array.from(selectedJobs), { status: statusId })
       
       // Refresh the jobs list
       fetchData()
@@ -610,6 +609,40 @@ export function JobTable({ showOnlyCompleted = false }: JobTableProps) {
     }
   }
 
+  // Handler for header filter clicks
+  const handleHeaderFilterClick = (header: string) => {
+    setOpenHeaderFilter(openHeaderFilter === header ? null : header)
+  }
+
+  // Get unique values for column filters
+  const getUniqueValues = (column: string) => {
+    switch (column) {
+      case 'type':
+        return [...new Set(filteredJobs.map(job => job.type?.name).filter(Boolean))]
+      case 'site':
+        return [...new Set(filteredJobs.map(job => (job as any).site_name).filter(Boolean))]
+      case 'fco':
+        return [...new Set(filteredJobs.map(job => {
+          const extendedJob = job as ExtendedJob;
+          return extendedJob.fco ? String(extendedJob.fco) : null;
+        }).filter(Boolean))]
+      case 'status':
+        return statuses.map(s => s.name)
+      case 'queue':
+        return queues.map(q => q.name)
+      case 'assignedTo':
+        return [
+          { id: 'unassigned', name: 'Unassigned' },
+          ...allUsers.map(user => ({ 
+            id: String(user.id), 
+            name: `${user.first_name} ${user.last_name}`.trim() || user.username 
+          }))
+        ]
+      default:
+        return []
+    }
+  }
+
   // Removed unused columns variable
 
   return (
@@ -624,6 +657,16 @@ export function JobTable({ showOnlyCompleted = false }: JobTableProps) {
               {showOnlyCompleted 
                 ? 'View all completed jobs' 
                 : 'Manage and track active jobs in the system'}
+              {totalJobCount > 0 && (
+                <span className="ml-2 font-semibold">
+                  • Total: {totalJobCount} {totalJobCount === 1 ? 'job' : 'jobs'}
+                  {totalJobCount > filteredJobs.length && (
+                    <span className="text-sm font-normal">
+                      {' '}(showing {filteredJobs.length})
+                    </span>
+                  )}
+                </span>
+              )}
             </p>
           </div>
           <Button onClick={() => navigate("/jobs/new")} size="sm" className="h-8">
@@ -651,32 +694,49 @@ export function JobTable({ showOnlyCompleted = false }: JobTableProps) {
           loading={loading}
         />
 
+
         {selectedJobs.size > 0 && (
           <div className="flex items-center gap-2 p-2 bg-muted dark:bg-gray-800 rounded-lg">
             <span className="text-sm text-muted-foreground dark:text-gray-400">
               {selectedJobs.size} job{selectedJobs.size === 1 ? '' : 's'} selected
             </span>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => handleBulkAction('assign')}
-            >
-              Assign
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => handleBulkAction('update')}
-            >
-              Update
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => handleBulkAction('delete')}
-            >
-              Delete
-            </Button>
+            {canAssignJobs && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => handleBulkAction('assign')}
+              >
+                Bulk Assign
+              </Button>
+            )}
+            {canChangeJobStatus && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => handleBulkAction('statusChange')}
+                className="bg-blue-50 hover:bg-blue-100 text-blue-700 border-blue-300"
+              >
+                Change Status
+              </Button>
+            )}
+            {canBulkUpdateJobs && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => handleBulkAction('update')}
+              >
+                Update
+              </Button>
+            )}
+            {canDeleteJobs && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => handleBulkAction('delete')}
+              >
+                Delete
+              </Button>
+            )}
             <Button
               variant="outline"
               size="sm"
@@ -698,15 +758,19 @@ export function JobTable({ showOnlyCompleted = false }: JobTableProps) {
             <p className="text-muted-foreground dark:text-gray-400 mb-4">No jobs match the current filters</p>
             <Button 
               variant="outline" 
-              onClick={() => setFilters({
-                status: [],
-                priority: [],
-                assignedTo: [],
-                queue: [],
-                search: '',
-                saveAsDefault: false,
-                defaultQueue: null
-              })}
+              onClick={() => {
+                setFilters({
+                  status: [],
+                  priority: [],
+                  assignedTo: [],
+                  queue: [],
+                  search: '',
+                  saveAsDefault: false,
+                  defaultQueue: null,
+                  fco: []
+                });
+                setCurrentPage(1);
+              }}
             >
               Clear Filters
             </Button>
@@ -722,17 +786,179 @@ export function JobTable({ showOnlyCompleted = false }: JobTableProps) {
                       onCheckedChange={handleSelectAll}
                     />
                   </TableHead>
-                  <TableHead className="uppercase tracking-wider text-xs text-gray-600 dark:text-gray-300">Type</TableHead>
+                  <TableHead className="uppercase tracking-wider text-xs text-gray-600 dark:text-gray-300">
+                    <Popover open={openHeaderFilter === 'type'} onOpenChange={(open) => setOpenHeaderFilter(open ? 'type' : null)}>
+                      <PopoverTrigger asChild>
+                        <button className="flex items-center space-x-1 hover:text-gray-900 dark:hover:text-gray-100">
+                          <span>Type</span>
+                          <ChevronDown className="h-3 w-3" />
+                        </button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-56">
+                        <div className="space-y-2">
+                          <h4 className="font-medium text-sm">Filter by Type</h4>
+                          {getUniqueValues('type').map(type => (
+                            <div key={type} className="flex items-center space-x-2">
+                              <Checkbox 
+                                checked={filters.status.includes(type)}
+                                onCheckedChange={(checked) => {
+                                  const newFilters = { ...filters }
+                                  if (checked) {
+                                    newFilters.status = [...filters.status, type]
+                                  } else {
+                                    newFilters.status = filters.status.filter(s => s !== type)
+                                  }
+                                  handleFiltersChange(newFilters)
+                                }}
+                              />
+                              <Label className="text-sm font-normal">{type}</Label>
+                            </div>
+                          ))}
+                        </div>
+                      </PopoverContent>
+                    </Popover>
+                  </TableHead>
                   <TableHead className="uppercase tracking-wider text-xs text-gray-600 dark:text-gray-300">Title</TableHead>
-                  <TableHead className="uppercase tracking-wider text-xs text-gray-600 dark:text-gray-300">Client</TableHead>
                   <TableHead className="uppercase tracking-wider text-xs text-gray-600 dark:text-gray-300">Site</TableHead>
-                  <TableHead className="uppercase tracking-wider text-xs text-gray-600 dark:text-gray-300">Status</TableHead>
-                  <TableHead className="uppercase tracking-wider text-xs text-gray-600 dark:text-gray-300">Priority</TableHead>
-                  <TableHead className="uppercase tracking-wider text-xs text-gray-600 dark:text-gray-300">Queue</TableHead>
+                  <TableHead className="uppercase tracking-wider text-xs text-gray-600 dark:text-gray-300">
+                    <Popover open={openHeaderFilter === 'fco'} onOpenChange={(open) => setOpenHeaderFilter(open ? 'fco' : null)}>
+                      <PopoverTrigger asChild>
+                        <button className="flex items-center space-x-1 hover:text-gray-900 dark:hover:text-gray-100">
+                          <span>FCO</span>
+                          <ChevronDown className="h-3 w-3" />
+                        </button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-56 max-h-80 overflow-y-auto">
+                        <div className="space-y-2">
+                          <h4 className="font-medium text-sm">Filter by FCO</h4>
+                          {loadingFCOs ? (
+                            <div className="flex items-center justify-center py-4">
+                              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-gray-900 dark:border-gray-100"></div>
+                            </div>
+                          ) : availableFCOs.length === 0 ? (
+                            <p className="text-sm text-muted-foreground">No FCO values available</p>
+                          ) : (
+                            <div className="space-y-1">
+                              {availableFCOs.map(fco => (
+                                <div key={fco} className="flex items-center space-x-2">
+                                  <Checkbox 
+                                    checked={filters.fco && filters.fco.includes(fco)}
+                                    onCheckedChange={(checked) => {
+                                      const currentFCOs = filters.fco || [];
+                                      const newFCOs = checked
+                                        ? [...currentFCOs, fco]
+                                        : currentFCOs.filter(f => f !== fco);
+                                      handleFiltersChange({ ...filters, fco: newFCOs });
+                                    }}
+                                  />
+                                  <Label className="text-sm font-normal cursor-pointer" 
+                                    onClick={() => {
+                                      const currentFCOs = filters.fco || [];
+                                      const isChecked = currentFCOs.includes(fco);
+                                      const newFCOs = isChecked
+                                        ? currentFCOs.filter(f => f !== fco)
+                                        : [...currentFCOs, fco];
+                                      handleFiltersChange({ ...filters, fco: newFCOs });
+                                    }}>
+                                    {fco}
+                                  </Label>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      </PopoverContent>
+                    </Popover>
+                  </TableHead>
+                  <TableHead className="uppercase tracking-wider text-xs text-gray-600 dark:text-gray-300">
+                    <Popover open={openHeaderFilter === 'status'} onOpenChange={(open) => setOpenHeaderFilter(open ? 'status' : null)}>
+                      <PopoverTrigger asChild>
+                        <button className="flex items-center space-x-1 hover:text-gray-900 dark:hover:text-gray-100">
+                          <span>Status</span>
+                          <ChevronDown className="h-3 w-3" />
+                        </button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-56">
+                        <div className="space-y-2">
+                          <h4 className="font-medium text-sm">Filter by Status</h4>
+                          {getUniqueValues('status').map(status => (
+                            <div key={status} className="flex items-center space-x-2">
+                              <Checkbox 
+                                checked={filters.status.includes(status)}
+                                onCheckedChange={(checked) => {
+                                  const newStatuses = checked
+                                    ? [...filters.status, status]
+                                    : filters.status.filter(s => s !== status)
+                                  handleFiltersChange({ ...filters, status: newStatuses })
+                                }}
+                              />
+                              <Label className="text-sm font-normal">{status}</Label>
+                            </div>
+                          ))}
+                        </div>
+                      </PopoverContent>
+                    </Popover>
+                  </TableHead>
+                  <TableHead className="uppercase tracking-wider text-xs text-gray-600 dark:text-gray-300">
+                    <Popover open={openHeaderFilter === 'queue'} onOpenChange={(open) => setOpenHeaderFilter(open ? 'queue' : null)}>
+                      <PopoverTrigger asChild>
+                        <button className="flex items-center space-x-1 hover:text-gray-900 dark:hover:text-gray-100">
+                          <span>Queue</span>
+                          <ChevronDown className="h-3 w-3" />
+                        </button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-56">
+                        <div className="space-y-2">
+                          <h4 className="font-medium text-sm">Filter by Queue</h4>
+                          {getUniqueValues('queue').map(queue => (
+                            <div key={queue} className="flex items-center space-x-2">
+                              <Checkbox 
+                                checked={filters.queue.includes(queue)}
+                                onCheckedChange={(checked) => {
+                                  const newQueues = checked
+                                    ? [...filters.queue, queue]
+                                    : filters.queue.filter(q => q !== queue)
+                                  handleFiltersChange({ ...filters, queue: newQueues })
+                                }}
+                              />
+                              <Label className="text-sm font-normal">{queue}</Label>
+                            </div>
+                          ))}
+                        </div>
+                      </PopoverContent>
+                    </Popover>
+                  </TableHead>
                   <TableHead className="uppercase tracking-wider text-xs text-gray-600 dark:text-gray-300">Site Status</TableHead>
                   <TableHead className="uppercase tracking-wider text-xs text-gray-600 dark:text-gray-300">Current Step</TableHead>
-                  <TableHead className="uppercase tracking-wider text-xs text-gray-600 dark:text-gray-300">Due Date</TableHead>
-                  <TableHead className="uppercase tracking-wider text-xs text-gray-600 dark:text-gray-300">Assigned To</TableHead>
+                  <TableHead className="uppercase tracking-wider text-xs text-gray-600 dark:text-gray-300">
+                    <Popover open={openHeaderFilter === 'assignedTo'} onOpenChange={(open) => setOpenHeaderFilter(open ? 'assignedTo' : null)}>
+                      <PopoverTrigger asChild>
+                        <button className="flex items-center space-x-1 hover:text-gray-900 dark:hover:text-gray-100">
+                          <span>Assigned To</span>
+                          <ChevronDown className="h-3 w-3" />
+                        </button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-56">
+                        <div className="space-y-2">
+                          <h4 className="font-medium text-sm">Filter by Assignment</h4>
+                          {getUniqueValues('assignedTo').map((user: any) => (
+                            <div key={user.id} className="flex items-center space-x-2">
+                              <Checkbox 
+                                checked={filters.assignedTo.includes(user.id)}
+                                onCheckedChange={(checked) => {
+                                  const newAssignedTo = checked
+                                    ? [...filters.assignedTo, user.id]
+                                    : filters.assignedTo.filter(a => a !== user.id)
+                                  handleFiltersChange({ ...filters, assignedTo: newAssignedTo })
+                                }}
+                              />
+                              <Label className="text-sm font-normal">{user.name}</Label>
+                            </div>
+                          ))}
+                        </div>
+                      </PopoverContent>
+                    </Popover>
+                  </TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody className="bg-white dark:bg-gray-900 divide-y divide-gray-100 dark:divide-gray-800">
@@ -755,18 +981,19 @@ export function JobTable({ showOnlyCompleted = false }: JobTableProps) {
                       {job.type ? job.type.name : '-'}
                     </TableCell>
                     <TableCell className="px-6 py-4 font-medium text-gray-900 dark:text-gray-100">{job.title}</TableCell>
-                    <TableCell className="px-6 py-4 dark:text-gray-300">{job.client}</TableCell>
                     <TableCell className="px-6 py-4 dark:text-gray-300">
                       {(job as any).site_name || 'Unknown Site'}
+                    </TableCell>
+                    <TableCell className="px-6 py-4 dark:text-gray-300">
+                      {job.fco === undefined ? (
+                        <span className="text-gray-400 dark:text-gray-500 italic">Loading...</span>
+                      ) : (
+                        job.fco || '-'
+                      )}
                     </TableCell>
                     <TableCell className="px-6 py-4">
                       <Badge className={getStatusColor(job.status.name)}>
                         {job.status.name}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="px-6 py-4">
-                      <Badge className={getPriorityColor(job.priority)}>
-                        {job.priority}
                       </Badge>
                     </TableCell>
                     <TableCell className="px-6 py-4 dark:text-gray-300">{job.queue.name}</TableCell>
@@ -788,15 +1015,105 @@ export function JobTable({ showOnlyCompleted = false }: JobTableProps) {
                       ) : "No tasks assigned"}
                     </TableCell>
                     <TableCell className="px-6 py-4 dark:text-gray-300">
-                      {job.due_date ? format(new Date(job.due_date), "MMM d, yyyy") : "No due date"}
-                    </TableCell>
-                    <TableCell className="px-6 py-4 dark:text-gray-300">
                       {job.assigned_to ? job.assigned_to.user.first_name + " " + job.assigned_to.user.last_name : "Unassigned"}
                     </TableCell>
                   </TableRow>
                 ))}
               </TableBody>
             </Table>
+          </div>
+        )}
+
+        {/* Pagination controls */}
+        {totalPages > 1 && (
+          <div className="flex items-center justify-between px-4 py-3 bg-white dark:bg-gray-900 border-t dark:border-gray-700">
+            <div className="flex items-center text-sm text-gray-700 dark:text-gray-300">
+              Showing{' '}
+              <span className="font-medium">
+                {(currentPage - 1) * pageSize + 1}
+              </span>{' '}
+              to{' '}
+              <span className="font-medium">
+                {Math.min(currentPage * pageSize, totalJobCount)}
+              </span>{' '}
+              of{' '}
+              <span className="font-medium">{totalJobCount}</span> results
+            </div>
+            
+            <div className="flex items-center space-x-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setCurrentPage(currentPage - 1)}
+                disabled={currentPage === 1}
+              >
+                Previous
+              </Button>
+              
+              {/* Page numbers */}
+              <div className="flex space-x-1">
+                {/* First page */}
+                {currentPage > 3 && (
+                  <>
+                    <Button
+                      variant={currentPage === 1 ? "default" : "outline"}
+                      size="sm"
+                      onClick={() => setCurrentPage(1)}
+                      className="min-w-[40px]"
+                    >
+                      1
+                    </Button>
+                    {currentPage > 4 && <span className="px-2 py-1">...</span>}
+                  </>
+                )}
+                
+                {/* Pages around current */}
+                {Array.from({ length: totalPages }, (_, i) => i + 1)
+                  .filter(page => {
+                    return page === currentPage || 
+                           page === currentPage - 1 || 
+                           page === currentPage + 1 ||
+                           page === currentPage - 2 ||
+                           page === currentPage + 2
+                  })
+                  .filter(page => page > 0 && page <= totalPages)
+                  .map(page => (
+                    <Button
+                      key={page}
+                      variant={page === currentPage ? "default" : "outline"}
+                      size="sm"
+                      onClick={() => setCurrentPage(page)}
+                      className="min-w-[40px]"
+                    >
+                      {page}
+                    </Button>
+                  ))}
+                
+                {/* Last page */}
+                {currentPage < totalPages - 2 && (
+                  <>
+                    {currentPage < totalPages - 3 && <span className="px-2 py-1">...</span>}
+                    <Button
+                      variant={currentPage === totalPages ? "default" : "outline"}
+                      size="sm"
+                      onClick={() => setCurrentPage(totalPages)}
+                      className="min-w-[40px]"
+                    >
+                      {totalPages}
+                    </Button>
+                  </>
+                )}
+              </div>
+              
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setCurrentPage(currentPage + 1)}
+                disabled={currentPage === totalPages}
+              >
+                Next
+              </Button>
+            </div>
           </div>
         )}
       </main>
@@ -855,6 +1172,14 @@ export function JobTable({ showOnlyCompleted = false }: JobTableProps) {
           setSelectedJobs(new Set());
           fetchData();
         }}
+      />
+      
+      <BulkStatusChangeModal
+        isOpen={showStatusChangeModal}
+        onClose={() => setShowStatusChangeModal(false)}
+        onUpdate={handleBulkStatusChange}
+        selectedCount={selectedJobs.size}
+        statuses={statuses}
       />
     </div>
   )

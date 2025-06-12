@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useMemo } from 'react';
+import React, { useState, useCallback, useMemo, useEffect } from 'react';
 import {
   GoogleMap,
   LoadScript,
@@ -6,7 +6,8 @@ import {
   DirectionsRenderer,
   Marker,
   InfoWindow,
-  TrafficLayer
+  TrafficLayer,
+  Polyline
 } from '@react-google-maps/api';
 import { Card } from '../../ui/card';
 import { Badge } from '../../ui/badge';
@@ -46,6 +47,7 @@ interface MapComponentProps {
   jobs?: Job[];
   routeJobs?: RouteJob[];
   optimizedRoute?: any;
+  optimizationResult?: any;
   onDirectionsCalculated?: (result: google.maps.DirectionsResult) => void;
   height?: string;
 }
@@ -56,6 +58,7 @@ const MapComponent: React.FC<MapComponentProps> = ({
   jobs = [],
   routeJobs = [],
   optimizedRoute,
+  optimizationResult,
   onDirectionsCalculated,
   height = '500px'
 }) => {
@@ -63,9 +66,7 @@ const MapComponent: React.FC<MapComponentProps> = ({
   const [selectedJob, setSelectedJob] = useState<Job | null>(null);
   const [directions, setDirections] = useState<google.maps.DirectionsResult | null>(null);
   const [showTraffic, setShowTraffic] = useState(true);
-  const [travelMode, setTravelMode] = useState<google.maps.TravelMode>(
-    google.maps.TravelMode.DRIVING
-  );
+  const travelMode = 'DRIVING'; // Always use driving mode
 
   const mapContainerStyle = {
     width: '100%',
@@ -73,6 +74,10 @@ const MapComponent: React.FC<MapComponentProps> = ({
   };
 
   const center = useMemo(() => {
+    // If we have optimization result with center, use that
+    if (optimizationResult?.map_data?.center) {
+      return optimizationResult.map_data.center;
+    }
     if (engineerLocation) {
       return engineerLocation;
     }
@@ -82,16 +87,37 @@ const MapComponent: React.FC<MapComponentProps> = ({
         lng: jobs[0].site.longitude
       };
     }
-    return { lat: 51.5074, lng: -0.1278 }; // Default to London
-  }, [engineerLocation, jobs]);
+    // Default to Tankersley, Barnsley
+    return { lat: 53.4926, lng: -1.4872 };
+  }, [engineerLocation, jobs, optimizationResult]);
 
   const onLoad = useCallback((map: google.maps.Map) => {
     setMap(map);
-  }, []);
+    
+    // If we have bounds from optimization, fit to them
+    if (optimizationResult?.map_data?.bounds) {
+      const bounds = new google.maps.LatLngBounds(
+        { lat: optimizationResult.map_data.bounds.south, lng: optimizationResult.map_data.bounds.west },
+        { lat: optimizationResult.map_data.bounds.north, lng: optimizationResult.map_data.bounds.east }
+      );
+      map.fitBounds(bounds);
+    }
+  }, [optimizationResult]);
 
   const onUnmount = useCallback(() => {
     setMap(null);
   }, []);
+
+  // Update bounds when optimization result changes
+  useEffect(() => {
+    if (map && optimizationResult?.map_data?.bounds) {
+      const bounds = new google.maps.LatLngBounds(
+        { lat: optimizationResult.map_data.bounds.south, lng: optimizationResult.map_data.bounds.west },
+        { lat: optimizationResult.map_data.bounds.north, lng: optimizationResult.map_data.bounds.east }
+      );
+      map.fitBounds(bounds);
+    }
+  }, [map, optimizationResult]);
 
   const directionsCallback = useCallback((
     result: google.maps.DirectionsResult | null,
@@ -128,11 +154,11 @@ const MapComponent: React.FC<MapComponentProps> = ({
       origin,
       destination,
       waypoints,
-      travelMode,
+      travelMode: travelMode as google.maps.TravelMode,
       optimizeWaypoints: false, // Already optimized by backend
       drivingOptions: {
         departureTime: new Date(),
-        trafficModel: google.maps.TrafficModel.BEST_GUESS
+        trafficModel: 'BEST_GUESS' as google.maps.TrafficModel
       }
     };
   }, [optimizedRoute, routeJobs, engineerLocation, travelMode]);
@@ -141,10 +167,11 @@ const MapComponent: React.FC<MapComponentProps> = ({
     const color = job.priority === 'urgent' || job.priority === 'high' ? 'red' : 'green';
     const label = index !== undefined ? (index + 1).toString() : '';
     
+    // Return simple icon config, Google Maps will handle the rest
     return {
       url: `https://maps.google.com/mapfiles/ms/icons/${color}-dot.png`,
-      scaledSize: new google.maps.Size(40, 40),
-      labelOrigin: new google.maps.Point(20, 15)
+      scaledSize: { width: 40, height: 40 },
+      labelOrigin: { x: 20, y: 15 }
     };
   };
 
@@ -176,20 +203,6 @@ const MapComponent: React.FC<MapComponentProps> = ({
             />
             <Label htmlFor="traffic-toggle">Show Traffic</Label>
           </div>
-          
-          <div className="flex items-center gap-2">
-            <Label>Travel Mode:</Label>
-            <select
-              className="px-3 py-1 border rounded-md"
-              value={travelMode}
-              onChange={(e) => setTravelMode(e.target.value as google.maps.TravelMode)}
-            >
-              <option value={google.maps.TravelMode.DRIVING}>Driving</option>
-              <option value={google.maps.TravelMode.WALKING}>Walking</option>
-              <option value={google.maps.TravelMode.BICYCLING}>Bicycling</option>
-              <option value={google.maps.TravelMode.TRANSIT}>Transit</option>
-            </select>
-          </div>
 
           {directions && (
             <div className="ml-auto text-sm text-gray-600">
@@ -203,7 +216,13 @@ const MapComponent: React.FC<MapComponentProps> = ({
       </Card>
 
       {/* Map */}
-      <LoadScript googleMapsApiKey={apiKey} libraries={libraries}>
+      <LoadScript 
+        googleMapsApiKey={apiKey} 
+        libraries={libraries}
+        loadingElement={<div className="flex items-center justify-center h-full bg-gray-100">Loading Google Maps...</div>}
+        onLoad={() => {}}
+        onError={(e) => console.error('Error loading Google Maps:', e)}
+      >
         <GoogleMap
           mapContainerStyle={mapContainerStyle}
           center={center}
@@ -221,7 +240,7 @@ const MapComponent: React.FC<MapComponentProps> = ({
               position={engineerLocation}
               icon={{
                 url: 'https://maps.google.com/mapfiles/ms/icons/blue-dot.png',
-                scaledSize: new google.maps.Size(45, 45)
+                scaledSize: { width: 45, height: 45 }
               }}
               title="Your Location"
             />
@@ -250,29 +269,57 @@ const MapComponent: React.FC<MapComponentProps> = ({
             );
           })}
 
-          {/* Route Jobs Markers (when optimized) */}
-          {routeJobs.map((routeJob, index) => {
-            const job = routeJob.job;
-            if (!job.site.latitude || !job.site.longitude) return null;
-            
-            return (
-              <Marker
-                key={`route-${job.id}`}
-                position={{
-                  lat: job.site.latitude,
-                  lng: job.site.longitude
-                }}
-                icon={getMarkerIcon(job)}
-                label={{
-                  text: (index + 1).toString(),
-                  color: 'white',
-                  fontSize: '14px',
-                  fontWeight: 'bold'
-                }}
-                onClick={() => setSelectedJob(job)}
-              />
-            );
-          })}
+          {/* Route Jobs Markers from optimization result */}
+          {optimizationResult?.map_data?.markers ? (
+            optimizationResult.map_data.markers.map((marker, index) => {
+              const routeJob = routeJobs[index];
+              const job = routeJob?.job;
+              
+              return (
+                <Marker
+                  key={`optimized-${index}`}
+                  position={marker.position}
+                  icon={job ? getMarkerIcon(job) : {
+                    url: 'https://maps.google.com/mapfiles/ms/icons/red-dot.png',
+                    scaledSize: { width: 40, height: 40 },
+                    labelOrigin: { x: 20, y: 15 }
+                  }}
+                  label={{
+                    text: marker.label || (index + 1).toString(),
+                    color: 'white',
+                    fontSize: '14px',
+                    fontWeight: 'bold'
+                  }}
+                  title={marker.title}
+                  onClick={() => job && setSelectedJob(job)}
+                />
+              );
+            })
+          ) : (
+            // Fallback to regular route job markers
+            routeJobs.map((routeJob, index) => {
+              const job = routeJob.job;
+              if (!job.site.latitude || !job.site.longitude) return null;
+              
+              return (
+                <Marker
+                  key={`route-${job.id}`}
+                  position={{
+                    lat: job.site.latitude,
+                    lng: job.site.longitude
+                  }}
+                  icon={getMarkerIcon(job)}
+                  label={{
+                    text: (index + 1).toString(),
+                    color: 'white',
+                    fontSize: '14px',
+                    fontWeight: 'bold'
+                  }}
+                  onClick={() => setSelectedJob(job)}
+                />
+              );
+            })
+          )}
 
           {/* Info Window */}
           {selectedJob && (
@@ -303,15 +350,28 @@ const MapComponent: React.FC<MapComponentProps> = ({
             </InfoWindow>
           )}
 
-          {/* Directions Renderer */}
-          {directionsServiceOptions && !directions && (
+          {/* Render polylines from optimization result */}
+          {optimizationResult?.map_data?.polylines?.map((polyline, index) => (
+            <Polyline
+              key={`polyline-${index}`}
+              path={polyline.path.map(point => ({ lat: point[0], lng: point[1] }))}
+              options={polyline.options || {
+                strokeColor: '#4285F4',
+                strokeOpacity: 0.8,
+                strokeWeight: 4
+              }}
+            />
+          ))}
+
+          {/* Fallback to DirectionsService if no optimization result */}
+          {!optimizationResult && directionsServiceOptions && !directions && (
             <DirectionsService
               options={directionsServiceOptions}
               callback={directionsCallback}
             />
           )}
 
-          {directions && (
+          {!optimizationResult && directions && (
             <DirectionsRenderer
               directions={directions}
               options={{

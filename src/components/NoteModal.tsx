@@ -4,13 +4,31 @@ import { X, Camera, Image } from 'lucide-react';
 interface NoteModalProps {
     isOpen: boolean;
     onClose: () => void;
-    onSubmit: (data: { note: string; image?: File; image_description?: string }) => void;
+    onSubmit: (data: { note: string; image?: File; image_description?: string; id?: number }) => void;
+    editNote?: {
+        id: number;
+        note: string;
+        image_description?: string;
+    };
 }
 
-const NoteModal: React.FC<NoteModalProps> = ({ isOpen, onClose, onSubmit }) => {
+const NoteModal: React.FC<NoteModalProps> = ({ isOpen, onClose, onSubmit, editNote }) => {
     const [note, setNote] = useState('');
     const [image, setImage] = useState<File | null>(null);
     const [imageDescription, setImageDescription] = useState('');
+
+    // Initialize form with edit data when modal opens
+    React.useEffect(() => {
+        if (isOpen && editNote) {
+            setNote(editNote.note || '');
+            setImageDescription(editNote.image_description || '');
+        } else if (!isOpen) {
+            // Reset form when modal closes
+            setNote('');
+            setImage(null);
+            setImageDescription('');
+        }
+    }, [isOpen, editNote]);
 
     if (!isOpen) return null;
 
@@ -21,7 +39,8 @@ const NoteModal: React.FC<NoteModalProps> = ({ isOpen, onClose, onSubmit }) => {
         const data = {
             note: note.trim(),
             ...(image && { image }),
-            ...(imageDescription.trim() && { image_description: imageDescription.trim() })
+            ...(imageDescription.trim() && { image_description: imageDescription.trim() }),
+            ...(editNote && { id: editNote.id })
         };
         onSubmit(data);
         
@@ -43,7 +62,7 @@ const NoteModal: React.FC<NoteModalProps> = ({ isOpen, onClose, onSubmit }) => {
         <div className="fixed inset-0 bg-black/30 backdrop-blur-sm flex items-center justify-center z-50">
             <div className="bg-white dark:bg-gray-800 rounded-lg p-6 w-full max-w-md">
                 <div className="flex justify-between items-center mb-4">
-                    <h2 className="text-xl font-semibold dark:text-white">Add Note</h2>
+                    <h2 className="text-xl font-semibold dark:text-white">{editNote ? 'Edit Note' : 'Add Note'}</h2>
                     <button
                         onClick={onClose}
                         className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"

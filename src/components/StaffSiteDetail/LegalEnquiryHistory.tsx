@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { ArrowLeft, Calendar, FileText, Eye, ChevronDown, ChevronUp, Edit2 } from 'lucide-react';
-import { LegalEnquiry, LEGAL_ENQUIRY_RECEIVERS, LEGAL_ENQUIRY_TYPES, LEGAL_ENQUIRY_TRANSACTIONS, DEED_VARIATION_PROGRESS_OPTIONS } from '../../types/legal';
+import { ArrowLeft, Calendar, FileText, Eye, ChevronDown, ChevronUp, Edit2, Filter } from 'lucide-react';
+import { LegalEnquiry, LEGAL_ENQUIRY_RECEIVERS, LEGAL_ENQUIRY_TYPES, LEGAL_ENQUIRY_TRANSACTIONS, DEED_VARIATION_PROGRESS_OPTIONS, LEGAL_ENQUIRY_STATUS_OPTIONS } from '../../types/legal';
 import { legalService } from '../../services/legalService';
 
 interface LegalEnquiryHistoryProps {
@@ -11,9 +11,11 @@ interface LegalEnquiryHistoryProps {
 
 const LegalEnquiryHistory: React.FC<LegalEnquiryHistoryProps> = ({ siteId, onBack, onEdit }) => {
   const [enquiries, setEnquiries] = useState<LegalEnquiry[]>([]);
+  const [filteredEnquiries, setFilteredEnquiries] = useState<LegalEnquiry[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [expandedEnquiry, setExpandedEnquiry] = useState<number | null>(null);
+  const [statusFilter, setStatusFilter] = useState<string>('all');
 
   useEffect(() => {
     fetchEnquiries();
@@ -22,14 +24,23 @@ const LegalEnquiryHistory: React.FC<LegalEnquiryHistoryProps> = ({ siteId, onBac
   const fetchEnquiries = async () => {
     setLoading(true);
     try {
-      const data = await legalService.getLegalEnquiries(siteId);
+      const data = await legalService.getLegalEnquiries(siteId, statusFilter !== 'all' ? statusFilter : undefined);
       setEnquiries(data);
+      setFilteredEnquiries(data);
     } catch (err) {
       setError('Failed to load legal enquiry history');
     } finally {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    if (statusFilter === 'all') {
+      setFilteredEnquiries(enquiries);
+    } else {
+      setFilteredEnquiries(enquiries.filter(e => e.status === statusFilter));
+    }
+  }, [statusFilter, enquiries]);
 
   const formatDate = (dateString: string | null | undefined) => {
     if (!dateString) return 'Not set';
@@ -67,6 +78,32 @@ const LegalEnquiryHistory: React.FC<LegalEnquiryHistoryProps> = ({ siteId, onBac
         <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Legal Enquiry History</h2>
       </div>
 
+      {/* Status Filter */}
+      <div className="flex items-center gap-4 bg-gray-50 dark:bg-gray-800 p-4 rounded-lg">
+        <div className="flex items-center gap-2">
+          <Filter className="w-4 h-4 text-gray-500 dark:text-gray-400" />
+          <label htmlFor="status-filter" className="text-sm font-medium text-gray-700 dark:text-gray-300">
+            Filter by Status:
+          </label>
+        </div>
+        <select
+          id="status-filter"
+          value={statusFilter}
+          onChange={(e) => setStatusFilter(e.target.value)}
+          className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+        >
+          <option value="all">All Enquiries</option>
+          {LEGAL_ENQUIRY_STATUS_OPTIONS.map(option => (
+            <option key={option.value} value={option.value}>
+              {option.label}
+            </option>
+          ))}
+        </select>
+        <div className="ml-auto text-sm text-gray-500 dark:text-gray-400">
+          Showing {filteredEnquiries.length} of {enquiries.length} enquiries
+        </div>
+      </div>
+
       {loading && (
         <div className="flex items-center justify-center py-8">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
@@ -79,16 +116,20 @@ const LegalEnquiryHistory: React.FC<LegalEnquiryHistoryProps> = ({ siteId, onBac
         </div>
       )}
 
-      {!loading && !error && enquiries.length === 0 && (
+      {!loading && !error && filteredEnquiries.length === 0 && (
         <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-8 text-center">
           <FileText className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-          <p className="text-gray-500 dark:text-gray-400">No legal enquiries found for this site.</p>
+          <p className="text-gray-500 dark:text-gray-400">
+            {statusFilter === 'all' 
+              ? 'No legal enquiries found for this site.' 
+              : `No ${statusFilter.replace('_', ' ')} enquiries found.`}
+          </p>
         </div>
       )}
 
-      {!loading && !error && enquiries.length > 0 && (
+      {!loading && !error && filteredEnquiries.length > 0 && (
         <div className="space-y-4">
-          {enquiries.map((enquiry) => {
+          {filteredEnquiries.map((enquiry) => {
             const isExpanded = expandedEnquiry === enquiry.id;
             
             return (
@@ -101,9 +142,21 @@ const LegalEnquiryHistory: React.FC<LegalEnquiryHistoryProps> = ({ siteId, onBac
                     <div className="flex items-center gap-4">
                       <FileText className="w-5 h-5 text-gray-400" />
                       <div>
-                        <p className="font-medium text-gray-900 dark:text-gray-100">
-                          {getDisplayValue(enquiry.enquiry_type, LEGAL_ENQUIRY_TYPES)}
-                        </p>
+                        <div className="flex items-center gap-2">
+                          <p className="font-medium text-gray-900 dark:text-gray-100">
+                            {getDisplayValue(enquiry.enquiry_type, LEGAL_ENQUIRY_TYPES)}
+                          </p>
+                          {/* Status Badge */}
+                          <span className={`px-2 py-1 text-xs font-medium rounded-full ${
+                            enquiry.status === 'open' 
+                              ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400'
+                              : enquiry.status === 'in_progress'
+                              ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400'
+                              : 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400'
+                          }`}>
+                            {getDisplayValue(enquiry.status || 'open', LEGAL_ENQUIRY_STATUS_OPTIONS)}
+                          </span>
+                        </div>
                         <p className="text-sm text-gray-500 dark:text-gray-400">
                           Received: {formatDate(enquiry.enquiry_receive_date)} • 
                           By: {getDisplayValue(enquiry.enquiry_received_by, LEGAL_ENQUIRY_RECEIVERS)}

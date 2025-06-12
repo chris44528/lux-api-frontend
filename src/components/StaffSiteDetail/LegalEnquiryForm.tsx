@@ -6,7 +6,8 @@ import {
   LEGAL_ENQUIRY_RECEIVERS, 
   LEGAL_ENQUIRY_TYPES, 
   LEGAL_ENQUIRY_TRANSACTIONS,
-  DEED_VARIATION_PROGRESS_OPTIONS 
+  DEED_VARIATION_PROGRESS_OPTIONS,
+  LEGAL_ENQUIRY_STATUS_OPTIONS 
 } from '../../types/legal';
 import { legalService } from '../../services/legalService';
 
@@ -27,6 +28,7 @@ const LegalEnquiryForm: React.FC<LegalEnquiryFormProps> = ({ siteId, onBack, onS
     enquiry_type: '',
     enquiry_transaction: '',
     solicitor_email: '',
+    status: 'open',
     authority_form_sent_date: null,
     authority_form_received_date: null,
     payment_value: '',
@@ -47,6 +49,7 @@ const LegalEnquiryForm: React.FC<LegalEnquiryFormProps> = ({ siteId, onBack, onS
         enquiry_type: enquiry.enquiry_type || '',
         enquiry_transaction: enquiry.enquiry_transaction || '',
         solicitor_email: enquiry.solicitor_email || '',
+        status: enquiry.status || 'open',
         authority_form_sent_date: enquiry.authority_form_sent_date || null,
         authority_form_received_date: enquiry.authority_form_received_date || null,
         payment_value: enquiry.payment_value || '',
@@ -216,6 +219,21 @@ const LegalEnquiryForm: React.FC<LegalEnquiryFormProps> = ({ siteId, onBack, onS
 
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              Status
+            </label>
+            <select
+              value={formData.status || 'open'}
+              onChange={(e) => handleInputChange('status', e.target.value)}
+              className="block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-gray-100 sm:text-sm"
+            >
+              {LEGAL_ENQUIRY_STATUS_OPTIONS.map(option => (
+                <option key={option.value} value={option.value}>{option.label}</option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
               Legal Enquiry Transaction *
             </label>
             <select
@@ -231,7 +249,7 @@ const LegalEnquiryForm: React.FC<LegalEnquiryFormProps> = ({ siteId, onBack, onS
             </select>
           </div>
 
-          <div className="md:col-span-2">
+          <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
               Solicitor Email
             </label>

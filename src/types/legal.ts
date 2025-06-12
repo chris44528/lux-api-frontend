@@ -10,6 +10,7 @@ export interface LegalEnquiry {
     'non_chargeable' | 'other' | 'sar' | 'unregistered_lease';
   enquiry_transaction: 'sale' | 'remortgage' | 'equity_release' | 'other';
   solicitor_email: string;
+  status: 'open' | 'in_progress' | 'closed';
   
   // GDPR Compliance Section
   authority_form_sent_date: string | null;
@@ -42,6 +43,7 @@ export interface LegalEnquiryFormData {
   enquiry_type: string;
   enquiry_transaction: string;
   solicitor_email: string;
+  status?: string;
   
   // GDPR Compliance Section
   authority_form_sent_date: string | null;
@@ -94,4 +96,10 @@ export const DEED_VARIATION_PROGRESS_OPTIONS = [
   { value: 'requisition', label: 'Requisition' },
   { value: 'submitted_to_land_registry', label: 'Submitted to Land Registry' },
   { value: 'registered', label: 'Registered' }
+];
+
+export const LEGAL_ENQUIRY_STATUS_OPTIONS = [
+  { value: 'open', label: 'Open' },
+  { value: 'in_progress', label: 'In Progress' },
+  { value: 'closed', label: 'Closed' }
 ];

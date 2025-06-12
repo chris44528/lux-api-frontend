@@ -18,6 +18,7 @@ export interface JobFilters {
   saveAsDefault: boolean
   defaultQueue: string | null
   search: string
+  fco: string[]
 }
 
 interface JobFilterProps {
@@ -110,6 +111,17 @@ export function JobFilter({
     })
   }
 
+  const handleFcoChange = (fco: string, checked: boolean) => {
+    const newFCOs = checked
+      ? [...filters.fco, fco]
+      : filters.fco.filter(f => f !== fco)
+    
+    onFiltersChange({
+      ...filters,
+      fco: newFCOs
+    })
+  }
+
   const resetFilters = () => {
     onFiltersChange({
       status: [],
@@ -118,7 +130,8 @@ export function JobFilter({
       queue: [],
       saveAsDefault: filters.saveAsDefault,
       defaultQueue: filters.defaultQueue,
-      search: ""
+      search: "",
+      fco: []
     })
   }
 
@@ -126,7 +139,8 @@ export function JobFilter({
     filters.status.length + 
     filters.priority.length + 
     filters.assignedTo.length + 
-    filters.queue.length
+    filters.queue.length +
+    (filters.fco ? filters.fco.length : 0)
 
   const getAdvancedFilterContent = () => {
     if (loading) {
@@ -420,6 +434,20 @@ export function JobFilter({
               onClick={() => handleQueueChange(queue, false)}
             >
               {queue}
+              <Check className="ml-1 h-3 w-3" />
+            </Badge>
+          ))}
+          {filters.fco && filters.fco.map(fco => (
+            <Badge 
+              key={`fco-${fco}`}
+              variant="secondary"
+              className="cursor-pointer h-6 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 hover:bg-gray-300 dark:hover:bg-gray-600"
+              onClick={() => {
+                const newFCOs = filters.fco.filter(f => f !== fco)
+                onFiltersChange({ ...filters, fco: newFCOs })
+              }}
+            >
+              FCO: {fco}
               <Check className="ml-1 h-3 w-3" />
             </Badge>
           ))}

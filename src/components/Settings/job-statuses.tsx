@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { 
   Card, 
   CardHeader, 
@@ -18,14 +18,21 @@ import jobService, { JobStatus, JobQueue } from "../../services/jobService";
 interface JobStatusesProps {
   jobStatuses: JobStatus[];
   jobQueues: JobQueue[];
+  onRefresh?: () => void;
 }
 
-export default function JobStatuses({ jobStatuses, jobQueues }: JobStatusesProps) {
+export default function JobStatuses({ jobStatuses: initialStatuses, jobQueues, onRefresh }: JobStatusesProps) {
   const { toast } = useToast();
+  const [jobStatuses, setJobStatuses] = useState<JobStatus[]>(initialStatuses);
   const [statusName, setStatusName] = useState("");
   const [statusColor, setStatusColor] = useState("blue");
   const [selectedQueue, setSelectedQueue] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+
+  // Update local state when props change
+  useEffect(() => {
+    setJobStatuses(initialStatuses);
+  }, [initialStatuses]);
 
   const addJobStatus = async () => {
     if (!statusName.trim()) {
@@ -53,6 +60,11 @@ export default function JobStatuses({ jobStatuses, jobQueues }: JobStatusesProps
       setStatusName("");
       setStatusColor("blue");
       setSelectedQueue(null);
+      
+      // Refresh the data
+      if (onRefresh) {
+        onRefresh();
+      }
     } catch (error) {
       toast({
         title: "Error",
@@ -75,6 +87,11 @@ export default function JobStatuses({ jobStatuses, jobQueues }: JobStatusesProps
         title: "Success",
         description: "Job status deleted successfully",
       });
+      
+      // Refresh the data
+      if (onRefresh) {
+        onRefresh();
+      }
     } catch (error) {
       toast({
         title: "Error",

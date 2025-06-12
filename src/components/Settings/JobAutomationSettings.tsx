@@ -9,6 +9,7 @@ import ZeroReadsConfiguration from './ZeroReadsConfiguration';
 import AutomationDashboard from './AutomationDashboard';
 import { api } from '@/services/api';
 import { useToast } from '@/hooks/use-toast';
+import jobService from '@/services/jobService';
 
 interface JobAutomationSettings {
   no_coms: {
@@ -127,14 +128,42 @@ export default function JobAutomationSettings() {
 
   const fetchOptions = async () => {
     try {
+      // Fetch options from the automation endpoint
       const response = await api.get('/job-automation/options/');
-      setOptions(response.data);
+      
+      // Also fetch task templates separately since they come from a different endpoint
+      const templates = await jobService.getTaskTemplates();
+      
+      // Combine the data
+      const optionsData = {
+        ...response.data,
+        task_templates: templates.map(template => ({
+          id: template.id,
+          name: template.name,
+          description: template.description || ''
+        }))
+      };
+      
+      setOptions(optionsData);
     } catch (error) {
       console.error('Failed to fetch options:', error);
       toast({
         title: "Error",
         description: "Failed to load automation options",
         variant: "destructive",
+      });
+      
+      // Set default options structure even on error
+      setOptions({
+        job_types: [],
+        queues: [],
+        statuses: [],
+        task_templates: [],
+        priority_options: [
+          { value: 'low', label: 'Low' },
+          { value: 'medium', label: 'Medium' },
+          { value: 'high', label: 'High' }
+        ]
       });
     }
   };

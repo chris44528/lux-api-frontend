@@ -11,7 +11,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 import { Checkbox } from '../ui/checkbox';
 import { useToast } from '../../hooks/use-toast';
-import { Loader2, UserPlus, Search, Edit, Trash2, Shield, UserX, UserCheck, KeyRound } from 'lucide-react';
+import { Loader2, UserPlus, Search, Edit, Trash2, Shield, UserX, UserCheck, KeyRound, CheckCircle, XCircle } from 'lucide-react';
 
 export const UserManagement: React.FC = () => {
   const [users, setUsers] = useState<User[]>([]);
@@ -188,6 +188,31 @@ export const UserManagement: React.FC = () => {
     }
   };
 
+  const handleApproveUser = async (user: User) => {
+    try {
+      if (user.is_active) {
+        await userService.unapproveUser(user.id);
+        toast({
+          title: "Success",
+          description: "User unapproved successfully"
+        });
+      } else {
+        await userService.approveUser(user.id);
+        toast({
+          title: "Success",
+          description: "User approved successfully"
+        });
+      }
+      loadUsers();
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to approve/unapprove user",
+        variant: "destructive"
+      });
+    }
+  };
+
   const handleResetPassword = async () => {
     if (!selectedUser) return;
     
@@ -327,6 +352,7 @@ export const UserManagement: React.FC = () => {
                     <Button
                       variant="outline"
                       size="sm"
+                      title="Edit User"
                       onClick={() => {
                         setSelectedUser(user);
                         setEditUserForm({
@@ -344,6 +370,7 @@ export const UserManagement: React.FC = () => {
                     <Button
                       variant="outline"
                       size="sm"
+                      title={user.is_active ? "Deactivate User" : "Activate User"}
                       onClick={() => handleToggleUserStatus(user)}
                     >
                       {user.is_active ? <UserX className="h-4 w-4" /> : <UserCheck className="h-4 w-4" />}
@@ -351,6 +378,15 @@ export const UserManagement: React.FC = () => {
                     <Button
                       variant="outline"
                       size="sm"
+                      title={user.is_active ? "Unapprove User" : "Approve User"}
+                      onClick={() => handleApproveUser(user)}
+                    >
+                      {user.is_active ? <XCircle className="h-4 w-4" /> : <CheckCircle className="h-4 w-4" />}
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      title="Manage Groups"
                       onClick={() => {
                         setSelectedUser(user);
                         setIsManageGroupsModalOpen(true);
@@ -361,6 +397,7 @@ export const UserManagement: React.FC = () => {
                     <Button
                       variant="outline"
                       size="sm"
+                      title="Reset Password"
                       onClick={() => {
                         setSelectedUser(user);
                         setIsResetPasswordModalOpen(true);

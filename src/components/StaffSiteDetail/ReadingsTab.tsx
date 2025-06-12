@@ -125,10 +125,6 @@ const ReadingsTab: React.FC<ReadingsTabProps> = ({ readings = [], meterTests = [
       >
         <div className="flex items-center justify-between mb-2">
           <h3 className="font-semibold text-gray-900 dark:text-gray-100">All Readings</h3>
-          <div className="flex items-center gap-2">
-            <span className="text-xs text-gray-700 dark:text-gray-300">End of Day</span>
-            <input type="checkbox" checked={endOfDay} onChange={() => setEndOfDay((v) => !v)} />
-          </div>
         </div>
         <div
           className={`border dark:border-gray-700 rounded overflow-auto`}

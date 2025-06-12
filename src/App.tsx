@@ -8,6 +8,9 @@ import ForgotPasswordPage from './pages/auth/forgot-password';
 import ResetPasswordPage from './pages/auth/reset-password';
 import ErrorBoundary from './components/ErrorBoundary';
 import ProtectedRoute from './components/ProtectedRoute';
+import PermissionProtectedRoute from './components/PermissionProtectedRoute';
+import AccessDenied from './components/AccessDenied';
+import SmartRedirect from './components/SmartRedirect';
 import { useAuth } from './hooks/useAuth';
 
 // Import all the pages that were in StaffLayout
@@ -18,6 +21,7 @@ import ReportBuilder from './components/report-builder';
 import { ReadingReport } from './components/report-builder';
 import { RDGReportPage, FCOReportPage } from './pages/reports';
 import JobEngineerReportsPage from './pages/JobEngineerReportsPage';
+import LegalReportPage from './pages/reports/LegalReportPage';
 import { JobTable } from './components/JobManagement/job-table';
 import JobDetailsPage from './pages/jobs/job-detail-page';
 import CalendarPage from './pages/calendar/page';
@@ -35,6 +39,8 @@ import ApprovalsPage from './pages/holidays/ApprovalsPage';
 // Engineer imports
 import RouteAllocationPage from './pages/engineer/RouteAllocationPage';
 import FormBuilderPage from './pages/engineer/FormBuilderPage';
+// Import pages
+import BulkSystemNotesPage from './pages/imports/BulkSystemNotesPage';
 
 function App() {
   const { user, loading } = useAuth();
@@ -83,57 +89,186 @@ function App() {
             {user ? (
               user.role === 'engineer' ? 
                 <Navigate to="/engineer/dashboard" replace /> : 
-                <Navigate to="/dashboard" replace />
+                <SmartRedirect />
             ) : (
               <Navigate to="/login" replace />
             )}
           </ProtectedRoute>
         } />
         
+        {/* Access Denied route */}
+        <Route path="/access-denied" element={<AccessDenied />} />
+        
         {/* Staff routes with layout */}
         <Route element={<ProtectedRoute><StaffLayout /></ProtectedRoute>}>
           <Route path="dashboard" element={<NewDashboardPage />} />
-          <Route path="sites" element={<SitesPage />} />
-          <Route path="site/:siteId" element={<SiteDetailPage />} />
-          <Route path="bio-mass" element={<BioMassPage />} />
-          <Route path="analysis" element={<AnalysisPage />} />
+          <Route path="sites" element={
+            <PermissionProtectedRoute requiredPermission="sites.module.root">
+              <SitesPage />
+            </PermissionProtectedRoute>
+          } />
+          <Route path="site/:siteId" element={
+            <PermissionProtectedRoute requiredPermission="sites.detail.view">
+              <SiteDetailPage />
+            </PermissionProtectedRoute>
+          } />
+          <Route path="bio-mass" element={
+            <PermissionProtectedRoute requiredPermission="bio.module.root">
+              <BioMassPage />
+            </PermissionProtectedRoute>
+          } />
+          <Route path="analysis" element={
+            <PermissionProtectedRoute requiredPermission="analysis.module.root">
+              <AnalysisPage />
+            </PermissionProtectedRoute>
+          } />
           
           {/* Job Management Routes */}
-          <Route path="jobs" element={<JobTable />} />
-          <Route path="jobs/new" element={<JobCreatePage />} />
-          <Route path="jobs/:id" element={<JobDetailsPage />} />
-          <Route path="completed-jobs" element={<JobTable showOnlyCompleted={true} />} />
-          <Route path="calendar" element={<CalendarPage />} />
+          <Route path="jobs" element={
+            <PermissionProtectedRoute requiredPermission="jobs.module.root">
+              <JobTable />
+            </PermissionProtectedRoute>
+          } />
+          <Route path="jobs/new" element={
+            <PermissionProtectedRoute requiredPermission="jobs.list.create_button">
+              <JobCreatePage />
+            </PermissionProtectedRoute>
+          } />
+          <Route path="jobs/:id" element={
+            <PermissionProtectedRoute requiredPermission="jobs.detail.view">
+              <JobDetailsPage />
+            </PermissionProtectedRoute>
+          } />
+          <Route path="completed-jobs" element={
+            <PermissionProtectedRoute requiredPermission="jobs.module.root">
+              <JobTable showOnlyCompleted={true} />
+            </PermissionProtectedRoute>
+          } />
+          <Route path="calendar" element={
+            <PermissionProtectedRoute requiredPermission="calendar.module.root">
+              <CalendarPage />
+            </PermissionProtectedRoute>
+          } />
           
           {/* Reports Routes */}
-          <Route path="reports/builder" element={<ReportBuilder />} />
-          <Route path="reports/reading" element={<ReadingReport />} />
-          <Route path="reports/rdg" element={<RDGReportPage />} />
-          <Route path="reports/fco" element={<FCOReportPage />} />
-          <Route path="reports/job-dashboard" element={<JobEngineerReportsPage />} />
+          <Route path="reports/builder" element={
+            <PermissionProtectedRoute requiredPermission="reports.custom.create">
+              <ReportBuilder />
+            </PermissionProtectedRoute>
+          } />
+          <Route path="reports/reading" element={
+            <PermissionProtectedRoute requiredPermission="reports.module.root">
+              <ReadingReport />
+            </PermissionProtectedRoute>
+          } />
+          <Route path="reports/rdg" element={
+            <PermissionProtectedRoute requiredPermission="reports.rdg.view">
+              <RDGReportPage />
+            </PermissionProtectedRoute>
+          } />
+          <Route path="reports/fco" element={
+            <PermissionProtectedRoute requiredPermission="reports.fco.view">
+              <FCOReportPage />
+            </PermissionProtectedRoute>
+          } />
+          <Route path="reports/job-dashboard" element={
+            <PermissionProtectedRoute requiredPermission="reports.module.root">
+              <JobEngineerReportsPage />
+            </PermissionProtectedRoute>
+          } />
+          <Route path="reports/legal" element={
+            <PermissionProtectedRoute requiredPermission="reports.module.root">
+              <LegalReportPage />
+            </PermissionProtectedRoute>
+          } />
           
           {/* Holiday Routes */}
-          <Route path="holidays/calendar" element={<HolidayCalendarPage />} />
-          <Route path="holidays/request/new" element={<HolidayRequestPage />} />
-          <Route path="holidays/request/:id" element={<HolidayRequestPage />} />
-          <Route path="holidays/my-requests" element={<MyRequestsPage />} />
-          <Route path="holidays/entitlements" element={<EntitlementsPage />} />
-          <Route path="holidays/team" element={<div>Team View Page - Coming Soon</div>} />
-          <Route path="holidays/approvals" element={<ApprovalsPage />} />
-          <Route path="holidays/policies" element={<div>HR Policies Page - Coming Soon</div>} />
-          <Route path="holidays/public" element={<div>Public Holidays Page - Coming Soon</div>} />
+          <Route path="holidays/calendar" element={
+            <PermissionProtectedRoute requiredPermission="holidays.calendar.view">
+              <HolidayCalendarPage />
+            </PermissionProtectedRoute>
+          } />
+          <Route path="holidays/request/new" element={
+            <PermissionProtectedRoute requiredPermission="holidays.my.request">
+              <HolidayRequestPage />
+            </PermissionProtectedRoute>
+          } />
+          <Route path="holidays/request/:id" element={
+            <PermissionProtectedRoute requiredPermission="holidays.my.request">
+              <HolidayRequestPage />
+            </PermissionProtectedRoute>
+          } />
+          <Route path="holidays/my-requests" element={
+            <PermissionProtectedRoute requiredPermission="holidays.my.view">
+              <MyRequestsPage />
+            </PermissionProtectedRoute>
+          } />
+          <Route path="holidays/entitlements" element={
+            <PermissionProtectedRoute requiredPermission="holidays.entitlements.view">
+              <EntitlementsPage />
+            </PermissionProtectedRoute>
+          } />
+          <Route path="holidays/team" element={
+            <PermissionProtectedRoute requiredPermission="holidays.module.root">
+              <div>Team View Page - Coming Soon</div>
+            </PermissionProtectedRoute>
+          } />
+          <Route path="holidays/approvals" element={
+            <PermissionProtectedRoute requiredPermission="holidays.entitlements.approve">
+              <ApprovalsPage />
+            </PermissionProtectedRoute>
+          } />
+          <Route path="holidays/policies" element={
+            <PermissionProtectedRoute requiredPermission="holidays.policies.view">
+              <div>HR Policies Page - Coming Soon</div>
+            </PermissionProtectedRoute>
+          } />
+          <Route path="holidays/public" element={
+            <PermissionProtectedRoute requiredPermission="holidays.policies.view">
+              <div>Public Holidays Page - Coming Soon</div>
+            </PermissionProtectedRoute>
+          } />
           
           {/* Imports Routes */}
-          <Route path="imports/readings" element={<div>Import Readings Page</div>} />
-          <Route path="imports/sites" element={<div>Import Sites Page</div>} />
+          <Route path="imports/readings" element={
+            <PermissionProtectedRoute requiredPermission="imports.csv.upload">
+              <div>Import Readings Page</div>
+            </PermissionProtectedRoute>
+          } />
+          <Route path="imports/sites" element={
+            <PermissionProtectedRoute requiredPermission="imports.csv.upload">
+              <div>Import Sites Page</div>
+            </PermissionProtectedRoute>
+          } />
+          <Route path="imports/bulk-notes" element={
+            <PermissionProtectedRoute requiredPermission="imports.csv.upload">
+              <BulkSystemNotesPage />
+            </PermissionProtectedRoute>
+          } />
           
           {/* Engineer Management Routes for Admin/Management */}
-          <Route path="engineer/forms/builder" element={<FormBuilderPage />} />
-          <Route path="engineer/routes/builder" element={<RouteAllocationPage />} />
-          <Route path="engineer/job-allocation" element={<RouteAllocationPage />} />
+          <Route path="engineer/forms/builder" element={
+            <PermissionProtectedRoute requiredPermission="jobs.module.root">
+              <FormBuilderPage />
+            </PermissionProtectedRoute>
+          } />
+          <Route path="engineer/routes/builder" element={
+            <PermissionProtectedRoute requiredPermission="jobs.module.root">
+              <RouteAllocationPage />
+            </PermissionProtectedRoute>
+          } />
+          <Route path="engineer/job-allocation" element={
+            <PermissionProtectedRoute requiredPermission="jobs.module.root">
+              <RouteAllocationPage />
+            </PermissionProtectedRoute>
+          } />
           
           {/* Settings */}
-          <Route path="settings" element={<ModernSettingsPage />} />
+          <Route path="settings" element={
+            <PermissionProtectedRoute requiredPermission="settings.module.root">
+              <ModernSettingsPage />
+            </PermissionProtectedRoute>
+          } />
           
         </Route>
         

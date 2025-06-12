@@ -22,6 +22,7 @@ import {
   TaskStep,
 } from "../../components/JobManagement/CompleteStepModal";
 import { ViewAllNotesModal } from "../../components/JobManagement/ViewAllNotesModal";
+import { AssignTemplateModal } from "../../components/JobManagement/assign-template-modal";
 import jobService, { Job as APIJob } from "../../services/jobService";
 import siteComparisonService, {
   SiteComparisonData,
@@ -158,6 +159,9 @@ export default function JobDetailsPage() {
 
   // Add state for the step completion modal
   const [completeModalOpen, setCompleteModalOpen] = useState(false);
+  
+  // Add state for the assign template modal
+  const [assignTemplateModalOpen, setAssignTemplateModalOpen] = useState(false);
   const [currentTaskId, setCurrentTaskId] = useState<number | null>(null);
   const [currentStep, setCurrentStep] = useState<TaskStep | null>(null);
   const [taskSteps, setTaskSteps] = useState<TaskStepInstance[]>([]);
@@ -959,7 +963,13 @@ export default function JobDetailsPage() {
                 // If no tasks are available, show a message
                 <div className="text-center py-10 text-gray-500 dark:text-gray-400">
                   <p className="mb-4">No tasks assigned to this job.</p>
-                  <Button variant="outline" className="dark:border-gray-600 dark:text-gray-200 dark:hover:bg-gray-700">Assign Task Template</Button>
+                  <Button 
+                    variant="outline" 
+                    className="dark:border-gray-600 dark:text-gray-200 dark:hover:bg-gray-700"
+                    onClick={() => setAssignTemplateModalOpen(true)}
+                  >
+                    Assign Task Template
+                  </Button>
                 </div>
               )}
             </CardContent>
@@ -1353,6 +1363,20 @@ export default function JobDetailsPage() {
           taskId={currentTaskId}
           currentStep={currentStep}
           onStepCompleted={handleStepCompleted}
+        />
+      )}
+
+      {/* Add the AssignTemplateModal */}
+      {job && (
+        <AssignTemplateModal
+          isOpen={assignTemplateModalOpen}
+          onClose={() => setAssignTemplateModalOpen(false)}
+          jobId={job.id}
+          onTaskAssigned={async () => {
+            setAssignTemplateModalOpen(false);
+            // Reload the job data to show the newly assigned task
+            window.location.reload();
+          }}
         />
       )}
     </div>

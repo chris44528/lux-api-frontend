@@ -7,9 +7,10 @@ import CallsTab from './CallsTab';
 import JobsTab from './JobsTab';
 import AdditionalDetailsTab from './AdditionalDetailsTab';
 import LegalTab from './LegalTab';
+import ImagesTab from './ImagesTab';
 import SystemNotesTable from './SystemNotesTable';
 import { useParams, useNavigate } from 'react-router-dom';
-import { getSiteDetail, createNote, api, startMeterTest, pollMeterTestStatus, searchSites } from '../../services/api';
+import { getSiteDetail, createNote, api, startMeterTest, pollMeterTestStatus, searchSites, updateSite } from '../../services/api';
 import LinearProgress from '@mui/material/LinearProgress';
 import Alert from '@mui/material/Alert';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
@@ -160,6 +161,7 @@ const AVAILABLE_TABS = [
   { key: 'calls', label: 'Calls', permission: 'sites.detail.tabs.calls' },
   { key: 'additional-details', label: 'Additional Details', permission: 'sites.detail.tabs.additional_details' },
   { key: 'legal', label: 'Legal', permission: 'sites.detail.tabs.legal' },
+  { key: 'images', label: 'Images', permission: 'sites.detail.tabs.images' },
 ];
 
 const StaffSiteDetailPage: React.FC = () => {
@@ -176,6 +178,7 @@ const StaffSiteDetailPage: React.FC = () => {
   const [noteImage, setNoteImage] = useState<File | null>(null);
   const [noteLoading, setNoteLoading] = useState(false);
   const [noteError, setNoteError] = useState<string | null>(null);
+  const [editingNote, setEditingNote] = useState<{id: number; note: string; department: string} | null>(null);
   const [meterTestLoading, setMeterTestLoading] = useState(false);
   const [meterTestStatus, setMeterTestStatus] = useState('');
   const [meterTestResult, setMeterTestResult] = useState<Record<string, unknown> | null>(null);
@@ -199,6 +202,15 @@ const StaffSiteDetailPage: React.FC = () => {
   const [showEmailTemplateModal, setShowEmailTemplateModal] = useState(false);
   const [showSiteReadingReportModal, setShowSiteReadingReportModal] = useState(false);
   const [showAdvancedMonitoringModal, setShowAdvancedMonitoringModal] = useState(false);
+  const [isEditMode, setIsEditMode] = useState(false);
+  const [editedData, setEditedData] = useState<{
+    inverter_num?: string;
+    inverter_exchange_date?: string;
+    owner?: string;
+    phone?: string;
+    email?: string;
+    owner_address?: string;
+  }>({});
 
   // Get permissions from context
   const { permissions, isLoaded } = useUIPermissionContext();
@@ -253,7 +265,29 @@ const StaffSiteDetailPage: React.FC = () => {
     }
   }, [showAddNoteModal]);
 
-  // Add note handler
+  // Initialize form when editing
+  useEffect(() => {
+    if (editingNote) {
+      setNoteContent(editingNote.note);
+      const dept = departments.find(d => d.name === editingNote.department);
+      if (dept) setSelectedDepartment(dept.id);
+    } else {
+      setNoteContent('');
+      setSelectedDepartment(null);
+    }
+  }, [editingNote, departments]);
+
+  // Handle edit note click
+  const handleEditNote = (note: any) => {
+    setEditingNote({
+      id: note.id,
+      note: note.note,
+      department: note.department
+    });
+    setShowAddNoteModal(true);
+  };
+
+  // Add/Edit note handler
   const handleSaveNote = async () => {
     if (!selectedDepartment || !noteContent.trim()) {
       setNoteError('Please select a department and enter note content.');
@@ -262,15 +296,25 @@ const StaffSiteDetailPage: React.FC = () => {
     setNoteLoading(true);
     setNoteError(null);
     try {
-      await createNote(siteId!, {
-        note: noteContent,
-        image: noteImage || undefined,
-        department_id: selectedDepartment,
-      });
+      if (editingNote) {
+        // Update existing note
+        await api.put(`/sites/${siteId}/notes/${editingNote.id}/`, {
+          note: noteContent,
+          department_id: selectedDepartment,
+        });
+      } else {
+        // Create new note
+        await createNote(siteId!, {
+          note: noteContent,
+          image: noteImage || undefined,
+          department_id: selectedDepartment,
+        });
+      }
       setShowAddNoteModal(false);
       setNoteContent('');
       setSelectedDepartment(null);
       setNoteImage(null);
+      setEditingNote(null);
       // Refresh site data/notes here
       if (siteId) {
         const data = await getSiteDetail(siteId.toString());
@@ -278,7 +322,7 @@ const StaffSiteDetailPage: React.FC = () => {
         setNotesTableKey(Date.now()); // force SystemNotesTable to re-render
       }
     } catch {
-      setNoteError('Failed to save note.');
+      setNoteError(`Failed to ${editingNote ? 'update' : 'save'} note.`);
     } finally {
       setNoteLoading(false);
     }
@@ -536,6 +580,17 @@ const StaffSiteDetailPage: React.FC = () => {
           {/* Actions menu (right) */}
           <div className="flex-shrink-0">
             <ActionsDropdown
+              onEditSite={() => {
+                setIsEditMode(true);
+                setEditedData({
+                  inverter_num: siteData.site?.inverter_num || '',
+                  inverter_exchange_date: siteData.site?.inverter_exchange_date || '',
+                  owner: siteData.customer?.owner || '',
+                  phone: siteData.customer?.phone || '',
+                  email: siteData.customer?.email || '',
+                  owner_address: siteData.customer?.owner_address || ''
+                });
+              }}
               onAddNote={() => setShowAddNoteModal(true)}
               onTestMeter={handleTestMeter}
               onChangeSim={() => setShowChangeSim(true)}
@@ -552,6 +607,69 @@ const StaffSiteDetailPage: React.FC = () => {
             />
           </div>
         </div>
+        
+        {/* Save/Cancel buttons - shown when in edit mode */}
+        {isEditMode && (
+          <div className="bg-blue-50 dark:bg-blue-900/20 border-b border-blue-200 dark:border-blue-800 px-8 py-3">
+            <div className="flex items-center justify-between">
+              <span className="text-sm font-medium text-blue-700 dark:text-blue-300">
+                You are editing site details. Click Save to apply changes or Cancel to discard.
+              </span>
+              <div className="flex gap-3">
+                <button
+                  onClick={() => {
+                    setIsEditMode(false);
+                    setEditedData({});
+                  }}
+                  className="px-4 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-md text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 font-medium"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={async () => {
+                    try {
+                      // Update site data
+                      const siteUpdates: any = {};
+                      if (editedData.inverter_num !== undefined) siteUpdates.inverter_num = editedData.inverter_num;
+                      if (editedData.inverter_exchange_date !== undefined) siteUpdates.inverter_exchange_date = editedData.inverter_exchange_date;
+                      
+                      if (Object.keys(siteUpdates).length > 0) {
+                        await updateSite(siteData.site?.id || siteData.site?.site_id, siteUpdates);
+                      }
+                      
+                      // Update customer data
+                      const customerUpdates: any = {};
+                      if (editedData.owner !== undefined) customerUpdates.owner = editedData.owner;
+                      if (editedData.phone !== undefined) customerUpdates.phone = editedData.phone;
+                      if (editedData.email !== undefined) customerUpdates.email = editedData.email;
+                      if (editedData.owner_address !== undefined) customerUpdates.owner_address = editedData.owner_address;
+                      
+                      if (Object.keys(customerUpdates).length > 0) {
+                        await api.patch(`/customer-details/${siteData.customer?.id}/`, customerUpdates);
+                      }
+                      
+                      // Refresh site data
+                      if (siteId) {
+                        const updatedData = await getSiteDetail(siteId.toString());
+                        setSiteData(updatedData);
+                      }
+                      
+                      setIsEditMode(false);
+                      setEditedData({});
+                    } catch (error) {
+                      console.error('Failed to save changes:', error);
+                      alert('Failed to save changes. Please try again.');
+                    }
+                  }}
+                  className="px-4 py-1.5 text-sm bg-blue-600 hover:bg-blue-700 text-white rounded-md font-medium"
+                >
+                  Save Changes
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+        
         {/* Meter Test Progress/Result UI below header */}
         <div className={`transition-all duration-300 ease-in-out ${showResultBar ? 'max-h-screen opacity-100' : 'max-h-0 opacity-0 overflow-hidden'}`}>
           <div className="flex flex-col items-center gap-4 px-8 mt-6 bg-white dark:bg-gray-900 dark:text-gray-100">
@@ -642,7 +760,15 @@ const StaffSiteDetailPage: React.FC = () => {
         <div className="flex flex-col lg:flex-row gap-6 px-8 py-6">
           {/* Left Card: Site + Landlord Details */}
           <div className="w-full lg:w-1/3">
-            <SiteLandlordCard site={{...siteData.site, last_reading: lastReading, last_reading_date: lastReadingDate}} customer={siteData.customer} />
+            <SiteLandlordCard 
+              site={{...siteData.site, last_reading: lastReading, last_reading_date: lastReadingDate}} 
+              customer={siteData.customer} 
+              isEditMode={isEditMode}
+              editedData={editedData}
+              onEditChange={(field, value) => {
+                setEditedData(prev => ({ ...prev, [field]: value }));
+              }}
+            />
           </div>
           {/* Main Content: Tabs */}
           <div className="w-full lg:w-2/3 flex flex-col gap-6">
@@ -677,6 +803,7 @@ const StaffSiteDetailPage: React.FC = () => {
                   {activeTab === 'calls' && <CallsTab calls={siteData.calls ?? []} />}
                   {activeTab === 'additional-details' && <AdditionalDetailsTab additionalFields={siteData.act_additional_fields} />}
                   {activeTab === 'legal' && <LegalTab siteId={siteId || ''} />}
+                  {activeTab === 'images' && <ImagesTab siteId={Number(siteId)} />}
                 </div>
               </>
             )}
@@ -688,15 +815,19 @@ const StaffSiteDetailPage: React.FC = () => {
             key={notesTableKey}
             notes={Array.isArray(siteData.notes) ? (siteData.notes as ApiNote[]).map(mapApiNoteToUiNote) : []}
             onAddNote={() => setShowAddNoteModal(true)}
+            onEditNote={handleEditNote}
           />
         </div>
         {/* Add Note Modal Placeholder */}
         {showAddNoteModal && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
             <div className="bg-white dark:bg-gray-800 rounded shadow-lg p-8 w-full max-w-lg relative">
-              <button className="absolute top-4 right-4 text-gray-400 hover:text-black text-2xl" onClick={() => setShowAddNoteModal(false)}>&times;</button>
-              <h2 className="text-2xl font-bold mb-1">Add New Note</h2>
-              <div className="text-gray-500 dark:text-gray-300 mb-6">Create a new note for this site. Tag it with a department for easier filtering.</div>
+              <button className="absolute top-4 right-4 text-gray-400 hover:text-black text-2xl" onClick={() => {
+                setShowAddNoteModal(false);
+                setEditingNote(null);
+              }}>&times;</button>
+              <h2 className="text-2xl font-bold mb-1">{editingNote ? 'Edit Note' : 'Add New Note'}</h2>
+              <div className="text-gray-500 dark:text-gray-300 mb-6">{editingNote ? 'Update the note details below.' : 'Create a new note for this site. Tag it with a department for easier filtering.'}</div>
               <div className="mb-4">
                 <label className="block font-semibold mb-1">Department Tag</label>
                 <select
@@ -719,9 +850,10 @@ const StaffSiteDetailPage: React.FC = () => {
                   onChange={e => setNoteContent(e.target.value)}
                 />
               </div>
-              <div className="mb-6">
-                <label className="block font-semibold mb-1">Attachments</label>
-                {!noteImage ? (
+              {!editingNote && (
+                <div className="mb-6">
+                  <label className="block font-semibold mb-1">Attachments</label>
+                  {!noteImage ? (
                   <label className="flex items-center justify-center w-full px-4 py-6 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-md cursor-pointer hover:border-gray-400 dark:hover:border-gray-500 transition-colors">
                     <div className="flex flex-col items-center">
                       <span className="text-3xl text-gray-400 mb-2">📷</span>
@@ -765,11 +897,15 @@ const StaffSiteDetailPage: React.FC = () => {
                     </div>
                   </div>
                 )}
-              </div>
+                </div>
+              )}
               {noteError && <div className="text-red-500 mb-2">{noteError}</div>}
               <div className="flex justify-end gap-2">
-                <button className="px-4 py-2 rounded bg-gray-200 dark:bg-gray-700 dark:text-gray-100" onClick={() => setShowAddNoteModal(false)} disabled={noteLoading}>Cancel</button>
-                <button className="px-4 py-2 rounded bg-black text-white dark:bg-blue-700 dark:hover:bg-blue-800" onClick={handleSaveNote} disabled={noteLoading}>{noteLoading ? 'Saving...' : 'Save Note'}</button>
+                <button className="px-4 py-2 rounded bg-gray-200 dark:bg-gray-700 dark:text-gray-100" onClick={() => {
+                  setShowAddNoteModal(false);
+                  setEditingNote(null);
+                }} disabled={noteLoading}>Cancel</button>
+                <button className="px-4 py-2 rounded bg-black text-white dark:bg-blue-700 dark:hover:bg-blue-800" onClick={handleSaveNote} disabled={noteLoading}>{noteLoading ? 'Saving...' : editingNote ? 'Update Note' : 'Save Note'}</button>
               </div>
             </div>
           </div>

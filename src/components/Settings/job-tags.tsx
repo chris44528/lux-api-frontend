@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { 
   Card, 
   CardHeader, 
@@ -17,14 +17,21 @@ import jobService, { JobTag, JobQueue } from "../../services/jobService";
 interface JobTagsProps {
   jobTags: JobTag[];
   jobQueues: JobQueue[];
+  onRefresh?: () => void;
 }
 
-export default function JobTags({ jobTags, jobQueues }: JobTagsProps) {
+export default function JobTags({ jobTags: initialTags, jobQueues, onRefresh }: JobTagsProps) {
   const { toast } = useToast();
+  const [jobTags, setJobTags] = useState<JobTag[]>(initialTags);
   const [newTagName, setNewTagName] = useState("");
   const [selectedTagQueue, setSelectedTagQueue] = useState<string | null>(null);
   const [filterTagsByQueue, setFilterTagsByQueue] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+
+  // Update local state when props change
+  useEffect(() => {
+    setJobTags(initialTags);
+  }, [initialTags]);
 
   // Filter tags based on selected queue
   const filteredTags = jobTags.filter(tag => {
@@ -56,6 +63,11 @@ export default function JobTags({ jobTags, jobQueues }: JobTagsProps) {
       
       setNewTagName("");
       setSelectedTagQueue(null);
+      
+      // Refresh the data
+      if (onRefresh) {
+        onRefresh();
+      }
     } catch (error) {
       toast({
         title: "Error",
@@ -77,6 +89,11 @@ export default function JobTags({ jobTags, jobQueues }: JobTagsProps) {
         title: "Success",
         description: "Tag deleted successfully"
       });
+      
+      // Refresh the data
+      if (onRefresh) {
+        onRefresh();
+      }
     } catch (error) {
       toast({
         title: "Error",

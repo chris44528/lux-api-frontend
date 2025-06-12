@@ -11,6 +11,7 @@ interface MenuItem {
 }
 
 const allMenuItems: MenuItem[] = [
+  { label: 'Edit Site', section: 'Site Actions', icon: '✏️', permission: 'sites.detail.edit', action: 'editSite' },
   { label: 'Test Meter', section: 'Site Actions', icon: '🔄', permission: 'sites.detail.actions.test_meter', action: 'testMeter' },
   { label: 'Change Sim', section: 'Site Actions', icon: '📱', permission: 'sites.detail.actions.change_sim', action: 'changeSim' },
   { label: 'Change Meter', section: 'Site Actions', icon: '√', permission: 'sites.detail.actions.change_meter', action: 'changeMeter' },
@@ -35,6 +36,7 @@ const sectionOrder = [
 ];
 
 interface ActionsDropdownProps {
+  onEditSite?: () => void;
   onAddNote?: () => void;
   onTestMeter?: () => void;
   onChangeSim?: () => void;
@@ -53,6 +55,7 @@ interface ActionsDropdownProps {
 }
 
 const ActionsDropdown: React.FC<ActionsDropdownProps> = ({
+  onEditSite,
   onAddNote,
   onTestMeter,
   onChangeSim,
@@ -100,6 +103,7 @@ const ActionsDropdown: React.FC<ActionsDropdownProps> = ({
   
   // Create action handlers map
   const actionHandlers: Record<string, () => void> = {
+    editSite: () => onEditSite?.(),
     testMeter: () => onTestMeter?.(),
     changeSim: () => onChangeSim?.(),
     changeMeter: () => onChangeMeter?.(),

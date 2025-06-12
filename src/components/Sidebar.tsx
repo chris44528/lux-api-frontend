@@ -333,12 +333,22 @@ const Sidebar = () => {
     engineer: false,
   });
 
-  // Function to toggle a submenu
+  // Function to toggle a submenu - only allow one expanded at a time
   const toggleSubmenu = (menu: string) => {
-    setExpandedMenus((prev) => ({
-      ...prev,
-      [menu]: !prev[menu],
-    }));
+    setExpandedMenus((prev) => {
+      const isCurrentlyExpanded = prev[menu];
+      // Collapse all menus
+      const allCollapsed = Object.keys(prev).reduce((acc, key) => ({
+        ...acc,
+        [key]: false,
+      }), {});
+      
+      // If the clicked menu wasn't expanded, expand it
+      return isCurrentlyExpanded ? allCollapsed : {
+        ...allCollapsed,
+        [menu]: true,
+      };
+    });
   };
 
   // User info - get from stored user object
@@ -702,6 +712,16 @@ const Sidebar = () => {
                   >
                     Job Report
                   </Link>
+                  <Link
+                    to="/reports/legal"
+                    className={`block px-3 py-1 rounded-md text-sm ${
+                      location.pathname === "/reports/legal"
+                        ? "text-green-700 font-medium"
+                        : "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100"
+                    }`}
+                  >
+                    Legal Report
+                  </Link>
                 </div>
               )}
             </div>
@@ -751,6 +771,16 @@ const Sidebar = () => {
                     }`}
                   >
                     Import Sites
+                  </Link>
+                  <Link
+                    to="/imports/bulk-notes"
+                    className={`block px-3 py-1 rounded-md text-sm ${
+                      location.pathname === "/imports/bulk-notes"
+                        ? "text-green-700 font-medium"
+                        : "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100"
+                    }`}
+                  >
+                    Bulk System Notes
                   </Link>
                 </div>
               )}

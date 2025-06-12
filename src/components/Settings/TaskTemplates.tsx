@@ -2,25 +2,23 @@ import { useState, useEffect, useCallback, useRef } from "react"
 import { Input } from "../ui/input"
 import { Button } from "../ui/button"
 import { Plus, Trash2 } from "lucide-react"
-import jobService, { TaskTemplate, JobType, JobQueue } from "../../services/jobService"
+import jobService, { TaskTemplate, JobType } from "../../services/jobService"
 import { useToast } from "../../hooks/use-toast"
 
 interface TaskTemplatesProps {
   jobTypes: JobType[];
-  queues: JobQueue[];
+  queues?: any[]; // Keep for compatibility but unused
 }
 
 interface NewTemplateData {
   name: string;
-  queue: number | null;
   job_type: number | null;
 }
 
-export function TaskTemplates({ jobTypes, queues }: TaskTemplatesProps) {
+export function TaskTemplates({ jobTypes }: TaskTemplatesProps) {
   const { toast } = useToast();
   const [templates, setTemplates] = useState<TaskTemplate[]>([]);
   const [newName, setNewName] = useState("");
-  const [newQueueId, setNewQueueId] = useState<number | null>(null);
   const [newJobTypeId, setNewJobTypeId] = useState<number | null>(null);
   
   // Track if we've already fetched templates
@@ -78,7 +76,6 @@ export function TaskTemplates({ jobTypes, queues }: TaskTemplatesProps) {
     try {
       const templateData: NewTemplateData = {
         name: newName,
-        queue: newQueueId,
         job_type: newJobTypeId
       };
 
@@ -88,7 +85,6 @@ export function TaskTemplates({ jobTypes, queues }: TaskTemplatesProps) {
       if (isMountedRef.current) {
         setTemplates([...templates, newTemplate]);
         setNewName("");
-        setNewQueueId(null);
         setNewJobTypeId(null);
         
         toast({
@@ -133,12 +129,6 @@ export function TaskTemplates({ jobTypes, queues }: TaskTemplatesProps) {
     }
   };
 
-  // Get queue name by ID
-  const getQueueName = (queueId: number | null) => {
-    if (queueId === null) return "All Queues";
-    const queue = queues.find(q => q.id === queueId);
-    return queue ? queue.name : "Unknown Queue";
-  };
 
   // Get job type name by ID
   const getJobTypeName = (typeId: number | null) => {
@@ -150,7 +140,7 @@ export function TaskTemplates({ jobTypes, queues }: TaskTemplatesProps) {
   return (
     <div className="space-y-4">
       <div className="flex flex-col space-y-2 md:flex-row md:space-y-0 md:space-x-4">
-        <div className="md:w-1/3">
+        <div className="flex-1">
           <Input
             placeholder="Template Name"
             value={newName}
@@ -160,29 +150,19 @@ export function TaskTemplates({ jobTypes, queues }: TaskTemplatesProps) {
         <div className="md:w-1/3">
           <select
             className="w-full p-2 border rounded-md border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-            value={newQueueId?.toString() || ""}
-            onChange={(e) => setNewQueueId(e.target.value ? parseInt(e.target.value) : null)}
-          >
-            <option value="">All Queues</option>
-            {queues.map((queue) => (
-              <option key={queue.id} value={queue.id.toString()}>
-                {queue.name}
-              </option>
-            ))}
-          </select>
-        </div>
-        <div className="md:w-1/3">
-          <select
-            className="w-full p-2 border rounded-md border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
             value={newJobTypeId?.toString() || ""}
             onChange={(e) => setNewJobTypeId(e.target.value ? parseInt(e.target.value) : null)}
           >
             <option value="">Any Job Type</option>
-            {jobTypes.map((type) => (
-              <option key={type.id} value={type.id.toString()}>
-                {type.name}
-              </option>
-            ))}
+            {jobTypes && jobTypes.length > 0 ? (
+              jobTypes.map((type) => (
+                <option key={type.id} value={type.id.toString()}>
+                  {type.name}
+                </option>
+              ))
+            ) : (
+              <option disabled>No job types available</option>
+            )}
           </select>
         </div>
         <Button onClick={handleAddTemplate}>
@@ -194,9 +174,8 @@ export function TaskTemplates({ jobTypes, queues }: TaskTemplatesProps) {
       <div className="rounded-md border border-gray-200 dark:border-gray-700">
         <div className="w-full">
           <div className="bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
-            <div className="grid grid-cols-4 gap-4">
+            <div className="grid grid-cols-3 gap-4">
               <div className="px-4 py-3 text-left text-sm font-medium text-gray-500 dark:text-gray-400">Template Name</div>
-              <div className="px-4 py-3 text-left text-sm font-medium text-gray-500 dark:text-gray-400">Queue</div>
               <div className="px-4 py-3 text-left text-sm font-medium text-gray-500 dark:text-gray-400">Job Type</div>
               <div className="px-4 py-3 text-left text-sm font-medium text-gray-500 dark:text-gray-400">Actions</div>
             </div>
@@ -208,9 +187,8 @@ export function TaskTemplates({ jobTypes, queues }: TaskTemplatesProps) {
               </div>
             ) : (
               templates.map((template) => (
-                <div key={template.id} className="grid grid-cols-4 gap-4 py-3 hover:bg-gray-50 dark:hover:bg-gray-700">
+                <div key={template.id} className="grid grid-cols-3 gap-4 py-3 hover:bg-gray-50 dark:hover:bg-gray-700">
                   <div className="px-4 text-sm font-medium text-gray-900 dark:text-white">{template.name}</div>
-                  <div className="px-4 text-sm text-gray-700 dark:text-gray-300">{template.queue ? getQueueName(template.queue.id) : "All Queues"}</div>
                   <div className="px-4 text-sm text-gray-700 dark:text-gray-300">{template.job_type ? getJobTypeName(template.job_type.id) : "Any Job Type"}</div>
                   <div className="px-4">
                     <Button

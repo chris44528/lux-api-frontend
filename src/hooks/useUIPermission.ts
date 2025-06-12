@@ -13,7 +13,7 @@ interface UseUIPermissionResult {
  * @param permission Single permission codename or array of codenames
  * @param requireAll If array provided, whether to require all permissions (default: true)
  */
-export function useUIPermission(
+export function useUIPermissionFull(
   permission: string | string[], 
   requireAll = true
 ): UseUIPermissionResult {
@@ -150,4 +150,13 @@ export function useAllUIPermissions(): {
   }, [loadAllPermissions]);
 
   return { permissions, loading, error, refresh };
+}
+
+/**
+ * Simplified hook that just returns the permission boolean
+ * Useful when you don't need loading/error states
+ */
+export function useUIPermission(permission: string): boolean {
+  const { hasPermission } = useUIPermissionFull(permission);
+  return hasPermission;
 }

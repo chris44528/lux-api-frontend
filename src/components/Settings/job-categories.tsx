@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { 
   Card, 
   CardHeader, 
@@ -17,14 +17,21 @@ import jobService, { JobCategory, JobQueue } from "../../services/jobService";
 interface JobCategoriesProps {
   jobCategories: JobCategory[];
   jobQueues: JobQueue[];
+  onRefresh?: () => void;
 }
 
-export default function JobCategories({ jobCategories, jobQueues }: JobCategoriesProps) {
+export default function JobCategories({ jobCategories: initialCategories, jobQueues, onRefresh }: JobCategoriesProps) {
   const { toast } = useToast();
+  const [jobCategories, setJobCategories] = useState<JobCategory[]>(initialCategories);
   const [newCategoryName, setNewCategoryName] = useState("");
   const [selectedCategoryQueue, setSelectedCategoryQueue] = useState<string | null>(null);
   const [filterCategoriesByQueue, setFilterCategoriesByQueue] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+
+  // Update local state when props change
+  useEffect(() => {
+    setJobCategories(initialCategories);
+  }, [initialCategories]);
 
   // Filter categories based on selected queue
   const filteredJobCategories = jobCategories.filter(category => {
@@ -56,6 +63,11 @@ export default function JobCategories({ jobCategories, jobQueues }: JobCategorie
       
       setNewCategoryName("");
       setSelectedCategoryQueue(null);
+      
+      // Refresh the data
+      if (onRefresh) {
+        onRefresh();
+      }
     } catch (error) {
       toast({
         title: "Error",
@@ -77,6 +89,11 @@ export default function JobCategories({ jobCategories, jobQueues }: JobCategorie
         title: "Success",
         description: "Job category deleted successfully"
       });
+      
+      // Refresh the data
+      if (onRefresh) {
+        onRefresh();
+      }
     } catch (error) {
       toast({
         title: "Error",

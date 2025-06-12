@@ -13,11 +13,13 @@ interface Note {
 interface SystemNotesTableProps {
   notes: Note[];
   onAddNote?: () => void;
+  onEditNote?: (note: Note) => void;
 }
 
 const SystemNotesTable: React.FC<SystemNotesTableProps> = ({
   notes: initialNotes,
   onAddNote,
+  onEditNote,
 }) => {
   const [search, setSearch] = useState("");
   const [showFavorites, setShowFavorites] = useState(false);
@@ -99,7 +101,8 @@ const SystemNotesTable: React.FC<SystemNotesTableProps> = ({
             <span className="w-5 text-lg flex-shrink-0">📄</span> Add Note
           </button>
           <button
-            className="px-4 py-2 bg-blue-600 text-white rounded font-semibold flex items-center gap-2 text-sm"
+            className="px-4 py-2 bg-green-700 text-white rounded font-semibold flex items-center gap-2 text-sm
+                    hover:bg-green-800 dark:bg-green-700 dark:hover:bg-green-800"
             onClick={handleExportCSV}
           >
             <span className="w-5 text-lg flex-shrink-0">⬇️</span> Export Notes
@@ -153,7 +156,10 @@ const SystemNotesTable: React.FC<SystemNotesTableProps> = ({
                     >
                       ★
                     </button>
-                    <button className="text-gray-600 dark:text-gray-400 underline text-xs">
+                    <button 
+                      className="text-gray-600 dark:text-gray-400 underline text-xs hover:text-gray-800 dark:hover:text-gray-200"
+                      onClick={() => onEditNote && onEditNote(note)}
+                    >
                       Edit
                     </button>
                   </td>

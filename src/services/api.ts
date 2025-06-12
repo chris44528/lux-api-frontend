@@ -153,6 +153,26 @@ export const clearSiteDetailCache = (siteId?: string | number): void => {
   }
 };
 
+// Update site details
+export const updateSite = async (
+  siteId: string | number,
+  data: {
+    low_riso?: boolean;
+    shading?: boolean;
+    trina_project?: boolean;
+    [key: string]: any;
+  }
+): Promise<any> => {
+  try {
+    const response = await api.patch(`/sites/${siteId}/`, data);
+    // Clear cache for this site after update
+    clearSiteDetailCache(siteId);
+    return response.data;
+  } catch (error) {
+    throw error;
+  }
+};
+
 // Toggle note favorite status
 export const toggleNoteFavorite = async (
   noteId: number
