@@ -9,7 +9,9 @@ import {
   EnergyProductionWidgetConfig,
   SiteDistributionWidgetConfig,
   QuickActionsWidgetConfig,
-  RecentVisitedSitesWidgetConfig
+  RecentVisitedSitesWidgetConfig,
+  ManagerDashboardWidgetConfig,
+  PendingApprovalsWidgetConfig
 } from "../../types/dashboard";
 import { Widget } from "./Widget";
 import { PlusCircle, RefreshCw } from "lucide-react";
@@ -45,6 +47,8 @@ import {
 import { SortableWidget } from './SortableWidget';
 import { createPortal } from 'react-dom';
 import { RecentVisitedSitesWidget } from '@/pages/dashboard/RecentVisitedSitesWidget';
+import { ManagerDashboardWidget } from './ManagerDashboardWidget';
+import PendingApprovalsWidget from './PendingApprovalsWidget';
 
 interface DashboardGridProps {
   dashboardId?: string;
@@ -267,6 +271,10 @@ const WidgetRenderer: React.FC<WidgetRendererProps> = ({ config }) => {
           <RecentVisitedSitesWidget />
         </Widget>
       );
+    case "managerDashboard":
+      return <ManagerDashboardWidget config={config} />;
+    case "pendingApprovals":
+      return <PendingApprovalsWidget />;
     // Add more widget types as needed
     default:
       return (
@@ -289,6 +297,7 @@ interface SystemStatusData {
     activeSites: number;
     sitesWithIssues: number;
     offlineSites: number;
+    zeroReads?: number;
   };
 }
 
@@ -359,7 +368,7 @@ const SystemOverviewWidget: React.FC<{ config: SystemOverviewWidgetConfig }> = (
           
           <div className="p-3 bg-orange-50 dark:bg-orange-900/20 rounded-lg border border-orange-100 dark:border-orange-800">
             <div className="text-2xl font-bold text-orange-600 dark:text-orange-400">
-              {data.metrics.sitesWithIssues.toLocaleString()}
+              {(data.metrics.zeroReads ?? 0).toLocaleString()}
             </div>
             <div className="text-xs text-orange-800 dark:text-orange-300">Zero Reads</div>
           </div>

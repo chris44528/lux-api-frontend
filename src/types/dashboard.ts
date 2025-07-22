@@ -95,6 +95,17 @@ export interface RecentVisitedSitesWidgetConfig extends WidgetConfig {
   limit?: number;
 }
 
+// Manager Dashboard Widget
+export interface ManagerDashboardWidgetConfig extends WidgetConfig {
+  type: "managerDashboard";
+}
+
+// Pending Approvals Widget
+export interface PendingApprovalsWidgetConfig extends WidgetConfig {
+  type: "pendingApprovals";
+  limit?: number;
+}
+
 // Union type of all widget configurations
 export type WidgetConfigUnion =
   | SystemOverviewWidgetConfig
@@ -107,7 +118,9 @@ export type WidgetConfigUnion =
   | BioBoilerStatusWidgetConfig
   | CustomReportWidgetConfig
   | QuickActionsWidgetConfig
-  | RecentVisitedSitesWidgetConfig;
+  | RecentVisitedSitesWidgetConfig
+  | ManagerDashboardWidgetConfig
+  | PendingApprovalsWidgetConfig;
 
 // Dashboard configuration
 export interface DashboardConfig {

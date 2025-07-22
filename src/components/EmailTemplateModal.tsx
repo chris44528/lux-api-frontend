@@ -333,7 +333,7 @@ const EmailTemplateModal: React.FC<EmailTemplateModalProps> = ({
       }
 
       // Send the email
-      await api.post('/email-templates/send-custom/', payload);
+      await api.post('/email-templates/templates/send_custom/', payload);
       
       toast({
         title: 'Success',

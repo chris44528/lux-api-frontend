@@ -8,7 +8,7 @@ import BottomNav from '../components/engineer/navigation/BottomNav';
 import storageService from '../services/offline/storageService';
 import syncManager from '../services/sync/syncManager';
 // Lazy load heavy components for better performance
-const JobDetailPage = React.lazy(() => import('../pages/jobs/JobDetailPage'));
+const JobDetailPage = React.lazy(() => import('../pages/jobs/job-detail-page'));
 const FormBuilderPage = React.lazy(() => import('../pages/forms/FormBuilderPage'));
 const FormListPage = React.lazy(() => import('../pages/forms/FormListPage'));
 const RoutesPage = React.lazy(() => import('../pages/routes/RoutesPage'));

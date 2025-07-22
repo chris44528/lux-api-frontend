@@ -86,6 +86,8 @@ export function JobTable({ showOnlyCompleted = false }: JobTableProps) {
   const [statuses, setStatuses] = useState<JobStatus[]>([])
   const [queues, setQueues] = useState<JobQueue[]>([])
   const [selectedJobs, setSelectedJobs] = useState<Set<string>>(new Set())
+  const [selectAllMode, setSelectAllMode] = useState<'none' | 'page' | 'all'>('none')
+  const [allJobsCount, setAllJobsCount] = useState<number>(0)
   const [filters, setFilters] = useState<JobFilters>(getSavedFilters() || defaultFilters)
   const [showAssignModal, setShowAssignModal] = useState(false)
   const [showDeleteModal, setShowDeleteModal] = useState(false)
@@ -98,6 +100,8 @@ export function JobTable({ showOnlyCompleted = false }: JobTableProps) {
   const [openHeaderFilter, setOpenHeaderFilter] = useState<string | null>(null)
   const [availableFCOs, setAvailableFCOs] = useState<string[]>([])
   const [loadingFCOs, setLoadingFCOs] = useState(false)
+  const [selectedJobsForMeterTest, setSelectedJobsForMeterTest] = useState<ExtendedJob[]>([])
+  const [loadingSelectedJobs, setLoadingSelectedJobs] = useState(false)
   
   const { toast } = useToast()
   const navigate = useNavigate()
@@ -416,6 +420,8 @@ export function JobTable({ showOnlyCompleted = false }: JobTableProps) {
   const handleFiltersChange = (newFilters: JobFilters) => {
     setFilters(newFilters)
     setCurrentPage(1) // Reset to first page when filters change
+    setSelectAllMode('none') // Reset selection when filters change
+    setSelectedJobs(new Set()) // Clear selections
     if (newFilters.saveAsDefault) {
       localStorage.setItem('useDefaultJobFilters', 'true')
     } else {
@@ -423,15 +429,90 @@ export function JobTable({ showOnlyCompleted = false }: JobTableProps) {
     }
   }
 
-  const handleSelectAll = (checked: boolean) => {
-    if (checked) {
-      setSelectedJobs(new Set(filteredJobs.map(job => job.id.toString())))
-    } else {
+  const handleSelectAll = (mode: 'none' | 'page' | 'all') => {
+    setSelectAllMode(mode)
+    
+    if (mode === 'none') {
       setSelectedJobs(new Set())
+      setAllJobsCount(0)
+    } else if (mode === 'page') {
+      setSelectedJobs(new Set(filteredJobs.map(job => job.id.toString())))
+      setAllJobsCount(0)
+    } else if (mode === 'all') {
+      // For 'all', we need to fetch all job IDs
+      fetchAllJobIds()
+    }
+  }
+  
+  // Helper function to get the actual selected job count
+  const getSelectedJobCount = () => {
+    return selectAllMode === 'all' ? allJobsCount : selectedJobs.size
+  }
+  
+  const fetchAllJobIds = async () => {
+    try {
+      const allJobIds: string[] = []
+      let page = 1
+      let hasMore = true
+      
+      // Show loading toast
+      toast({
+        title: "Loading",
+        description: "Fetching all job IDs...",
+      })
+      
+      while (hasMore) {
+        const allJobsFilters = {
+          status: showOnlyCompleted 
+            ? ['completed'] 
+            : (filters.status.length > 0 ? filters.status : undefined),
+          priority: filters.priority,
+          queue: filters.queue,
+          assignedTo: filters.assignedTo.map(id => id === 'unassigned' ? -1 : parseInt(id)),
+          search: filters.search || '',
+          page: page,
+          page_size: 100, // Fetch in chunks of 100
+          site_fco: filters.fco && filters.fco.length > 0 ? filters.fco : undefined
+        }
+        
+        const response = await jobService.getJobs(allJobsFilters)
+        
+        if (response && typeof response === 'object' && 'results' in response) {
+          const paginatedResponse = response as unknown as PaginatedResponse<Job>
+          const pageJobIds = paginatedResponse.results.map(job => job.id.toString())
+          allJobIds.push(...pageJobIds)
+          
+          // Check if there are more pages
+          hasMore = paginatedResponse.next !== null
+          page++
+        } else {
+          hasMore = false
+        }
+      }
+      
+      console.log(`Fetched ${allJobIds.length} job IDs across all pages`)
+      setSelectedJobs(new Set(allJobIds))
+      setAllJobsCount(allJobIds.length)
+      
+      toast({
+        title: "Success",
+        description: `Selected all ${allJobIds.length} jobs`,
+      })
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to select all jobs. Please try again.",
+      })
     }
   }
 
   const handleSelectJob = (jobId: string, checked: boolean) => {
+    // If we're in "all" mode and user unchecks a job, switch to manual selection
+    if (selectAllMode === 'all' && !checked) {
+      setSelectAllMode('none')
+      setAllJobsCount(0)
+    }
+    
     const newSelected = new Set(selectedJobs)
     if (checked) {
       newSelected.add(jobId)
@@ -442,7 +523,8 @@ export function JobTable({ showOnlyCompleted = false }: JobTableProps) {
   }
 
   const handleBulkAction = async (action: string) => {
-    if (selectedJobs.size === 0) {
+    const actualSelectedCount = getSelectedJobCount()
+    if (actualSelectedCount === 0) {
       toast({
         title: "No jobs selected",
         description: "Please select at least one job to perform this action.",
@@ -465,7 +547,26 @@ export function JobTable({ showOnlyCompleted = false }: JobTableProps) {
           setShowStatusChangeModal(true)
           break
         case 'meterTest':
-          setShowMeterTestModal(true)
+          // If all pages are selected, we need to fetch all job details
+          if (selectAllMode === 'all') {
+            setLoadingSelectedJobs(true)
+            try {
+              const allSelectedJobs = await jobService.fetchJobsByIds(Array.from(selectedJobs))
+              setSelectedJobsForMeterTest(allSelectedJobs as ExtendedJob[])
+              setShowMeterTestModal(true)
+            } catch (error) {
+              toast({
+                title: "Error",
+                description: "Failed to fetch job details. Please try again.",
+              })
+            } finally {
+              setLoadingSelectedJobs(false)
+            }
+          } else {
+            // For page selection, use the jobs from current page
+            setSelectedJobsForMeterTest(filteredJobs.filter(job => selectedJobs.has(job.id.toString())))
+            setShowMeterTestModal(true)
+          }
           break
         default:
           toast({
@@ -497,14 +598,51 @@ export function JobTable({ showOnlyCompleted = false }: JobTableProps) {
 
   const handleBulkDelete = async () => {
     try {
-      await jobService.bulkDeleteJobs(Array.from(selectedJobs))
+      console.log(`handleBulkDelete: selectAllMode=${selectAllMode}, selectedJobs.size=${selectedJobs.size}, allJobsCount=${allJobsCount}`)
+      const jobIdsArray = Array.from(selectedJobs)
+      const batchSize = 100 // Delete in batches of 100 to avoid overwhelming the backend
+      
+      // If we have a lot of jobs, show a progress toast
+      if (jobIdsArray.length > batchSize) {
+        toast({
+          title: "Processing",
+          description: `Deleting ${jobIdsArray.length} jobs in batches...`,
+        })
+      }
+      
+      // Delete jobs in batches
+      for (let i = 0; i < jobIdsArray.length; i += batchSize) {
+        const batch = jobIdsArray.slice(i, i + batchSize)
+        await jobService.bulkDeleteJobs(batch)
+        
+        // Update progress if we have multiple batches
+        if (jobIdsArray.length > batchSize) {
+          const processed = Math.min(i + batchSize, jobIdsArray.length)
+          toast({
+            title: "Progress",
+            description: `Deleted ${processed} of ${jobIdsArray.length} jobs...`,
+          })
+        }
+      }
+      
+      // Show success message
+      const deletedCount = selectAllMode === 'all' ? allJobsCount : jobIdsArray.length
+      toast({
+        title: "Success",
+        description: `Successfully deleted ${deletedCount} jobs`,
+      })
       
       // Refresh the jobs list
       fetchData()
       
-      // Clear selection
+      // Clear selection and reset select all mode
       setSelectedJobs(new Set())
+      setSelectAllMode('none')
     } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to delete some jobs. Please try again.",
+      })
       throw error
     }
   }
@@ -643,6 +781,29 @@ export function JobTable({ showOnlyCompleted = false }: JobTableProps) {
     }
   }
 
+  // Helper function to format dates
+  const formatDate = (dateString: string | undefined) => {
+    if (!dateString) return '-'
+    const date = new Date(dateString)
+    const now = new Date()
+    const diffMs = now.getTime() - date.getTime()
+    const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24))
+    
+    if (diffDays === 0) {
+      return 'Today'
+    } else if (diffDays === 1) {
+      return 'Yesterday'
+    } else if (diffDays < 7) {
+      return `${diffDays} days ago`
+    } else {
+      return date.toLocaleDateString('en-GB', {
+        day: '2-digit',
+        month: 'short',
+        year: 'numeric'
+      })
+    }
+  }
+
   // Removed unused columns variable
 
   return (
@@ -696,9 +857,20 @@ export function JobTable({ showOnlyCompleted = false }: JobTableProps) {
 
 
         {selectedJobs.size > 0 && (
-          <div className="flex items-center gap-2 p-2 bg-muted dark:bg-gray-800 rounded-lg">
-            <span className="text-sm text-muted-foreground dark:text-gray-400">
-              {selectedJobs.size} job{selectedJobs.size === 1 ? '' : 's'} selected
+          <div className={`flex items-center gap-2 p-2 rounded-lg ${
+            selectAllMode === 'all' 
+              ? 'bg-orange-100 dark:bg-orange-900/20 border border-orange-300 dark:border-orange-700' 
+              : 'bg-muted dark:bg-gray-800'
+          }`}>
+            <span className={`text-sm ${
+              selectAllMode === 'all'
+                ? 'text-orange-800 dark:text-orange-300 font-medium'
+                : 'text-muted-foreground dark:text-gray-400'
+            }`}>
+              {selectAllMode === 'all' 
+                ? `ALL ${totalJobCount} jobs selected across all pages`
+                : `${selectedJobs.size} job${selectedJobs.size === 1 ? '' : 's'} selected on this page`
+              }
             </span>
             {canAssignJobs && (
               <Button
@@ -741,8 +913,9 @@ export function JobTable({ showOnlyCompleted = false }: JobTableProps) {
               variant="outline"
               size="sm"
               onClick={() => handleBulkAction('meterTest')}
+              disabled={loadingSelectedJobs}
             >
-              Meter Test
+              {loadingSelectedJobs ? "Loading jobs..." : "Meter Test"}
             </Button>
           </div>
         )}
@@ -780,11 +953,46 @@ export function JobTable({ showOnlyCompleted = false }: JobTableProps) {
             <Table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
               <TableHeader className="bg-gray-100 dark:bg-gray-800">
                 <TableRow>
-                  <TableHead className="w-[50px]">
-                    <Checkbox
-                      checked={selectedJobs.size === filteredJobs.length}
-                      onCheckedChange={handleSelectAll}
-                    />
+                  <TableHead className="w-[80px]">
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <div className="flex items-center gap-1 cursor-pointer">
+                          <Checkbox
+                            checked={selectAllMode !== 'none'}
+                            onCheckedChange={(checked) => {
+                              if (checked) {
+                                handleSelectAll('page')
+                              } else {
+                                handleSelectAll('none')
+                              }
+                            }}
+                          />
+                          <ChevronDown className="h-3 w-3" />
+                        </div>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-48" align="start">
+                        <div className="space-y-2">
+                          <button
+                            className="w-full text-left px-2 py-1 hover:bg-gray-100 dark:hover:bg-gray-800 rounded text-sm"
+                            onClick={() => handleSelectAll('none')}
+                          >
+                            Select None
+                          </button>
+                          <button
+                            className="w-full text-left px-2 py-1 hover:bg-gray-100 dark:hover:bg-gray-800 rounded text-sm"
+                            onClick={() => handleSelectAll('page')}
+                          >
+                            Select Current Page ({filteredJobs.length})
+                          </button>
+                          <button
+                            className="w-full text-left px-2 py-1 hover:bg-gray-100 dark:hover:bg-gray-800 rounded text-sm"
+                            onClick={() => handleSelectAll('all')}
+                          >
+                            Select All Pages ({totalJobCount})
+                          </button>
+                        </div>
+                      </PopoverContent>
+                    </Popover>
                   </TableHead>
                   <TableHead className="uppercase tracking-wider text-xs text-gray-600 dark:text-gray-300">
                     <Popover open={openHeaderFilter === 'type'} onOpenChange={(open) => setOpenHeaderFilter(open ? 'type' : null)}>
@@ -930,6 +1138,8 @@ export function JobTable({ showOnlyCompleted = false }: JobTableProps) {
                   </TableHead>
                   <TableHead className="uppercase tracking-wider text-xs text-gray-600 dark:text-gray-300">Site Status</TableHead>
                   <TableHead className="uppercase tracking-wider text-xs text-gray-600 dark:text-gray-300">Current Step</TableHead>
+                  <TableHead className="uppercase tracking-wider text-xs text-gray-600 dark:text-gray-300">Created</TableHead>
+                  <TableHead className="uppercase tracking-wider text-xs text-gray-600 dark:text-gray-300">Last Action</TableHead>
                   <TableHead className="uppercase tracking-wider text-xs text-gray-600 dark:text-gray-300">
                     <Popover open={openHeaderFilter === 'assignedTo'} onOpenChange={(open) => setOpenHeaderFilter(open ? 'assignedTo' : null)}>
                       <PopoverTrigger asChild>
@@ -1013,6 +1223,12 @@ export function JobTable({ showOnlyCompleted = false }: JobTableProps) {
                           {job.currentStep}
                         </span>
                       ) : "No tasks assigned"}
+                    </TableCell>
+                    <TableCell className="px-6 py-4 dark:text-gray-300 text-sm">
+                      {formatDate(job.created_at)}
+                    </TableCell>
+                    <TableCell className="px-6 py-4 dark:text-gray-300 text-sm">
+                      {formatDate(job.last_status_change || job.updated_at)}
                     </TableCell>
                     <TableCell className="px-6 py-4 dark:text-gray-300">
                       {job.assigned_to ? job.assigned_to.user.first_name + " " + job.assigned_to.user.last_name : "Unassigned"}
@@ -1134,21 +1350,21 @@ export function JobTable({ showOnlyCompleted = false }: JobTableProps) {
           full_name: `${user.first_name} ${user.last_name}`.trim() || user.username,
           is_active: user.is_active
         } as Technician))}
-        selectedCount={selectedJobs.size}
+        selectedCount={getSelectedJobCount()}
       />
       
       <BulkDeleteModal
         isOpen={showDeleteModal}
         onClose={() => setShowDeleteModal(false)}
         onConfirm={handleBulkDelete}
-        selectedCount={selectedJobs.size}
+        selectedCount={getSelectedJobCount()}
       />
       
       <BulkUpdateModal
         isOpen={showUpdateModal}
         onClose={() => setShowUpdateModal(false)}
         onUpdate={handleBulkUpdate}
-        selectedCount={selectedJobs.size}
+        selectedCount={getSelectedJobCount()}
         technicians={allUsers.map(user => ({
           id: user.id,
           user: {
@@ -1166,10 +1382,14 @@ export function JobTable({ showOnlyCompleted = false }: JobTableProps) {
       
       <BulkMeterTestModal
         isOpen={showMeterTestModal}
-        onClose={() => setShowMeterTestModal(false)}
-        selectedJobs={filteredJobs.filter(job => selectedJobs.has(job.id.toString()))}
+        onClose={() => {
+          setShowMeterTestModal(false)
+          setSelectedJobsForMeterTest([])
+        }}
+        selectedJobs={selectedJobsForMeterTest}
         onComplete={() => {
           setSelectedJobs(new Set());
+          setSelectedJobsForMeterTest([]);
           fetchData();
         }}
       />
@@ -1178,7 +1398,7 @@ export function JobTable({ showOnlyCompleted = false }: JobTableProps) {
         isOpen={showStatusChangeModal}
         onClose={() => setShowStatusChangeModal(false)}
         onUpdate={handleBulkStatusChange}
-        selectedCount={selectedJobs.size}
+        selectedCount={getSelectedJobCount()}
         statuses={statuses}
       />
     </div>

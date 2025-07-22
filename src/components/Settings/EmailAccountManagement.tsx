@@ -6,6 +6,7 @@ import { Label } from '../ui/label';
 import { Select } from '../ui/select';
 import { Badge } from '../ui/badge';
 import { Switch } from '../ui/switch';
+import { Alert, AlertDescription } from '../ui/alert';
 import { useToast } from '../../hooks/use-toast';
 import { api } from '../../services/api';
 import { 
@@ -20,17 +21,21 @@ import {
   EyeOff,
   AlertCircle,
   CheckCircle,
-  Clock
+  Clock,
+  HelpCircle,
+  ExternalLink
 } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '../ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../ui/tabs';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../ui/table';
+import Office365SetupGuide from './Office365SetupGuide';
 
 interface EmailAccount {
   id: number;
   name: string;
   email_address: string;
-  account_type: 'smtp' | 'office365' | 'gmail' | 'sendgrid' | 'aws_ses';
+  account_type: 'smtp' | 'office365' | 'office365_graph' | 'gmail' | 'sendgrid' | 'aws_ses';
+  provider?: string; // Backend uses 'provider' field
   is_active: boolean;
   is_default: boolean;
   smtp_host?: string;
@@ -38,6 +43,8 @@ interface EmailAccount {
   smtp_username?: string;
   use_tls?: boolean;
   use_ssl?: boolean;
+  graph_tenant_id?: string;
+  graph_client_id?: string;
   daily_limit?: number;
   hourly_limit?: number;
   emails_sent_today?: number;
@@ -67,6 +74,7 @@ const EmailAccountManagement: React.FC = () => {
   const [testingAccount, setTestingAccount] = useState<number | null>(null);
   const [showStatsModal, setShowStatsModal] = useState<EmailAccount | null>(null);
   const [stats, setStats] = useState<UsageStats | null>(null);
+  const [showOffice365Guide, setShowOffice365Guide] = useState(false);
 
   // Form states
   const [formData, setFormData] = useState({
@@ -80,6 +88,9 @@ const EmailAccountManagement: React.FC = () => {
     use_tls: true,
     use_ssl: false,
     api_key: '',
+    graph_tenant_id: '',
+    graph_client_id: '',
+    graph_client_secret: '',
     daily_limit: 1000,
     hourly_limit: 100,
     is_active: true,
@@ -123,6 +134,9 @@ const EmailAccountManagement: React.FC = () => {
       use_tls: true,
       use_ssl: false,
       api_key: '',
+      graph_tenant_id: '',
+      graph_client_id: '',
+      graph_client_secret: '',
       daily_limit: 1000,
       hourly_limit: 100,
       is_active: true,
@@ -133,10 +147,13 @@ const EmailAccountManagement: React.FC = () => {
   };
 
   const handleEdit = (account: EmailAccount) => {
+    // Map provider to account_type if needed
+    const accountType = account.provider === 'office365_graph' ? 'office365_graph' : account.account_type;
+    
     setFormData({
       name: account.name,
       email_address: account.email_address,
-      account_type: account.account_type,
+      account_type: accountType,
       smtp_host: account.smtp_host || '',
       smtp_port: account.smtp_port || 587,
       smtp_username: account.smtp_username || '',
@@ -144,6 +161,9 @@ const EmailAccountManagement: React.FC = () => {
       use_tls: account.use_tls || false,
       use_ssl: account.use_ssl || false,
       api_key: '', // Don't pre-fill API key
+      graph_tenant_id: account.graph_tenant_id || '',
+      graph_client_id: account.graph_client_id || '',
+      graph_client_secret: '', // Don't pre-fill secret
       daily_limit: account.daily_limit || 1000,
       hourly_limit: account.hourly_limit || 100,
       is_active: account.is_active,
@@ -158,7 +178,7 @@ const EmailAccountManagement: React.FC = () => {
       const payload: any = {
         name: formData.name,
         email_address: formData.email_address,
-        account_type: formData.account_type,
+        provider: formData.account_type, // Backend uses 'provider' field
         daily_limit: formData.daily_limit,
         hourly_limit: formData.hourly_limit,
         is_active: formData.is_active,
@@ -186,6 +206,12 @@ const EmailAccountManagement: React.FC = () => {
         payload.use_tls = true;
         if (formData.smtp_password) {
           payload.smtp_password = formData.smtp_password;
+        }
+      } else if (formData.account_type === 'office365_graph') {
+        payload.graph_tenant_id = formData.graph_tenant_id;
+        payload.graph_client_id = formData.graph_client_id;
+        if (formData.graph_client_secret) {
+          payload.password = formData.graph_client_secret; // Backend stores this in password field
         }
       } else if (formData.account_type === 'gmail') {
         payload.smtp_host = 'smtp.gmail.com';
@@ -286,6 +312,7 @@ const EmailAccountManagement: React.FC = () => {
     const labels: Record<string, string> = {
       smtp: 'SMTP',
       office365: 'Office 365',
+      office365_graph: 'Office 365 (Graph API)',
       gmail: 'Gmail',
       sendgrid: 'SendGrid',
       aws_ses: 'AWS SES'
@@ -329,7 +356,7 @@ const EmailAccountManagement: React.FC = () => {
                         {account.is_active ? 'Active' : 'Inactive'}
                       </Badge>
                       <Badge variant="outline">
-                        {getAccountTypeLabel(account.account_type)}
+                        {getAccountTypeLabel(account.provider || account.account_type)}
                       </Badge>
                     </div>
 
@@ -485,11 +512,24 @@ const EmailAccountManagement: React.FC = () => {
                 onChange={(e) => setFormData({ ...formData, account_type: e.target.value as any })}
               >
                 <option value="smtp">SMTP</option>
-                <option value="office365">Office 365</option>
+                <option value="office365">Office 365 (SMTP)</option>
+                <option value="office365_graph">Office 365 (Graph API)</option>
                 <option value="gmail">Gmail</option>
                 <option value="sendgrid">SendGrid</option>
                 <option value="aws_ses">AWS SES</option>
               </select>
+              {formData.account_type === 'office365_graph' && (
+                <Button
+                  type="button"
+                  variant="link"
+                  size="sm"
+                  className="mt-2"
+                  onClick={() => setShowOffice365Guide(true)}
+                >
+                  <HelpCircle className="h-4 w-4 mr-1" />
+                  Setup Guide
+                </Button>
+              )}
             </div>
 
             {/* SMTP Settings */}
@@ -537,6 +577,58 @@ const EmailAccountManagement: React.FC = () => {
                     />
                     Use SSL
                   </label>
+                </div>
+              </>
+            )}
+
+            {/* Graph API Settings */}
+            {formData.account_type === 'office365_graph' && (
+              <>
+                <Alert className="bg-blue-50 border-blue-200">
+                  <AlertCircle className="h-4 w-4 text-blue-600" />
+                  <AlertDescription className="text-blue-800">
+                    Graph API requires an Azure App Registration. Click the Setup Guide above for detailed instructions.
+                  </AlertDescription>
+                </Alert>
+
+                <div>
+                  <Label>Tenant ID</Label>
+                  <Input
+                    value={formData.graph_tenant_id}
+                    onChange={(e) => setFormData({ ...formData, graph_tenant_id: e.target.value })}
+                    placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+                  />
+                  <p className="text-xs text-muted-foreground mt-1">Your Azure AD Directory (tenant) ID</p>
+                </div>
+
+                <div>
+                  <Label>Client ID</Label>
+                  <Input
+                    value={formData.graph_client_id}
+                    onChange={(e) => setFormData({ ...formData, graph_client_id: e.target.value })}
+                    placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+                  />
+                  <p className="text-xs text-muted-foreground mt-1">Application (client) ID from your app registration</p>
+                </div>
+
+                <div>
+                  <Label>Client Secret {editingAccount && '(leave blank to keep current)'}</Label>
+                  <div className="relative">
+                    <Input
+                      type={showPasswordFields.graphSecret ? 'text' : 'password'}
+                      value={formData.graph_client_secret}
+                      onChange={(e) => setFormData({ ...formData, graph_client_secret: e.target.value })}
+                      placeholder={editingAccount ? '••••••••' : 'Enter client secret'}
+                    />
+                    <button
+                      type="button"
+                      className="absolute right-2 top-2"
+                      onClick={() => setShowPasswordFields({ ...showPasswordFields, graphSecret: !showPasswordFields.graphSecret })}
+                    >
+                      {showPasswordFields.graphSecret ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    </button>
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-1">Secret value from your app registration</p>
                 </div>
               </>
             )}
@@ -684,6 +776,21 @@ const EmailAccountManagement: React.FC = () => {
           </DialogContent>
         </Dialog>
       )}
+
+      {/* Office 365 Setup Guide Modal */}
+      <Dialog open={showOffice365Guide} onOpenChange={setShowOffice365Guide}>
+        <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Office 365 Graph API Setup Guide</DialogTitle>
+          </DialogHeader>
+          <Office365SetupGuide />
+          <DialogFooter>
+            <Button onClick={() => setShowOffice365Guide(false)}>
+              Close
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

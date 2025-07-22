@@ -32,6 +32,16 @@ const ReadingsTab: React.FC<ReadingsTabProps> = ({ readings = [], meterTests = [
   const [hasMore, setHasMore] = useState(true);
   const [endOfDay, setEndOfDay] = useState(true);
   const readingsContainerRef = useRef<HTMLDivElement>(null);
+  
+  // Pagination state for meter tests
+  const [currentPage, setCurrentPage] = useState(1);
+  const testsPerPage = 8;
+  const totalPages = Math.ceil(meterTests.length / testsPerPage);
+  
+  // Calculate the tests to display based on current page
+  const indexOfLastTest = currentPage * testsPerPage;
+  const indexOfFirstTest = indexOfLastTest - testsPerPage;
+  const currentTests = meterTests.slice(indexOfFirstTest, indexOfLastTest);
 
   // On mount, use initial readings from props
   useEffect(() => {
@@ -88,7 +98,7 @@ const ReadingsTab: React.FC<ReadingsTabProps> = ({ readings = [], meterTests = [
             </tr>
           </thead>
           <tbody>
-            {meterTests.length > 0 ? meterTests.map((test, idx) => (
+            {currentTests.length > 0 ? currentTests.map((test, idx) => (
               <tr key={test.id || idx} className="border-b dark:border-gray-700 last:border-0">
                 <td className="py-1 text-gray-900 dark:text-gray-100">{
                   test.test_reading
@@ -112,6 +122,71 @@ const ReadingsTab: React.FC<ReadingsTabProps> = ({ readings = [], meterTests = [
             )}
           </tbody>
         </table>
+        {/* Pagination controls */}
+        {meterTests.length > testsPerPage && (
+          <div className="flex items-center justify-between mt-4">
+            <div className="text-sm text-gray-700 dark:text-gray-300">
+              Showing {indexOfFirstTest + 1} to {Math.min(indexOfLastTest, meterTests.length)} of {meterTests.length} tests
+            </div>
+            <div className="flex items-center space-x-2">
+              <button
+                onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                disabled={currentPage === 1}
+                className={`px-3 py-1 text-sm rounded border ${
+                  currentPage === 1
+                    ? 'bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed dark:bg-gray-700 dark:text-gray-500 dark:border-gray-600'
+                    : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50 dark:bg-gray-800 dark:text-gray-300 dark:border-gray-600 dark:hover:bg-gray-700'
+                }`}
+              >
+                Previous
+              </button>
+              
+              {/* Page numbers */}
+              <div className="flex items-center space-x-1">
+                {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => {
+                  // Show first page, last page, current page, and pages around current
+                  if (
+                    page === 1 ||
+                    page === totalPages ||
+                    (page >= currentPage - 1 && page <= currentPage + 1)
+                  ) {
+                    return (
+                      <button
+                        key={page}
+                        onClick={() => setCurrentPage(page)}
+                        className={`px-3 py-1 text-sm rounded ${
+                          page === currentPage
+                            ? 'bg-blue-500 text-white'
+                            : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50 dark:bg-gray-800 dark:text-gray-300 dark:border-gray-600 dark:hover:bg-gray-700'
+                        }`}
+                      >
+                        {page}
+                      </button>
+                    );
+                  } else if (
+                    page === currentPage - 2 || 
+                    page === currentPage + 2
+                  ) {
+                    return <span key={page} className="text-gray-500 dark:text-gray-400">...</span>;
+                  }
+                  return null;
+                })}
+              </div>
+              
+              <button
+                onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                disabled={currentPage === totalPages}
+                className={`px-3 py-1 text-sm rounded border ${
+                  currentPage === totalPages
+                    ? 'bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed dark:bg-gray-700 dark:text-gray-500 dark:border-gray-600'
+                    : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50 dark:bg-gray-800 dark:text-gray-300 dark:border-gray-600 dark:hover:bg-gray-700'
+                }`}
+              >
+                Next
+              </button>
+            </div>
+          </div>
+        )}
       </div>
       {/* All Readings */}
       <div

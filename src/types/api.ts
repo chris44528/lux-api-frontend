@@ -286,6 +286,13 @@ export interface DatabaseColumn {
     type: string;
     description?: string;
     table_name: string;
+    is_primary_key?: boolean;
+    is_foreign_key?: boolean;
+    is_nullable?: boolean;
+    related_table?: string;
+    related_model?: string;
+    supports_aggregation?: boolean;
+    supported_functions?: string[];
 }
 
 export interface DatabaseTable {
@@ -293,6 +300,8 @@ export interface DatabaseTable {
     name: string;
     description?: string;
     columns: DatabaseColumn[];
+    app?: string;
+    record_count?: number;
 }
 
 export interface ReportFilter {
@@ -322,4 +331,31 @@ export interface ReportQueryResult {
     columns?: string[];
     valid_columns?: string[];
     column_aliases?: Record<string, string>;
+}
+
+// Enhanced Report Builder Types
+export interface AggregationConfig {
+    function: 'SUM' | 'AVG' | 'COUNT' | 'COUNT_DISTINCT' | 'MIN' | 'MAX';
+    column: string;
+    alias?: string;
+}
+
+export interface ReportTemplate {
+    id: number;
+    name: string;
+    description: string;
+    tables: string[];
+    columns: string[];
+    aggregations: AggregationConfig[];
+    groupBy: string[];
+    filters: ReportFilter[];
+    dateRange: ReportDateRange;
+    orderBy: Array<{ column: string; direction: 'ASC' | 'DESC' }>;
+    created_by: string;
+    created_at: string;
+    updated_at: string;
+    last_run: string | null;
+    run_count: number;
+    is_public: boolean;
+    is_owner?: boolean;
 }

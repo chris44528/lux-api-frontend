@@ -1,8 +1,9 @@
 import { useState, useEffect } from "react";
+import { useSearchParams } from "react-router-dom";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Settings2, Users, Shield, Filter, Building, Palmtree, Cpu, Mail } from "lucide-react";
+import { Settings2, Users, Shield, Filter, Building, Palmtree, Cpu, Mail, Clock } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 // Import existing components
@@ -15,15 +16,20 @@ import HolidayEntitlements from "@/components/Settings/HolidayEntitlements";
 import HolidayPolicies from "@/components/Settings/HolidayPolicies";
 import PublicHolidays from "@/components/Settings/PublicHolidays";
 import BlackoutPeriods from "@/components/Settings/BlackoutPeriods";
+import DepartmentApprovers from "@/components/Settings/DepartmentApprovers";
+import HolidayTypes from "@/components/Settings/HolidayTypes";
 import JobAutomationSettings from "@/components/Settings/JobAutomationSettings";
 import EmailAccountManagement from "@/components/Settings/EmailAccountManagement";
 import { TestPermissions } from "@/components/TestPermissions";
 import { TestBulkUpdate } from "@/components/TestBulkUpdate";
+import AgedCaseSettingsV2 from "@/components/AgedCases/AgedCaseSettingsV2";
+import AgedCaseTemplateManager from "@/components/AgedCases/AgedCaseTemplateManager";
 
 // Import jobService to fetch data
 import jobService from "@/services/jobService";
 
 const ModernSettingsPage = () => {
+  const [searchParams] = useSearchParams();
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<string | null>(null);
   
@@ -64,6 +70,21 @@ const ModernSettingsPage = () => {
     fetchJobData();
   }, []);
 
+  // Handle URL parameters for direct navigation
+  useEffect(() => {
+    const category = searchParams.get('category');
+    const tab = searchParams.get('tab');
+    
+    if (category && tab) {
+      // Find the category in settingsCategories
+      const foundCategory = settingsCategories.find(c => c.id === category);
+      if (foundCategory && foundCategory.tabs.includes(tab)) {
+        setActiveCategory(category);
+        setActiveTab(tab);
+      }
+    }
+  }, [searchParams]);
+
   // Mock data for overview stats - this should come from your API
   const overviewStats = [
     { label: "Active Users", value: 42, icon: Users, color: "bg-blue-500" },
@@ -98,7 +119,7 @@ const ModernSettingsPage = () => {
       icon: Palmtree,
       color: "bg-teal-50 border-teal-200",
       iconColor: "text-teal-600",
-      tabs: ["holiday-policies", "holiday-entitlements", "public-holidays", "blackout-periods"]
+      tabs: ["holiday-types", "department-approvers", "holiday-policies", "holiday-entitlements", "public-holidays", "blackout-periods"]
     },
     {
       id: "access-control",
@@ -117,6 +138,15 @@ const ModernSettingsPage = () => {
       color: "bg-orange-50 border-orange-200",
       iconColor: "text-orange-600",
       tabs: ["departments", "canned-messages", "email-templates", "email-accounts"]
+    },
+    {
+      id: "aged-cases",
+      title: "Aged Cases Management",
+      description: "Configure aged cases thresholds and communication templates",
+      icon: Clock,
+      color: "bg-amber-50 border-amber-200",
+      iconColor: "text-amber-600",
+      tabs: ["aged-cases-config", "aged-cases-templates"]
     }
   ];
 
@@ -131,6 +161,8 @@ const ModernSettingsPage = () => {
     { id: "users", label: "Users", category: "user-management" },
     { id: "groups", label: "Groups", category: "user-management" },
     { id: "engineers", label: "Engineers", category: "user-management" },
+    { id: "holiday-types", label: "Holiday Types", category: "holiday-management" },
+    { id: "department-approvers", label: "Department Approvers", category: "holiday-management" },
     { id: "holiday-policies", label: "Holiday Policies", category: "holiday-management" },
     { id: "holiday-entitlements", label: "Entitlements", category: "holiday-management" },
     { id: "public-holidays", label: "Public Holidays", category: "holiday-management" },
@@ -141,6 +173,8 @@ const ModernSettingsPage = () => {
     { id: "canned-messages", label: "Canned Text Messages", category: "system-config" },
     { id: "email-templates", label: "Email Templates", category: "system-config" },
     { id: "email-accounts", label: "Email Accounts", category: "system-config", icon: Mail },
+    { id: "aged-cases-config", label: "Configuration", category: "aged-cases" },
+    { id: "aged-cases-templates", label: "Templates", category: "aged-cases" },
   ];
 
   const handleCategoryClick = (categoryId: string, firstTab: string) => {
@@ -439,6 +473,14 @@ const ModernSettingsPage = () => {
           </TabsContent>
 
           {/* Holiday Management Tabs */}
+          <TabsContent value="holiday-types">
+            <HolidayTypes />
+          </TabsContent>
+
+          <TabsContent value="department-approvers">
+            <DepartmentApprovers />
+          </TabsContent>
+
           <TabsContent value="holiday-policies">
             <HolidayPolicies />
           </TabsContent>
@@ -453,6 +495,15 @@ const ModernSettingsPage = () => {
 
           <TabsContent value="blackout-periods">
             <BlackoutPeriods />
+          </TabsContent>
+
+          {/* Aged Cases Management Tabs */}
+          <TabsContent value="aged-cases-config">
+            <AgedCaseSettingsV2 />
+          </TabsContent>
+
+          <TabsContent value="aged-cases-templates">
+            <AgedCaseTemplateManager />
           </TabsContent>
         </Tabs>
         )}

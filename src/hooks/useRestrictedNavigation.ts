@@ -19,6 +19,7 @@ export const useRestrictedNavigation = () => {
     { name: 'Dashboard', path: '/dashboard', icon: 'dashboard' },
     { name: 'Sites', path: '/sites', icon: 'location' },
     { name: 'Jobs', path: '/jobs', icon: 'job' },
+    { name: 'Aged Cases', path: '/aged-cases', icon: 'warning' },
     { name: 'Completed Jobs', path: '/completed-jobs', icon: 'check' },
     { name: 'Calendar', path: '/calendar', icon: 'calendar' },
     { name: 'Reports', path: '/reports', icon: 'report' },

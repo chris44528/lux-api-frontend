@@ -14,7 +14,7 @@ import SmartRedirect from './components/SmartRedirect';
 import { useAuth } from './hooks/useAuth';
 
 // Import all the pages that were in StaffLayout
-import NewDashboardPage from './pages/dashboard/NewDashboardPage';
+import FixedDashboardPage from './pages/dashboard/FixedDashboardPage';
 import SitesPage from './pages/sites/SitesPage';
 import SiteDetailPage from './pages/sites/SiteDetailPage';
 import ReportBuilder from './components/report-builder';
@@ -22,11 +22,13 @@ import { ReadingReport } from './components/report-builder';
 import { RDGReportPage, FCOReportPage } from './pages/reports';
 import JobEngineerReportsPage from './pages/JobEngineerReportsPage';
 import LegalReportPage from './pages/reports/LegalReportPage';
+import TempRemovalReportPage from './pages/reports/TempRemovalReportPage';
 import { JobTable } from './components/JobManagement/job-table';
 import JobDetailsPage from './pages/jobs/job-detail-page';
 import CalendarPage from './pages/calendar/page';
 import ModernSettingsPage from './pages/settings/modern-page';
 import JobCreatePage from './pages/jobs/new';
+import PostcardsManagement from './pages/postcards';
 import BioMassPage from './pages/bio-mass/page';
 import AnalysisPage from './pages/analysis/page';
 import NotFound from './components/NotFound';
@@ -39,8 +41,20 @@ import ApprovalsPage from './pages/holidays/ApprovalsPage';
 // Engineer imports
 import RouteAllocationPage from './pages/engineer/RouteAllocationPage';
 import FormBuilderPage from './pages/engineer/FormBuilderPage';
+import LocationTrackerPage from './pages/engineer/LocationTrackerPage';
 // Import pages
 import BulkSystemNotesPage from './pages/imports/BulkSystemNotesPage';
+// Aged Cases imports
+import AgedCasesPage from './pages/aged-cases';
+import AgedCaseDetailPage from './pages/aged-cases/[id]';
+import AgedCaseSettingsPage from './pages/aged-cases/settings';
+// Transfer imports
+import TransfersListView from './pages/transfers/TransfersListView';
+import TransferDetailView from './pages/transfers/TransferDetailView';
+import PublicTransferForm from './pages/transfers/PublicTransferForm';
+import TransferSuccessPage from './pages/transfers/TransferSuccessPage';
+import TransferReviewDashboard from './pages/transfers/TransferReviewDashboard';
+import TransferAnalytics from './pages/transfers/TransferAnalytics';
 
 function App() {
   const { user, loading } = useAuth();
@@ -76,6 +90,10 @@ function App() {
         <Route path="/forgot-password" element={<ForgotPasswordPage />} />
         <Route path="/reset-password/:uid/:token" element={<ResetPasswordPage />} />
         
+        {/* Public transfer form routes */}
+        <Route path="/transfer/:token" element={<PublicTransferForm />} />
+        <Route path="/transfer/success" element={<TransferSuccessPage />} />
+        
         {/* Engineer routes */}
         <Route path="/engineer/*" element={
           <ProtectedRoute>
@@ -101,7 +119,7 @@ function App() {
         
         {/* Staff routes with layout */}
         <Route element={<ProtectedRoute><StaffLayout /></ProtectedRoute>}>
-          <Route path="dashboard" element={<NewDashboardPage />} />
+          <Route path="dashboard" element={<FixedDashboardPage />} />
           <Route path="sites" element={
             <PermissionProtectedRoute requiredPermission="sites.module.root">
               <SitesPage />
@@ -149,6 +167,11 @@ function App() {
               <CalendarPage />
             </PermissionProtectedRoute>
           } />
+          <Route path="postcards" element={
+            <PermissionProtectedRoute requiredPermission="jobs.postcards.view">
+              <PostcardsManagement />
+            </PermissionProtectedRoute>
+          } />
           
           {/* Reports Routes */}
           <Route path="reports/builder" element={
@@ -179,6 +202,11 @@ function App() {
           <Route path="reports/legal" element={
             <PermissionProtectedRoute requiredPermission="reports.module.root">
               <LegalReportPage />
+            </PermissionProtectedRoute>
+          } />
+          <Route path="reports/temp-removals" element={
+            <PermissionProtectedRoute requiredPermission="reports.module.root">
+              <TempRemovalReportPage />
             </PermissionProtectedRoute>
           } />
           
@@ -260,6 +288,50 @@ function App() {
           <Route path="engineer/job-allocation" element={
             <PermissionProtectedRoute requiredPermission="jobs.module.root">
               <RouteAllocationPage />
+            </PermissionProtectedRoute>
+          } />
+          <Route path="engineer/location-tracker" element={
+            <PermissionProtectedRoute requiredPermission="jobs.module.root">
+              <LocationTrackerPage />
+            </PermissionProtectedRoute>
+          } />
+          
+          {/* Aged Cases Routes */}
+          <Route path="aged-cases" element={
+            <PermissionProtectedRoute requiredPermission="jobs.module.root">
+              <AgedCasesPage />
+            </PermissionProtectedRoute>
+          } />
+          <Route path="aged-cases/settings" element={
+            <PermissionProtectedRoute requiredPermission="settings.module.root">
+              <AgedCaseSettingsPage />
+            </PermissionProtectedRoute>
+          } />
+          <Route path="aged-cases/:id" element={
+            <PermissionProtectedRoute requiredPermission="jobs.module.root">
+              <AgedCaseDetailPage />
+            </PermissionProtectedRoute>
+          } />
+          
+          {/* Transfer Routes */}
+          <Route path="transfers" element={
+            <PermissionProtectedRoute requiredPermission="sites.module.root">
+              <TransfersListView />
+            </PermissionProtectedRoute>
+          } />
+          <Route path="transfers/analytics" element={
+            <PermissionProtectedRoute requiredPermission="sites.module.root">
+              <TransferAnalytics />
+            </PermissionProtectedRoute>
+          } />
+          <Route path="transfers/:id" element={
+            <PermissionProtectedRoute requiredPermission="sites.module.root">
+              <TransferDetailView />
+            </PermissionProtectedRoute>
+          } />
+          <Route path="transfers/:id/review" element={
+            <PermissionProtectedRoute requiredPermission="sites.module.root">
+              <TransferReviewDashboard />
             </PermissionProtectedRoute>
           } />
           

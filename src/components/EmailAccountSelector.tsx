@@ -43,7 +43,7 @@ export const EmailAccountSelector: React.FC<EmailAccountSelectorProps> = ({
     try {
       setLoading(true);
       setError(null);
-      const response = await api.get('/email-templates/available_email_accounts/');
+      const response = await api.get('/email-templates/templates/available_email_accounts/');
       setAccounts(response.data || []);
     } catch (error) {
       console.error('Failed to fetch email accounts:', error);

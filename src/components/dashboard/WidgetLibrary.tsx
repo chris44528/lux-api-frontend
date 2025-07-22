@@ -17,6 +17,8 @@ import {
   FileText,
   Zap,
   MapPin,
+  Shield,
+  Calendar,
 } from "lucide-react";
 
 interface WidgetLibraryProps {
@@ -129,6 +131,22 @@ export const WidgetLibrary: React.FC<WidgetLibraryProps> = ({
       icon: <MapPin className="h-8 w-8 text-indigo-500" />,
       defaultSize: "2x2",
       category: "metrics",
+    },
+    {
+      type: "managerDashboard",
+      title: "Manager Dashboard",
+      description: "Manager-only dashboard with team statistics",
+      icon: <Shield className="h-8 w-8 text-red-500" />,
+      defaultSize: "2x2",
+      category: "operations",
+    },
+    {
+      type: "pendingApprovals",
+      title: "Pending Holiday Approvals",
+      description: "Shows pending holiday requests for managers",
+      icon: <Calendar className="h-8 w-8 text-teal-500" />,
+      defaultSize: "2x2",
+      category: "operations",
     },
   ];
 
@@ -261,6 +279,23 @@ export const WidgetLibrary: React.FC<WidgetLibraryProps> = ({
           title: widgetTitle || selectedWidget.title,
           size: selectedWidget.defaultSize,
           limit: 5, // Default limit
+        };
+        break;
+      case "managerDashboard":
+        newWidget = {
+          id: uuidv4(),
+          type: "managerDashboard",
+          title: widgetTitle || selectedWidget.title,
+          size: selectedWidget.defaultSize,
+        };
+        break;
+      case "pendingApprovals":
+        newWidget = {
+          id: uuidv4(),
+          type: "pendingApprovals",
+          title: widgetTitle || selectedWidget.title,
+          size: selectedWidget.defaultSize,
+          limit: 5,
         };
         break;
       default:

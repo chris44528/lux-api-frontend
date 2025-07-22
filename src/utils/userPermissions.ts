@@ -24,4 +24,13 @@ export const isUserInGroup = (user: User | null, groupName: string): boolean => 
  */
 export const isEcotricityUser = (user: User | null): boolean => {
   return isUserInGroup(user, 'Ecotricity');
+};
+
+/**
+ * Check if a user is in the Manager group
+ * @param user The user object
+ * @returns Boolean indicating if the user is in the Manager group
+ */
+export const isManagerUser = (user: User | null): boolean => {
+  return isUserInGroup(user, 'Manager');
 }; 

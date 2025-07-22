@@ -58,6 +58,7 @@ export interface Job {
   };
   created_at: string;
   updated_at: string;
+  last_status_change?: string;
   created_by?: {
     id: number;
     first_name: string;
@@ -403,7 +404,7 @@ const jobService = {
       }
       if (filters.assignedTo?.length) {
         filters.assignedTo.forEach((techId) =>
-          params.append("assigned_to", techId)
+          params.append("assigned_to", techId.toString())
         );
       }
       if (filters.queue?.length) {
@@ -579,6 +580,36 @@ const jobService = {
 
       await api.patch(`/jobs/bulk-update/`, updateData);
     } catch (error) {
+      throw error;
+    }
+  },
+
+  async fetchJobsByIds(jobIds: string[]): Promise<Job[]> {
+    try {
+      // Fetch jobs in batches to avoid URL length limits
+      const BATCH_SIZE = 100;
+      const allJobs: Job[] = [];
+      
+      for (let i = 0; i < jobIds.length; i += BATCH_SIZE) {
+        const batch = jobIds.slice(i, i + BATCH_SIZE);
+        const response = await api.get(`/jobs/`, {
+          params: {
+            ids: batch.join(','),
+            page_size: BATCH_SIZE
+          }
+        });
+        
+        if (response.data && typeof response.data === 'object' && 'results' in response.data) {
+          const paginatedResponse = response.data as PaginatedResponse<Job>;
+          allJobs.push(...paginatedResponse.results);
+        } else if (Array.isArray(response.data)) {
+          allJobs.push(...response.data);
+        }
+      }
+      
+      return allJobs;
+    } catch (error) {
+      console.error('Error fetching jobs by IDs:', error);
       throw error;
     }
   },

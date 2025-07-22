@@ -24,6 +24,7 @@ import {
   Route,
   ClipboardList,
   Users,
+  AlertTriangle,
 } from "lucide-react";
 import { Avatar, AvatarFallback } from "./ui/avatar";
 
@@ -460,6 +461,8 @@ const Sidebar = () => {
         return <MapPin className="mr-2 h-5 w-5" />;
       case "job":
         return <Briefcase className="mr-2 h-5 w-5" />;
+      case "warning":
+        return <AlertTriangle className="mr-2 h-5 w-5" />;
       case "check":
         return <CheckSquare className="mr-2 h-5 w-5" />;
       case "calendar":
@@ -528,6 +531,23 @@ const Sidebar = () => {
             >
               <MapPin className="mr-2 h-5 w-5" />
               Sites
+            </Link>
+          </li>
+        )}
+
+        {/* Transfers */}
+        {uiPermissions['sites.module.root'] === true && (
+          <li>
+            <Link
+              to="/transfers"
+              className={`flex items-center px-3 py-2 rounded-md text-sm transition-colors ${
+                location.pathname.startsWith("/transfers")
+                  ? "bg-green-50 text-green-700 font-medium"
+                  : "text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700"
+              }`}
+            >
+              <Home className="mr-2 h-5 w-5" />
+              Home Owner Transfers
             </Link>
           </li>
         )}
@@ -632,6 +652,16 @@ const Sidebar = () => {
                   >
                     Calendar
                   </Link>
+                  <Link
+                    to="/postcards"
+                    className={`block px-3 py-1 rounded-md text-sm ${
+                      location.pathname === "/postcards"
+                        ? "text-green-700 font-medium"
+                        : "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100"
+                    }`}
+                  >
+                    Post Cards
+                  </Link>
                 </div>
               )}
             </div>
@@ -721,6 +751,16 @@ const Sidebar = () => {
                     }`}
                   >
                     Legal Report
+                  </Link>
+                  <Link
+                    to="/reports/temp-removals"
+                    className={`block px-3 py-1 rounded-md text-sm ${
+                      location.pathname === "/reports/temp-removals"
+                        ? "text-green-700 font-medium"
+                        : "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100"
+                    }`}
+                  >
+                    Temp Removal Report
                   </Link>
                 </div>
               )}
@@ -841,6 +881,16 @@ const Sidebar = () => {
                     }`}
                   >
                     Job Allocation
+                  </Link>
+                  <Link
+                    to="/engineer/location-tracker"
+                    className={`block px-3 py-1 rounded-md text-sm ${
+                      location.pathname === "/engineer/location-tracker"
+                        ? "text-green-700 font-medium"
+                        : "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100"
+                    }`}
+                  >
+                    Location Tracker
                   </Link>
                 </div>
               )}

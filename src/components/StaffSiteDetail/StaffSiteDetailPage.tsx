@@ -9,6 +9,7 @@ import AdditionalDetailsTab from './AdditionalDetailsTab';
 import LegalTab from './LegalTab';
 import ImagesTab from './ImagesTab';
 import SystemNotesTable from './SystemNotesTable';
+import NewHomeOwnerDialog from '../transfers/NewHomeOwnerDialog';
 import { useParams, useNavigate } from 'react-router-dom';
 import { getSiteDetail, createNote, api, startMeterTest, pollMeterTestStatus, searchSites, updateSite } from '../../services/api';
 import LinearProgress from '@mui/material/LinearProgress';
@@ -33,6 +34,7 @@ import TextMessageModal from '../TextMessageModal';
 import EmailTemplateModal from '../EmailTemplateModal';
 import SiteReadingReportModal from '../SiteReadingReportModal';
 import AdvancedMonitoringModal from '../AdvancedMonitoringModal';
+import TempRemovalModal from './TempRemovalModal';
 import { useUIPermissionContext } from '../../contexts/UIPermissionContext';
 
 interface Reading {
@@ -202,6 +204,8 @@ const StaffSiteDetailPage: React.FC = () => {
   const [showEmailTemplateModal, setShowEmailTemplateModal] = useState(false);
   const [showSiteReadingReportModal, setShowSiteReadingReportModal] = useState(false);
   const [showAdvancedMonitoringModal, setShowAdvancedMonitoringModal] = useState(false);
+  const [showTempRemoval, setShowTempRemoval] = useState(false);
+  const [showNewHomeOwnerModal, setShowNewHomeOwnerModal] = useState(false);
   const [isEditMode, setIsEditMode] = useState(false);
   const [editedData, setEditedData] = useState<{
     inverter_num?: string;
@@ -348,6 +352,7 @@ const StaffSiteDetailPage: React.FC = () => {
       const meterIp = String(siteData.sim?.sim_ip ?? '');
       const meterModel = String(siteData.active_meter.meter_model ?? '');
       const meterPassword = String(siteData.active_meter.meter_password ?? '');
+      const meterPort = siteData.sim?.connection_port ? Number(siteData.sim.connection_port) : undefined;
       const site_id = siteId;
 
       if (!meterIp || !meterModel || !meterPassword || !site_id) {
@@ -362,6 +367,7 @@ const StaffSiteDetailPage: React.FC = () => {
         model: meterModel,
         password: meterPassword,
         site_id: Number(site_id),
+        port: meterPort,
       });
 
       await pollMeterTestStatus(
@@ -603,6 +609,8 @@ const StaffSiteDetailPage: React.FC = () => {
               onSendEmail={() => setShowEmailTemplateModal(true)}
               onSiteReadingReport={() => setShowSiteReadingReportModal(true)}
               onAdvancedMonitoring={() => setShowAdvancedMonitoringModal(true)}
+              onTempRemoval={() => setShowTempRemoval(true)}
+              onNewHomeOwner={() => setShowNewHomeOwnerModal(true)}
               siteId={siteId}
             />
           </div>
@@ -1029,6 +1037,29 @@ const StaffSiteDetailPage: React.FC = () => {
             open={showAdvancedMonitoringModal}
             onClose={() => setShowAdvancedMonitoringModal(false)}
             siteId={siteId || ''}
+          />
+        )}
+        {showTempRemoval && (
+          <TempRemovalModal
+            isOpen={showTempRemoval}
+            onClose={() => setShowTempRemoval(false)}
+            siteId={parseInt(siteId || '0')}
+            siteName={siteData.site?.site_name ? String(siteData.site.site_name) : ''}
+            siteReference={typeof siteData.site?.site_reference === 'string' ? siteData.site.site_reference : ''}
+          />
+        )}
+        {showNewHomeOwnerModal && siteData && (
+          <NewHomeOwnerDialog
+            siteId={parseInt(siteId || '0')}
+            siteName={siteData.site?.site_name ? String(siteData.site.site_name) : ''}
+            siteAddress={siteData.site?.site_address ? String(siteData.site.site_address) : ''}
+            existingEmail={siteData.customer?.email ? String(siteData.customer.email) : undefined}
+            open={showNewHomeOwnerModal}
+            onOpenChange={setShowNewHomeOwnerModal}
+            onSuccess={(transferId) => {
+              // Optional: Navigate to transfer details or show success message
+              console.log('Transfer initiated with ID:', transferId);
+            }}
           />
         )}
       </div>

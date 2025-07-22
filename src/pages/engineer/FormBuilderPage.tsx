@@ -49,7 +49,7 @@ interface FormTemplate {
   id: string;
   name: string;
   description: string;
-  type: 'pre_visit' | 'post_visit' | 'general';
+  type: 'pre_job' | 'post_job' | 'safety' | 'meter_reading' | 'site_survey' | 'maintenance' | 'customer_interaction' | 'incident_report';
   fields: FormField[];
   created_date: string;
   updated_date: string;
@@ -175,7 +175,7 @@ const FormBuilderPage: React.FC = () => {
   // Form state
   const [formName, setFormName] = useState('');
   const [formDescription, setFormDescription] = useState('');
-  const [formType, setFormType] = useState<'pre_visit' | 'post_visit' | 'general'>('general');
+  const [formType, setFormType] = useState<'pre_job' | 'post_job' | 'safety' | 'meter_reading' | 'site_survey' | 'maintenance' | 'customer_interaction' | 'incident_report'>('pre_job');
   const [formFields, setFormFields] = useState<FormField[]>([]);
 
   // Field modal state
@@ -318,8 +318,8 @@ const FormBuilderPage: React.FC = () => {
         schema: {
           elements: formFields,
           settings: {
-            require_signature: formType === 'post_visit',
-            require_photo: formType === 'post_visit',
+            require_signature: formType === 'post_job',
+            require_photo: formType === 'post_job',
             require_gps_location: true,
           }
         },
@@ -665,7 +665,7 @@ const FormBuilderPage: React.FC = () => {
                     <h4 className="font-medium text-gray-900 dark:text-gray-100">{form.name}</h4>
                     <p className="text-xs text-gray-500">{form.fields.length} fields</p>
                   </div>
-                  <Badge variant={form.type === 'pre_visit' ? 'default' : form.type === 'post_visit' ? 'secondary' : 'outline'}>
+                  <Badge variant={form.type === 'pre_job' ? 'default' : form.type === 'post_job' ? 'secondary' : 'outline'}>
                     {form.type.replace('_', ' ')}
                   </Badge>
                 </div>
@@ -708,9 +708,14 @@ const FormBuilderPage: React.FC = () => {
                             <SelectValue />
                           </SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="pre_visit">Pre-visit</SelectItem>
-                            <SelectItem value="post_visit">Post-visit</SelectItem>
-                            <SelectItem value="general">General</SelectItem>
+                            <SelectItem value="pre_job">Pre-Job Checklist</SelectItem>
+                            <SelectItem value="post_job">Post-Job Report</SelectItem>
+                            <SelectItem value="safety">Safety Inspection</SelectItem>
+                            <SelectItem value="meter_reading">Meter Reading Form</SelectItem>
+                            <SelectItem value="site_survey">Site Survey</SelectItem>
+                            <SelectItem value="maintenance">Maintenance Report</SelectItem>
+                            <SelectItem value="customer_interaction">Customer Interaction</SelectItem>
+                            <SelectItem value="incident_report">Incident Report</SelectItem>
                           </SelectContent>
                         </Select>
                       </div>

@@ -1,0 +1,531 @@
+import React, { useState, useEffect } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Skeleton } from "@/components/ui/skeleton";
+import { useToast } from "@/components/ui/use-toast";
+import {
+  AlertCircle,
+  CheckCircle,
+  Upload,
+  FileText,
+  X,
+  Home,
+  Calendar,
+  User,
+  Phone,
+  Mail,
+  MapPin,
+} from "lucide-react";
+import transferService, { PublicTransferData } from '@/services/transferService';
+import { format } from 'date-fns';
+
+export default function PublicTransferForm() {
+  const { token } = useParams<{ token: string }>();
+  const navigate = useNavigate();
+  const { toast } = useToast();
+  
+  const [loading, setLoading] = useState(true);
+  const [validating, setValidating] = useState(true);
+  const [submitting, setSubmitting] = useState(false);
+  const [isValid, setIsValid] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
+  const [contactEmail, setContactEmail] = useState('');
+  const [siteName, setSiteName] = useState('');
+  const [siteAddress, setSiteAddress] = useState('');
+  
+  const [formData, setFormData] = useState<PublicTransferData>({
+    sale_completion_date: '',
+    legal_proprietor_1: '',
+    legal_proprietor_2: '',
+    legal_proprietor_3: '',
+    phone_number: '',
+    mobile_number: '',
+    form_email: '',
+    postal_address: '',
+    evidence_document_type: '',
+  });
+  
+  const [uploadedFile, setUploadedFile] = useState<File | null>(null);
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const [uploadError, setUploadError] = useState('');
+
+  useEffect(() => {
+    if (token) {
+      validateToken();
+    }
+  }, [token]);
+
+  const validateToken = async () => {
+    try {
+      setValidating(true);
+      const response = await transferService.validateToken(token!);
+      
+      if (response.valid) {
+        setIsValid(true);
+        setSiteName(response.site_name || '');
+        setSiteAddress(response.site_address || '');
+        if (response.transfer) {
+          setFormData(prev => ({ ...prev, ...response.transfer }));
+        }
+      } else {
+        setIsValid(false);
+        setErrorMessage(response.message || 'Invalid token');
+        setContactEmail(response.contact_email || 'noreply@ashadegreener.co.uk');
+      }
+    } catch (error: any) {
+      setIsValid(false);
+      setErrorMessage('Unable to validate form. Please try again later.');
+      setContactEmail('noreply@ashadegreener.co.uk');
+    } finally {
+      setValidating(false);
+      setLoading(false);
+    }
+  };
+
+  const handleInputChange = (field: keyof PublicTransferData, value: string) => {
+    setFormData(prev => ({ ...prev, [field]: value }));
+  };
+
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      // Validate file size (10MB max)
+      if (file.size > 10 * 1024 * 1024) {
+        setUploadError('File size must be less than 10MB');
+        return;
+      }
+      
+      // Validate file type
+      const allowedTypes = [
+        'application/pdf',
+        'image/jpeg',
+        'image/jpg',
+        'image/png',
+        'application/msword',
+        'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+      ];
+      
+      if (!allowedTypes.includes(file.type)) {
+        setUploadError('Please upload a PDF, image (JPG/PNG), or Word document');
+        return;
+      }
+      
+      setUploadedFile(file);
+      setUploadError('');
+    }
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    // Validate required fields
+    if (!formData.legal_proprietor_1) {
+      toast({
+        title: "Validation Error",
+        description: "Please enter at least one legal proprietor",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    if (!formData.phone_number && !formData.mobile_number) {
+      toast({
+        title: "Validation Error",
+        description: "Please enter either a phone number or mobile number",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    if (!formData.form_email) {
+      toast({
+        title: "Validation Error",
+        description: "Please enter an email address",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    if (!formData.sale_completion_date) {
+      toast({
+        title: "Validation Error",
+        description: "Please enter the sale completion date",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    setSubmitting(true);
+    
+    try {
+      // Upload document first if provided
+      if (uploadedFile && formData.evidence_document_type) {
+        setUploadProgress(30);
+        await transferService.uploadDocument(token!, uploadedFile);
+        setUploadProgress(60);
+      }
+      
+      // Submit form data
+      setUploadProgress(80);
+      await transferService.submitForm(token!, formData);
+      setUploadProgress(100);
+      
+      // Show success state
+      toast({
+        title: "Success!",
+        description: "Your transfer form has been submitted successfully.",
+      });
+      
+      // Show success page
+      setFormData({
+        sale_completion_date: '',
+        legal_proprietor_1: '',
+        legal_proprietor_2: '',
+        legal_proprietor_3: '',
+        phone_number: '',
+        mobile_number: '',
+        form_email: '',
+        postal_address: '',
+        evidence_document_type: '',
+      });
+      setUploadedFile(null);
+      
+      // Navigate to success page after a delay
+      setTimeout(() => {
+        navigate('/transfer/success');
+      }, 3000);
+      
+    } catch (error: any) {
+      console.error('Submission error:', error);
+      toast({
+        title: "Submission Failed",
+        description: error.response?.data?.detail || "Failed to submit form. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setSubmitting(false);
+      setUploadProgress(0);
+    }
+  };
+
+  if (loading || validating) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
+        <Card className="max-w-md w-full">
+          <CardContent className="pt-6">
+            <Skeleton className="h-8 w-3/4 mx-auto mb-4" />
+            <Skeleton className="h-4 w-full mb-2" />
+            <Skeleton className="h-4 w-5/6" />
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  if (!isValid) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
+        <Card className="max-w-md w-full">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-red-600">
+              <AlertCircle className="h-6 w-6" />
+              Form Unavailable
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <Alert variant="destructive">
+              <AlertCircle className="h-4 w-4" />
+              <AlertTitle>Unable to Access Form</AlertTitle>
+              <AlertDescription>
+                {errorMessage}
+              </AlertDescription>
+            </Alert>
+            <div className="mt-6 p-4 bg-gray-100 rounded-lg">
+              <p className="text-sm text-gray-600 mb-2">
+                If you need assistance, please contact:
+              </p>
+              <a 
+                href={`mailto:${contactEmail}`} 
+                className="text-blue-600 hover:underline font-medium"
+              >
+                {contactEmail}
+              </a>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-gray-50 py-8 px-4">
+      <div className="max-w-4xl mx-auto">
+        {/* Header */}
+        <div className="text-center mb-8">
+          <h1 className="text-3xl font-bold text-gray-900 mb-2">
+            Home Owner Transfer Form
+          </h1>
+          <p className="text-gray-600">
+            Please complete this form to transfer ownership of your solar PV system
+          </p>
+        </div>
+
+        {/* Property Information */}
+        <Card className="mb-6">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Home className="h-5 w-5" />
+              Property Information
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-2">
+              <div>
+                <span className="font-medium">Property Name:</span> {siteName}
+              </div>
+              <div>
+                <span className="font-medium">Address:</span> {siteAddress}
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Form */}
+        <form onSubmit={handleSubmit}>
+          <Card className="mb-6">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <User className="h-5 w-5" />
+                New Owner Details
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {/* Sale Completion Date */}
+              <div>
+                <Label htmlFor="sale_date" className="flex items-center gap-2">
+                  <Calendar className="h-4 w-4" />
+                  Sale Completion Date *
+                </Label>
+                <Input
+                  id="sale_date"
+                  type="date"
+                  value={formData.sale_completion_date}
+                  onChange={(e) => handleInputChange('sale_completion_date', e.target.value)}
+                  required
+                  className="mt-1"
+                />
+              </div>
+
+              {/* Legal Proprietors */}
+              <div className="space-y-3">
+                <Label>Legal Proprietor(s) *</Label>
+                <p className="text-sm text-gray-600">
+                  Please enter the name(s) of all legal proprietors as shown on the title deed
+                </p>
+                <Input
+                  placeholder="Legal Proprietor 1 (Required)"
+                  value={formData.legal_proprietor_1}
+                  onChange={(e) => handleInputChange('legal_proprietor_1', e.target.value)}
+                  required
+                />
+                <Input
+                  placeholder="Legal Proprietor 2 (Optional)"
+                  value={formData.legal_proprietor_2}
+                  onChange={(e) => handleInputChange('legal_proprietor_2', e.target.value)}
+                />
+                <Input
+                  placeholder="Legal Proprietor 3 (Optional)"
+                  value={formData.legal_proprietor_3}
+                  onChange={(e) => handleInputChange('legal_proprietor_3', e.target.value)}
+                />
+              </div>
+
+              {/* Contact Details */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="phone" className="flex items-center gap-2">
+                    <Phone className="h-4 w-4" />
+                    Phone Number
+                  </Label>
+                  <Input
+                    id="phone"
+                    type="tel"
+                    placeholder="01234 567890"
+                    value={formData.phone_number}
+                    onChange={(e) => handleInputChange('phone_number', e.target.value)}
+                    className="mt-1"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="mobile" className="flex items-center gap-2">
+                    <Phone className="h-4 w-4" />
+                    Mobile Number
+                  </Label>
+                  <Input
+                    id="mobile"
+                    type="tel"
+                    placeholder="07123 456789"
+                    value={formData.mobile_number}
+                    onChange={(e) => handleInputChange('mobile_number', e.target.value)}
+                    className="mt-1"
+                  />
+                </div>
+              </div>
+              <p className="text-sm text-gray-600">
+                Please provide at least one contact number
+              </p>
+
+              {/* Email */}
+              <div>
+                <Label htmlFor="email" className="flex items-center gap-2">
+                  <Mail className="h-4 w-4" />
+                  Email Address *
+                </Label>
+                <Input
+                  id="email"
+                  type="email"
+                  placeholder="your@email.com"
+                  value={formData.form_email}
+                  onChange={(e) => handleInputChange('form_email', e.target.value)}
+                  required
+                  className="mt-1"
+                />
+              </div>
+
+              {/* Postal Address */}
+              <div>
+                <Label htmlFor="address" className="flex items-center gap-2">
+                  <MapPin className="h-4 w-4" />
+                  Postal Address
+                </Label>
+                <Textarea
+                  id="address"
+                  placeholder="Enter your full postal address"
+                  value={formData.postal_address}
+                  onChange={(e) => handleInputChange('postal_address', e.target.value)}
+                  className="mt-1"
+                  rows={3}
+                />
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Evidence Upload */}
+          <Card className="mb-6">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <FileText className="h-5 w-5" />
+                Evidence of Ownership
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div>
+                <Label htmlFor="evidence_type">Document Type</Label>
+                <Select
+                  value={formData.evidence_document_type}
+                  onValueChange={(value) => handleInputChange('evidence_document_type', value)}
+                >
+                  <SelectTrigger className="mt-1">
+                    <SelectValue placeholder="Select document type" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="tr1_form">TR1 Form</SelectItem>
+                    <SelectItem value="title_deed">Title Deed</SelectItem>
+                    <SelectItem value="solicitor_letter">Solicitor Letter</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {formData.evidence_document_type && (
+                <div>
+                  <Label htmlFor="file">Upload Document</Label>
+                  <div className="mt-1 flex items-center gap-4">
+                    <Input
+                      id="file"
+                      type="file"
+                      onChange={handleFileSelect}
+                      accept=".pdf,.jpg,.jpeg,.png,.doc,.docx"
+                      className="flex-1"
+                    />
+                    {uploadedFile && (
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => {
+                          setUploadedFile(null);
+                          setUploadError('');
+                        }}
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
+                    )}
+                  </div>
+                  {uploadError && (
+                    <p className="text-sm text-red-600 mt-1">{uploadError}</p>
+                  )}
+                  {uploadedFile && !uploadError && (
+                    <p className="text-sm text-green-600 mt-1 flex items-center gap-1">
+                      <CheckCircle className="h-4 w-4" />
+                      {uploadedFile.name} ready to upload
+                    </p>
+                  )}
+                  <p className="text-sm text-gray-600 mt-1">
+                    Accepted formats: PDF, JPG, PNG, DOC, DOCX (Max 10MB)
+                  </p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Submit Button */}
+          <div className="flex justify-end gap-4">
+            <Button
+              type="submit"
+              disabled={submitting}
+              className="min-w-[150px]"
+            >
+              {submitting ? (
+                <>
+                  <Upload className="mr-2 h-4 w-4 animate-spin" />
+                  Submitting... {uploadProgress > 0 && `(${uploadProgress}%)`}
+                </>
+              ) : (
+                <>
+                  <CheckCircle className="mr-2 h-4 w-4" />
+                  Submit Form
+                </>
+              )}
+            </Button>
+          </div>
+        </form>
+
+        {/* Footer */}
+        <div className="mt-8 text-center text-sm text-gray-600">
+          <p>
+            By submitting this form, you confirm that the information provided is accurate
+            and that you are the legal owner of the property.
+          </p>
+          <p className="mt-2">
+            Need help? Contact us at{' '}
+            <a href={`mailto:${contactEmail}`} className="text-blue-600 hover:underline">
+              {contactEmail}
+            </a>
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+}

@@ -16,6 +16,10 @@ import {
   CheckCircle,
   Circle,
   ExternalLink,
+  MoreVertical,
+  Send,
+  History,
+  FlaskConical,
 } from "lucide-react";
 import {
   CompleteStepModal,
@@ -23,11 +27,21 @@ import {
 } from "../../components/JobManagement/CompleteStepModal";
 import { ViewAllNotesModal } from "../../components/JobManagement/ViewAllNotesModal";
 import { AssignTemplateModal } from "../../components/JobManagement/assign-template-modal";
+import { PostcardHistoryModal } from "../../components/JobManagement/PostcardHistoryModal";
 import jobService, { Job as APIJob } from "../../services/jobService";
 import siteComparisonService, {
   SiteComparisonData,
 } from "../../services/siteComparisonService";
-import { api } from "../../services/api";
+import { api, getSiteReadings, getSiteDetail, startMeterTest, pollMeterTestStatus } from "../../services/api";
+import { Badge } from "../../components/ui/badge";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "../../components/ui/dropdown-menu";
+import { useUIPermission } from "../../hooks/useUIPermission";
+import EmailTemplateModal from "../../components/EmailTemplateModal";
 
 // Define types for our job data
 interface JobNote {
@@ -84,6 +98,7 @@ interface Job {
   installDate?: string;
   lastMaintenance?: string;
   nextStep?: string;
+  created_at?: string;
   currentProduction?: string;
   efficiency?: string;
   detectedIssues?: string[];
@@ -156,6 +171,51 @@ export default function JobDetailsPage() {
 
   // Add state for the ViewAllNotesModal
   const [isViewAllNotesModalOpen, setIsViewAllNotesModalOpen] = useState(false);
+  
+  // Add state for status change
+  const [statuses, setStatuses] = useState<any[]>([]);
+  const [updatingStatus, setUpdatingStatus] = useState(false);
+  
+  // Add state for meter readings and tests
+  const [siteReadings, setSiteReadings] = useState<any[]>([]);
+  const [meterTests, setMeterTests] = useState<any[]>([]);
+  const [loadingReadings, setLoadingReadings] = useState(false);
+  const [loadingTests, setLoadingTests] = useState(false);
+  const [readingsDisplayCount, setReadingsDisplayCount] = useState(30);
+  
+  // Add state for active tab
+  const [activeTab, setActiveTab] = useState<string>('performance');
+  
+  // Add state for email modal
+  const [isEmailModalOpen, setIsEmailModalOpen] = useState(false);
+  
+  // Add state for postcard management
+  const [showPostcardMenu, setShowPostcardMenu] = useState(false);
+  const [postcardRequests, setPostcardRequests] = useState<any[]>([]);
+  const [showPostcardHistory, setShowPostcardHistory] = useState(false);
+  const [loadingPostcards, setLoadingPostcards] = useState(false);
+  
+  // Check UI permissions
+  const canChangeStatus = useUIPermission('jobs.status.change');
+  
+  // Add state for meter test
+  const [meterTestLoading, setMeterTestLoading] = useState(false);
+  const [meterTestStatus, setMeterTestStatus] = useState('');
+  const [meterTestResult, setMeterTestResult] = useState<Record<string, unknown> | null>(null);
+  const [meterTestError, setMeterTestError] = useState('');
+  const [showMeterTestResult, setShowMeterTestResult] = useState(false);
+  
+  // Close postcard menu when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (showPostcardMenu) {
+        setShowPostcardMenu(false);
+      }
+    };
+    
+    document.addEventListener('click', handleClickOutside);
+    return () => document.removeEventListener('click', handleClickOutside);
+  }, [showPostcardMenu]);
 
   // Add state for the step completion modal
   const [completeModalOpen, setCompleteModalOpen] = useState(false);
@@ -407,6 +467,9 @@ export default function JobDetailsPage() {
 
       // Keep site property for backward compatibility
       site: apiJob.site,
+      
+      // Add created_at for job opened date
+      created_at: apiJob.created_at,
     };
   };
 
@@ -620,8 +683,214 @@ export default function JobDetailsPage() {
   // Load the job details
   useEffect(() => {
     fetchJobDetails();
+    fetchStatuses();
   }, [jobId]);
+  
+  // Load postcard requests when job is loaded
+  useEffect(() => {
+    if (job) {
+      fetchPostcardRequests();
+    }
+  }, [job?.id]);
+  
+  // Fetch job statuses
+  const fetchStatuses = async () => {
+    try {
+      const statusesData = await jobService.getJobStatuses();
+      setStatuses(statusesData);
+    } catch (error) {
+      console.error('Failed to fetch statuses:', error);
+    }
+  };
+  
+  // Fetch meter readings and tests when job is loaded
+  useEffect(() => {
+    if (job && job.site_id) {
+      fetchSiteReadingsAndTests();
+    }
+  }, [job]);
+  
+  const fetchSiteReadingsAndTests = async () => {
+    if (!job || !job.site_id) return;
+    
+    // Fetch meter readings
+    setLoadingReadings(true);
+    try {
+      const readingsData = await getSiteReadings(job.site_id.toString());
+      setSiteReadings(readingsData.readings || []);
+    } catch (error) {
+      console.error('Failed to fetch site readings:', error);
+    } finally {
+      setLoadingReadings(false);
+    }
+    
+    // Fetch meter tests
+    setLoadingTests(true);
+    try {
+      const siteData = await getSiteDetail(job.site_id.toString());
+      setMeterTests(siteData.meter_tests || []);
+    } catch (error) {
+      console.error('Failed to fetch meter tests:', error);
+    } finally {
+      setLoadingTests(false);
+    }
+  };
+  
+  // Handle status change
+  const handleStatusChange = async (statusId: string) => {
+    if (!job || updatingStatus) return;
+    
+    setUpdatingStatus(true);
+    try {
+      // The backend expects just the status ID for updates
+      const updateData: any = {
+        status: parseInt(statusId)
+      };
+      await jobService.updateJob(parseInt(job.id), updateData);
+      
+      // Update local state
+      const newStatus = statuses.find(s => s.id.toString() === statusId);
+      if (newStatus) {
+        setJob({
+          ...job,
+          status: newStatus.name,
+          statusColor: newStatus.color
+        });
+      }
+    } catch (error) {
+      console.error('Failed to update status:', error);
+      alert('Failed to update status. Please try again.');
+    } finally {
+      setUpdatingStatus(false);
+    }
+  };
 
+  // Function to fetch postcard requests for the job
+  const fetchPostcardRequests = async () => {
+    if (!job) return;
+    
+    setLoadingPostcards(true);
+    try {
+      const response = await api.get('/postcards/job_postcards/', {
+        params: { job_id: job.id }
+      });
+      setPostcardRequests(response.data);
+    } catch (error) {
+      console.error('Failed to fetch postcard requests:', error);
+    } finally {
+      setLoadingPostcards(false);
+    }
+  };
+  
+  // Function to handle sending a postcard
+  const handleSendPostcard = async (postcardNumber: number) => {
+    if (!job) return;
+    
+    setShowPostcardMenu(false);
+    
+    try {
+      const response = await api.post('/postcards/request_postcard/', {
+        job_id: job.id,
+        postcard_number: postcardNumber
+      });
+      
+      // Refresh postcard requests
+      await fetchPostcardRequests();
+      
+      // Show success message (you might want to add a toast notification here)
+      alert(`Postcard ${postcardNumber} requested successfully`);
+    } catch (error: any) {
+      console.error('Failed to request postcard:', error);
+      alert(error.response?.data?.error || 'Failed to request postcard');
+    }
+  };
+  
+  // Function to handle meter test
+  const handleTestMeter = async () => {
+    if (!job || !job.site_id) return;
+    
+    setShowPostcardMenu(false);
+    setMeterTestLoading(true);
+    setMeterTestStatus('Starting meter test...');
+    setMeterTestResult(null);
+    setMeterTestError('');
+    setShowMeterTestResult(true);
+    
+    try {
+      // Get site details to obtain meter information
+      const siteData = await getSiteDetail(job.site_id.toString());
+      
+      if (!siteData || !siteData.active_meter) {
+        setMeterTestError('No meter data available.');
+        setMeterTestLoading(false);
+        return;
+      }
+      
+      // Use SIM IP for meter test
+      const meterIp = String(siteData.sim?.sim_ip ?? '');
+      const meterModel = String(siteData.active_meter.meter_model ?? '');
+      const meterPassword = String(siteData.active_meter.meter_password ?? '');
+      const meterPort = siteData.sim?.connection_port ? Number(siteData.sim.connection_port) : undefined;
+      
+      if (!meterIp || !meterModel || !meterPassword) {
+        setMeterTestError('Missing meter information.');
+        setMeterTestLoading(false);
+        return;
+      }
+      
+      const { task_id } = await startMeterTest({
+        ip: meterIp,
+        model: meterModel,
+        password: meterPassword,
+        site_id: job.site_id,
+        port: meterPort,
+      });
+      
+      await pollMeterTestStatus(
+        task_id,
+        async (statusResponse) => {
+          setMeterTestStatus(statusResponse.status);
+          
+          // Handle completed status
+          if (statusResponse.status === 'completed') {
+            setMeterTestResult(statusResponse.result ?? null);
+            setMeterTestLoading(false);
+            
+            // Save the test attempt to backend
+            try {
+              const obis = statusResponse.result ? (statusResponse.result as unknown as Record<string, unknown>) : {};
+              const obisVal = obis['1.0.1.8.0.255'] as Record<string, unknown> ?? {};
+              const value = Number(obisVal.value ?? 0);
+              
+              await api.post('/meter-test/', {
+                site_id: job.site_id,
+                meter_model: meterModel,
+                test_reading: value.toFixed(4),
+                test_date: new Date().toISOString(),
+                signal_level: statusResponse.result?.['0.0.128.20.0.255']?.value ?? '',
+              });
+              
+              // Refresh meter tests
+              await fetchSiteReadingsAndTests();
+            } catch (saveError) {
+              console.error('Failed to save meter test:', saveError);
+            }
+          }
+          
+          // Handle error status
+          if (statusResponse.status === 'error') {
+            setMeterTestError(statusResponse.error || 'Unknown error');
+            setMeterTestLoading(false);
+          }
+        }
+      );
+    } catch (error) {
+      console.error('Failed to start meter test:', error);
+      setMeterTestError('Failed to start meter test');
+      setMeterTestLoading(false);
+    }
+  };
+  
   // Add a function to handle the "Mark as Complete" button click
   const handleMarkAsComplete = () => {
     let taskIdToUse = currentTaskId;
@@ -676,7 +945,7 @@ export default function JobDetailsPage() {
   };
 
   // Handle step completion from the modal
-  const handleStepCompleted = async (nextStepId?: number) => {
+  const handleStepCompleted = async (_nextStepId?: number) => {
     // In a real implementation, update the task/step via API
 
     // Refresh the job data
@@ -801,11 +1070,53 @@ export default function JobDetailsPage() {
         <div className="w-full md:w-1/2">
           <Card className="mb-6 dark:bg-gray-800 dark:border-gray-700">
             <CardContent className="pt-6">
-              <div className="flex items-center mb-4">
-                <div className="h-6 w-6 flex items-center justify-center mr-2">
-                  <span className="text-gray-500 dark:text-gray-400">⊙</span>
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center">
+                  <div className="h-6 w-6 flex items-center justify-center mr-2">
+                    <span className="text-gray-500 dark:text-gray-400">⊙</span>
+                  </div>
+                  <h2 className="text-xl font-semibold dark:text-white">Job Details</h2>
                 </div>
-                <h2 className="text-xl font-semibold dark:text-white">Job Details</h2>
+                <div className="relative">
+                  <Button
+                    variant="default"
+                    size="sm"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setShowPostcardMenu(!showPostcardMenu);
+                    }}
+                    className="bg-green-600 hover:bg-green-700 text-white"
+                  >
+                    Actions
+                  </Button>
+                  {showPostcardMenu && (
+                    <div className="absolute right-0 mt-2 w-48 bg-white dark:bg-gray-800 rounded-md shadow-lg z-10 border dark:border-gray-700">
+                      <div className="py-1">
+                        <button
+                          onClick={handleTestMeter}
+                          className="w-full text-left px-4 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2 border-b dark:border-gray-700"
+                          disabled={meterTestLoading}
+                        >
+                          <FlaskConical className="h-4 w-4" />
+                          {meterTestLoading ? 'Testing Meter...' : 'Test Meter'}
+                        </button>
+                        <div className="py-1 px-4 text-xs text-gray-500 dark:text-gray-400 font-semibold">
+                          Send Postcard
+                        </div>
+                        {[1, 2, 3, 4, 5].map((num) => (
+                          <button
+                            key={num}
+                            onClick={() => handleSendPostcard(num)}
+                            className="w-full text-left px-4 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
+                          >
+                            <Send className="h-4 w-4" />
+                            Send Postcard {num}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
               </div>
 
               <div className="space-y-4">
@@ -815,6 +1126,68 @@ export default function JobDetailsPage() {
                 </div>
 
                 <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <h3 className="text-sm text-gray-500 dark:text-gray-400 mb-1">Job Status</h3>
+                    {canChangeStatus ? (
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <button
+                            type="button"
+                            className="inline-flex items-center focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 rounded-full"
+                            title="Click to change status"
+                            disabled={updatingStatus}
+                          >
+                            <Badge 
+                              className={`${getBadgeClass(job.status)} cursor-pointer hover:opacity-75 hover:scale-105 transition-all duration-200`}
+                            >
+                              {updatingStatus ? (
+                                <>Updating...</>
+                              ) : (
+                                <>
+                                  {job.status}
+                                  <span className="ml-1 text-xs">▼</span>
+                                </>
+                              )}
+                            </Badge>
+                          </button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="start" className="w-48">
+                          {statuses.map((status) => (
+                            <DropdownMenuItem
+                              key={status.id}
+                              onClick={() => handleStatusChange(status.id.toString())}
+                              disabled={status.name === job.status}
+                              className={status.name === job.status ? 'opacity-50' : ''}
+                            >
+                              <div className="flex items-center gap-2">
+                                <div 
+                                  className="w-3 h-3 rounded-full" 
+                                  style={{ backgroundColor: status.color || '#6B7280' }}
+                                />
+                                <span>{status.name}</span>
+                              </div>
+                            </DropdownMenuItem>
+                          ))}
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    ) : (
+                      <Badge className={getBadgeClass(job.status)}>
+                        {job.status}
+                      </Badge>
+                    )}
+                  </div>
+                  <div>
+                    <h3 className="text-sm text-gray-500 dark:text-gray-400 mb-1">Job Opened</h3>
+                    <p className="dark:text-gray-200">
+                      {job.created_at ? new Date(job.created_at).toLocaleDateString('en-GB', {
+                        day: 'numeric',
+                        month: 'short',
+                        year: 'numeric',
+                        hour: '2-digit',
+                        minute: '2-digit'
+                      }) : 'N/A'}
+                    </p>
+                  </div>
                   <div>
                     <h3 className="text-sm text-gray-500 dark:text-gray-400 mb-1">Job Type</h3>
                     <p className="dark:text-gray-200">{job.jobType}</p>
@@ -857,9 +1230,111 @@ export default function JobDetailsPage() {
                     <p className="dark:text-gray-200">{nextPendingStep}</p>
                   </div>
                 </div>
+                
+                {/* Postcard Status Section */}
+                {postcardRequests.length > 0 && (
+                  <div className="mt-4 p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                    <div className="flex items-center justify-between mb-2">
+                      <h3 className="text-sm font-medium dark:text-white">Postcard Status</h3>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setShowPostcardHistory(true)}
+                        className="flex items-center gap-1 text-xs"
+                      >
+                        <History className="h-3 w-3" />
+                        History
+                      </Button>
+                    </div>
+                    <div className="space-y-1">
+                      {postcardRequests.map((postcard) => (
+                        <div key={postcard.id} className="flex items-center justify-between text-sm">
+                          <span className="dark:text-gray-300">
+                            Postcard {postcard.postcard_number}
+                          </span>
+                          <Badge
+                            className={`text-xs ${
+                              postcard.status === 'sent' 
+                                ? 'bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400'
+                                : 'bg-amber-100 text-amber-800 dark:bg-amber-900/20 dark:text-amber-400'
+                            }`}
+                          >
+                            {postcard.status === 'sent' ? 'Sent' : 'Requested'}
+                          </Badge>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
             </CardContent>
           </Card>
+
+          {/* Meter Test Result Display */}
+          {showMeterTestResult && (meterTestLoading || meterTestResult || meterTestError) && (
+            <Card className="mb-6 dark:bg-gray-800 dark:border-gray-700">
+              <CardContent className="py-4">
+                <div className="flex items-center justify-between mb-2">
+                  <h3 className="text-lg font-semibold dark:text-white">Meter Test Result</h3>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setShowMeterTestResult(false)}
+                    className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+                  >
+                    ✕
+                  </Button>
+                </div>
+                
+                {meterTestLoading && !meterTestResult && (
+                  <div className="text-center py-4">
+                    <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-green-600 mx-auto mb-2"></div>
+                    <p className="text-sm text-gray-600 dark:text-gray-400">{meterTestStatus}</p>
+                  </div>
+                )}
+                
+                {meterTestError && (
+                  <div className="bg-red-100 dark:bg-red-900/20 border border-red-300 dark:border-red-800 text-red-700 dark:text-red-400 px-4 py-3 rounded">
+                    <p className="text-sm">{meterTestError}</p>
+                  </div>
+                )}
+                
+                {meterTestResult && !meterTestLoading && (
+                  <div className="space-y-2">
+                    {(() => {
+                      const obis = meterTestResult ? (meterTestResult as unknown as Record<string, Record<string, unknown>>) : {};
+                      const reading = obis['1.0.1.8.0.255'] as Record<string, unknown> ?? {};
+                      const value = Number(reading.value ?? 0);
+                      const unit = String(reading.unit ?? 'kWh');
+                      const signalLevel = obis['0.0.128.20.0.255'] as Record<string, unknown> ?? {};
+                      
+                      return (
+                        <>
+                          <div className="grid grid-cols-2 gap-4">
+                            <div>
+                              <p className="text-sm text-gray-500 dark:text-gray-400">Current Reading</p>
+                              <p className="text-lg font-semibold dark:text-white">
+                                {value.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} {unit}
+                              </p>
+                            </div>
+                            {signalLevel.value && (
+                              <div>
+                                <p className="text-sm text-gray-500 dark:text-gray-400">Signal Level</p>
+                                <p className="text-lg font-semibold dark:text-white">{String(signalLevel.value)}</p>
+                              </div>
+                            )}
+                          </div>
+                          <div className="mt-4 text-sm text-gray-600 dark:text-gray-400">
+                            <p>Test completed successfully at {new Date().toLocaleTimeString()}</p>
+                          </div>
+                        </>
+                      );
+                    })()}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          )}
 
           <Card className="mb-6 dark:bg-gray-800 dark:border-gray-700">
             <CardContent className="py-6">
@@ -1109,8 +1584,8 @@ export default function JobDetailsPage() {
                 <Button 
                   className="w-1/2 dark:border-gray-600 dark:text-gray-200 dark:hover:bg-gray-700" 
                   variant="outline"
-                  onClick={() => window.location.href = `mailto:${job.email}`}
-                  disabled={job.email === "Loading..." || job.email === "customer@example.com"}
+                  onClick={() => setIsEmailModalOpen(true)}
+                  disabled={job.email === "Loading..." || job.email === "customer@example.com" || !job.email}
                 >
                   Email
                 </Button>
@@ -1127,13 +1602,52 @@ export default function JobDetailsPage() {
                 <h2 className="text-xl font-semibold dark:text-white">System Performance</h2>
               </div>
 
-              {loadingComparison ? (
-                <div className="py-8 text-center">
-                  <p className="text-gray-500 dark:text-gray-400 mb-2">
-                    Loading comparison data...
-                  </p>
+              <div className="w-full">
+                {/* Custom Tab Navigation */}
+                <div className="flex h-11 items-center justify-center rounded-lg bg-gray-100 p-1 dark:bg-gray-800">
+                  <button
+                    onClick={() => setActiveTab('performance')}
+                    className={`inline-flex items-center justify-center whitespace-nowrap rounded-md px-4 py-2 text-sm font-medium transition-all ${
+                      activeTab === 'performance'
+                        ? 'bg-white text-blue-600 shadow-sm dark:bg-gray-700 dark:text-white'
+                        : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200'
+                    }`}
+                  >
+                    Performance
+                  </button>
+                  <button
+                    onClick={() => setActiveTab('readings')}
+                    className={`ml-1 inline-flex items-center justify-center whitespace-nowrap rounded-md px-4 py-2 text-sm font-medium transition-all ${
+                      activeTab === 'readings'
+                        ? 'bg-white text-blue-600 shadow-sm dark:bg-gray-700 dark:text-white'
+                        : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200'
+                    }`}
+                  >
+                    Meter Readings
+                  </button>
+                  <button
+                    onClick={() => setActiveTab('tests')}
+                    className={`ml-1 inline-flex items-center justify-center whitespace-nowrap rounded-md px-4 py-2 text-sm font-medium transition-all ${
+                      activeTab === 'tests'
+                        ? 'bg-white text-blue-600 shadow-sm dark:bg-gray-700 dark:text-white'
+                        : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200'
+                    }`}
+                  >
+                    Meter Tests
+                  </button>
                 </div>
-              ) : siteComparison ? (
+                
+                {/* Tab Content */}
+                <div className="mt-4">
+                  {activeTab === 'performance' && (
+                    <div className="space-y-4">
+                      {loadingComparison ? (
+                    <div className="py-8 text-center">
+                      <p className="text-gray-500 dark:text-gray-400 mb-2">
+                        Loading comparison data...
+                      </p>
+                    </div>
+                  ) : siteComparison ? (
                 <div>
                   {/* Current Site Data */}
                   <div className="mb-6 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-md">
@@ -1336,6 +1850,111 @@ export default function JobDetailsPage() {
                   </div>
                 </div>
               )}
+                    </div>
+                  )}
+                  
+                  {activeTab === 'readings' && (
+                    <div className="space-y-4">
+                  {loadingReadings ? (
+                    <div className="py-8 text-center">
+                      <p className="text-gray-500 dark:text-gray-400">Loading meter readings...</p>
+                    </div>
+                  ) : siteReadings.length > 0 ? (
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-sm">
+                        <thead>
+                          <tr className="border-b dark:border-gray-700">
+                            <th className="text-left py-2 px-2 font-medium dark:text-gray-300">Date</th>
+                            <th className="text-left py-2 px-2 font-medium dark:text-gray-300">Type</th>
+                            <th className="text-right py-2 px-2 font-medium dark:text-gray-300">Value</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {siteReadings.slice(0, readingsDisplayCount).map((reading: any, index: number) => (
+                            <tr key={index} className="border-b dark:border-gray-700">
+                              <td className="py-2 px-2 dark:text-gray-200">
+                                {new Date(reading.date || reading.timestamp).toLocaleDateString()}
+                              </td>
+                              <td className="py-2 px-2 dark:text-gray-200">
+                                <Badge variant="secondary" className="text-xs">
+                                  {reading.type || 'Generation'}
+                                </Badge>
+                              </td>
+                              <td className="text-right py-2 px-2 dark:text-gray-200">
+                                {reading.meter_reading || reading.value || reading.generation_value || reading.daily_gen} kWh
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                      {siteReadings.length > readingsDisplayCount && (
+                        <div className="mt-4 text-center">
+                          <Button
+                            variant="outline"
+                            onClick={() => setReadingsDisplayCount(readingsDisplayCount + 30)}
+                            className="mx-auto"
+                          >
+                            Load More ({siteReadings.length - readingsDisplayCount} remaining)
+                          </Button>
+                        </div>
+                      )}
+                      {readingsDisplayCount >= siteReadings.length && siteReadings.length > 30 && (
+                        <p className="text-sm text-gray-500 dark:text-gray-400 mt-2 text-center">
+                          Showing all {siteReadings.length} readings
+                        </p>
+                      )}
+                    </div>
+                  ) : (
+                    <p className="text-gray-500 dark:text-gray-400 text-center py-8">
+                      No meter readings available
+                    </p>
+                  )}
+                    </div>
+                  )}
+                  
+                  {activeTab === 'tests' && (
+                    <div className="space-y-4">
+                  {loadingTests ? (
+                    <div className="py-8 text-center">
+                      <p className="text-gray-500 dark:text-gray-400">Loading meter tests...</p>
+                    </div>
+                  ) : meterTests.length > 0 ? (
+                    <div className="space-y-4">
+                      {meterTests.slice(0, 5).map((test: any, index: number) => (
+                        <div key={index} className="border dark:border-gray-700 rounded-lg p-4">
+                          <div className="flex justify-between items-start mb-2">
+                            <h4 className="font-medium dark:text-white">
+                              {test.test_type || 'Meter Test'}
+                            </h4>
+                            <Badge 
+                              variant={test.status === 'passed' ? 'success' : test.status === 'failed' ? 'destructive' : 'secondary'}
+                              className="text-xs"
+                            >
+                              {test.status || 'Completed'}
+                            </Badge>
+                          </div>
+                          <div className="text-sm text-gray-600 dark:text-gray-400">
+                            <p>Date: {new Date(test.created_at || test.test_date).toLocaleDateString()}</p>
+                            {test.notes && <p className="mt-1">Notes: {test.notes}</p>}
+                            {test.result && <p className="mt-1">Result: {test.result}</p>}
+                          </div>
+                        </div>
+                      ))}
+                      {meterTests.length > 5 && (
+                        <p className="text-sm text-gray-500 dark:text-gray-400 text-center">
+                          Showing 5 of {meterTests.length} tests
+                        </p>
+                      )}
+                    </div>
+                  ) : (
+                    <p className="text-gray-500 dark:text-gray-400 text-center py-8">
+                      No meter tests available
+                    </p>
+                  )}
+                    </div>
+                  )}
+                </div>
+              </div>
             </CardContent>
           </Card>
         </div>
@@ -1372,13 +1991,47 @@ export default function JobDetailsPage() {
           isOpen={assignTemplateModalOpen}
           onClose={() => setAssignTemplateModalOpen(false)}
           jobId={job.id}
-          onTaskAssigned={async () => {
+          onTemplateAssigned={async () => {
             setAssignTemplateModalOpen(false);
             // Reload the job data to show the newly assigned task
             window.location.reload();
           }}
         />
       )}
+
+      {/* Add the EmailTemplateModal */}
+      {job && (
+        <EmailTemplateModal
+          isOpen={isEmailModalOpen}
+          onClose={() => setIsEmailModalOpen(false)}
+          siteId={job.site_id?.toString() || job.id}
+          customer={{
+            owner: job.client,
+            email: job.email,
+            phone: job.phone,
+            owner_address: job.address,
+            customer_name: job.client
+          }}
+          site={{
+            site_name: job.site_name,
+            site_reference: job.site_id?.toString(),
+            postcode: job.postcode,
+            address: job.address,
+            fit_id: job.id
+          }}
+        />
+      )}
+      
+      {/* Add the PostcardHistoryModal */}
+      {job && (
+        <PostcardHistoryModal
+          isOpen={showPostcardHistory}
+          onClose={() => setShowPostcardHistory(false)}
+          jobId={job.id}
+          postcardRequests={postcardRequests}
+        />
+      )}
+
     </div>
   );
 }

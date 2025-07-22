@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
 // Temporarily disabled Badge due to TypeScript issue
@@ -6,10 +6,12 @@ import { Button } from '../../components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../components/ui/select';
 import { Label } from '../../components/ui/label';
 import { Clock, Briefcase, Route, Plus, X, Navigation, Coffee, Truck, MapPin } from 'lucide-react';
-import { format, addDays } from 'date-fns';
+import { format, addDays, isValid } from 'date-fns';
 import engineerService from '../../services/engineerService';
 import jobService from '../../services/jobService';
 import MapComponent from '../../components/engineer/maps/MapComponent';
+import EngineersTimeline from '../../components/engineer/EngineersTimeline';
+import EngineerCapacityVisualization from '../../components/engineer/EngineerCapacityVisualization';
 import { useToast } from '../../hooks/use-toast';
 import api from '../../services/api';
 
@@ -80,6 +82,13 @@ interface EngineerAvailability {
     can_accommodate_jobs: boolean;
     would_cause_overtime: boolean;
     no_route: boolean;
+    daily_capacity_percentage?: number;
+    already_in_area?: boolean;
+    nearby_jobs_count?: number;
+    nearby_jobs?: Array<{ job_id: number; distance_km: number; scheduled_time: string | null }>;
+    travel_savings_minutes?: number;
+    overbooking_recommended?: boolean;
+    overbooking_reason?: string;
   }>;
 }
 
@@ -116,7 +125,7 @@ const RouteAllocationPage: React.FC = () => {
   const [engineers, setEngineers] = useState<Engineer[]>([]);
   const [availableDates, setAvailableDates] = useState<AvailableDate[]>([]);
   const [isOptimizing, setIsOptimizing] = useState(false);
-  const googleMapsApiKey = '';
+  const googleMapsApiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY || '';
   const [regions, setRegions] = useState<string[]>(['all']);
   const [isLoadingJobs, setIsLoadingJobs] = useState(false);
   const [isLoadingEngineers, setIsLoadingEngineers] = useState(false);
@@ -133,8 +142,18 @@ const RouteAllocationPage: React.FC = () => {
   const [selectedEngineerAvailability, setSelectedEngineerAvailability] = useState<EngineerAvailability | null>(null);
   const [currentRouteTimeline, setCurrentRouteTimeline] = useState<any>(null);
   const [isLoadingRoute, setIsLoadingRoute] = useState(false);
+  const [allocatedJobIds, setAllocatedJobIds] = useState<Set<number>>(new Set());
+  const [routesByDate, setRoutesByDate] = useState<Map<string, any[]>>(new Map());
+  const [engineerRoutes, setEngineerRoutes] = useState<Map<string, any>>(new Map());
+  const [allEngineersTimelines, setAllEngineersTimelines] = useState<any[]>([]);
+  const [isLoadingTimelines, setIsLoadingTimelines] = useState(false);
   
   const { toast } = useToast();
+  
+  // Refs to prevent duplicate API calls
+  const fetchingEngineersRef = useRef(false);
+  const lastFetchedJobsRef = useRef<string>('');
+  const lastFetchedDateRef = useRef<string>('');
   
   // Removed debug logging to avoid hooks error
 
@@ -161,7 +180,7 @@ const RouteAllocationPage: React.FC = () => {
         description: "Google Maps API key not configured",
       });
     }
-  }, [googleMapsApiKey]);
+  }, []); // Remove googleMapsApiKey dependency to prevent re-running
 
   // Fetch job statuses
   useEffect(() => {
@@ -172,7 +191,10 @@ const RouteAllocationPage: React.FC = () => {
         setJobStatuses(response);
         // Set default to first status if available
         if (response.length > 0 && !selectedStatus) {
-          setSelectedStatus(response[0].name);
+          // Use a setTimeout to avoid state update during render
+          setTimeout(() => {
+            setSelectedStatus(response[0].name);
+          }, 0);
         }
       } catch (error) {
         console.error('Failed to fetch job statuses:', error);
@@ -186,6 +208,181 @@ const RouteAllocationPage: React.FC = () => {
     };
     fetchStatuses();
   }, []);
+
+  // Fetch all routes for selected date to identify allocated jobs and build timelines
+  useEffect(() => {
+    const fetchRoutesForDate = async () => {
+      if (!selectedDate || !isValid(selectedDate)) return;
+      
+      setIsLoadingTimelines(true);
+      try {
+        const dateStr = format(selectedDate, 'yyyy-MM-dd');
+        
+        // Fetch all engineers and routes for the date
+        const [engineersResponse, routesResponse] = await Promise.all([
+          engineerService.getEngineers({ active_only: true }),
+          engineerService.getRoutes({ date: dateStr, page_size: 100 })
+        ]);
+        
+        const allEngineers = engineersResponse.results || engineersResponse || [];
+        const routes = routesResponse.results || routesResponse || [];
+        const newAllocatedJobIds = new Set<number>();
+        const newEngineerRoutes = new Map<string, any>();
+        
+        // Build timelines for all engineers
+        const timelines = await Promise.all(allEngineers.map(async (engineer: any) => {
+          // Try different ways to match the route to the engineer
+          const engineerRoute = routes.find((r: any) => {
+            // The route has an engineer object with an id, not just an id
+            return r.engineer?.id === engineer.id;
+          });
+          const blocks: any[] = [];
+          let currentTime = 480; // 8:00 AM in minutes
+          
+          if (engineerRoute && engineerRoute.optimized_order) {
+            try {
+              const optimizedOrder = typeof engineerRoute.optimized_order === 'string' 
+                ? JSON.parse(engineerRoute.optimized_order) 
+                : engineerRoute.optimized_order;
+              
+              // Add start of day
+              blocks.push({
+                type: 'home',
+                startTime: '08:00',
+                endTime: formatMinutesToTime(currentTime + 30),
+                duration: 30,
+                title: 'Start'
+              });
+              currentTime += 30;
+              
+              // Process each job in the route
+              for (let i = 0; i < optimizedOrder.length; i++) {
+                const item = optimizedOrder[i];
+                
+                // Add travel time if not the first job
+                if (item.travel_time_minutes > 0) {
+                  const distanceKm = item.distance_from_previous || 0;
+                  const distanceMiles = distanceKm * 0.621371;
+                  blocks.push({
+                    type: 'travel',
+                    startTime: formatMinutesToTime(currentTime),
+                    endTime: formatMinutesToTime(currentTime + item.travel_time_minutes),
+                    duration: Math.round(item.travel_time_minutes),
+                    title: `${Math.round(distanceMiles)} miles`
+                  });
+                  currentTime += item.travel_time_minutes;
+                }
+                
+                // Add job
+                blocks.push({
+                  type: 'job',
+                  startTime: item.arrival_time || formatMinutesToTime(currentTime),
+                  endTime: item.departure_time || formatMinutesToTime(currentTime + item.estimated_service_minutes),
+                  duration: item.estimated_service_minutes || 60,
+                  title: `Job ${item.job_id}`,
+                  jobId: item.job_id
+                });
+                currentTime += (item.estimated_service_minutes || 60);
+                
+                // Add lunch break after 4 hours
+                if (currentTime > 720 && !blocks.some(b => b.type === 'lunch')) {
+                  blocks.push({
+                    type: 'lunch',
+                    startTime: formatMinutesToTime(currentTime),
+                    endTime: formatMinutesToTime(currentTime + 60),
+                    duration: 60,
+                    title: 'Lunch'
+                  });
+                  currentTime += 60;
+                }
+                
+                // Track allocated job IDs
+                if (item.job_id) {
+                  newAllocatedJobIds.add(item.job_id);
+                }
+              }
+            } catch (e) {
+              console.error('Error parsing route data:', e);
+            }
+          }
+          
+          // Extract postcode area from service_areas or use default
+          const area = engineer.service_areas && engineer.service_areas.length > 0 
+            ? engineer.service_areas[0].split(' ')[0] // Get first part of postcode
+            : 'N/A';
+          
+          // Get engineer name - the structure is engineer.technician.user.first_name/last_name
+          let engineerName = 'Unknown';
+          if (engineer.technician) {
+            if (engineer.technician.full_name) {
+              engineerName = engineer.technician.full_name;
+            } else if (engineer.technician.user) {
+              const firstName = engineer.technician.user.first_name || '';
+              const lastName = engineer.technician.user.last_name || '';
+              engineerName = `${firstName} ${lastName}`.trim();
+            } else {
+              // Try direct properties on technician
+              const firstName = engineer.technician.first_name || '';
+              const lastName = engineer.technician.last_name || '';
+              engineerName = `${firstName} ${lastName}`.trim();
+            }
+          }
+          
+          if (!engineerName || engineerName === '') {
+            engineerName = engineer.employee_id || `Engineer ${engineer.id}`;
+          }
+          
+          return {
+            engineerId: engineer.id,
+            engineerName: engineerName,
+            area: area,
+            blocks: blocks
+          };
+        }));
+        
+        // Store route data and also process for allocated job IDs
+        routes.forEach((route: any) => {
+          const key = `${route.engineer}-${dateStr}`;
+          newEngineerRoutes.set(key, route);
+          
+          // Also extract job IDs from routes that might not have been processed above
+          if (route.optimized_order) {
+            try {
+              const optimizedOrder = typeof route.optimized_order === 'string' 
+                ? JSON.parse(route.optimized_order) 
+                : route.optimized_order;
+              
+              optimizedOrder.forEach((item: any) => {
+                if (item.job_id) {
+                  newAllocatedJobIds.add(item.job_id);
+                }
+              });
+            } catch (e) {
+              console.error('Error parsing route optimized_order:', e);
+            }
+          }
+        });
+        
+        setAllocatedJobIds(newAllocatedJobIds);
+        setRoutesByDate(prev => new Map(prev).set(dateStr, routes));
+        setEngineerRoutes(newEngineerRoutes);
+        setAllEngineersTimelines(timelines);
+      } catch (error) {
+        console.error('Failed to fetch routes for date:', error);
+      } finally {
+        setIsLoadingTimelines(false);
+      }
+    };
+    
+    fetchRoutesForDate();
+  }, [selectedDate]);
+  
+  // Helper function to format minutes to HH:MM
+  const formatMinutesToTime = (minutes: number): string => {
+    const hours = Math.floor(minutes / 60);
+    const mins = Math.round(minutes % 60);
+    return `${hours.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}`;
+  };
 
   // Fetch jobs with selected status
   useEffect(() => {
@@ -246,6 +443,11 @@ const RouteAllocationPage: React.FC = () => {
 
   // Fetch available dates when region changes or show next available is toggled
   useEffect(() => {
+    // Skip this effect if we're getting dates from the engineers-by-location endpoint
+    if (selectedJobs.length > 0) {
+      return;
+    }
+    
     const fetchAvailableDates = async () => {
       try {
         const params: any = {
@@ -275,9 +477,10 @@ const RouteAllocationPage: React.FC = () => {
     fetchAvailableDates();
   }, [selectedRegion, showNextAvailableDate]);
 
-  const filteredJobs = selectedRegion === 'all' 
+  const filteredJobs = (selectedRegion === 'all' 
     ? unallocatedJobs 
-    : unallocatedJobs.filter(job => job.region === selectedRegion);
+    : unallocatedJobs.filter(job => job.region === selectedRegion))
+    .filter(job => !allocatedJobIds.has(job.id));
 
   const groupedJobs = filteredJobs.reduce((acc: Record<string, Job[]>, job: Job) => {
     const region = job.region || 'Unknown';
@@ -296,27 +499,48 @@ const RouteAllocationPage: React.FC = () => {
     }
   };
 
-  // Fetch available engineers when jobs are selected
+  // Fetch available engineers when jobs are selected or in route
   useEffect(() => {
     const fetchAvailableEngineers = async () => {
-      if (selectedJobs.length === 0) {
+      // Use selected jobs if available, otherwise use route jobs
+      const jobsToCheck = selectedJobs.length > 0 ? selectedJobs : routeJobs.filter(j => !j.is_static);
+      
+      if (jobsToCheck.length === 0) {
         setAvailableEngineers([]);
         setJobLocation(null);
+        // Only clear availableDates if we were previously showing job-specific dates
+        if (lastFetchedJobsRef.current !== '') {
+          setAvailableDates([]);
+        }
+        lastFetchedJobsRef.current = '';
         return;
       }
 
+      // Create a unique key for this request
+      const jobsKey = jobsToCheck.map(j => j.id).sort().join(',');
+      const dateKey = selectedDate ? format(selectedDate, 'yyyy-MM-dd') : '';
+      
+      // Skip if we're already fetching or if this is the same request
+      if (fetchingEngineersRef.current || 
+          (lastFetchedJobsRef.current === jobsKey && lastFetchedDateRef.current === dateKey)) {
+        return;
+      }
+
+      fetchingEngineersRef.current = true;
+      lastFetchedJobsRef.current = jobsKey;
+      lastFetchedDateRef.current = dateKey;
+      
       setIsLoadingAvailableEngineers(true);
       try {
         // Check if the method exists (for backward compatibility)
         if (!engineerService.getEngineersByLocation) {
           console.warn('getEngineersByLocation method not available yet');
           setAvailableEngineers([]);
-          setAvailableDates([]);
           return;
         }
         
         const response = await engineerService.getEngineersByLocation({
-          job_ids: selectedJobs.map(j => j.id),
+          job_ids: jobsToCheck.map(j => j.id),
           date: selectedDate ? format(selectedDate, 'yyyy-MM-dd') : undefined,
           max_distance_km: 50,
         });
@@ -358,58 +582,83 @@ const RouteAllocationPage: React.FC = () => {
         });
       } finally {
         setIsLoadingAvailableEngineers(false);
+        fetchingEngineersRef.current = false;
       }
     };
 
     fetchAvailableEngineers();
-  }, [selectedJobs, selectedDate, toast]);
+  }, [selectedJobs, selectedDate, routeJobs]);
 
   // Load existing route when engineer and date are selected
   useEffect(() => {
     const loadExistingRoute = async () => {
-      if (!selectedEngineer || !selectedDate) {
+      if (!selectedEngineer || !selectedDate || !isValid(selectedDate)) {
         setCurrentRouteTimeline(null);
         return;
       }
 
       setIsLoadingRoute(true);
       try {
-        // Check if engineer has existing route for this date
-        const routesResponse = await engineerService.getRoutes({
-          engineer: selectedEngineer.id,
-          date: format(selectedDate, 'yyyy-MM-dd'),
-        });
-
-        if (routesResponse.results && routesResponse.results.length > 0) {
-          const route = routesResponse.results[0];
-          
-          // Load timeline
-          if (engineerService.getRouteTimeline) {
-            const timelineResponse = await engineerService.getRouteTimeline(route.id);
-            setCurrentRouteTimeline(timelineResponse);
-          } else {
-            console.warn('getRouteTimeline method not available yet');
+        const dateStr = format(selectedDate, 'yyyy-MM-dd');
+        const key = `${selectedEngineer.id}-${dateStr}`;
+        
+        // Check if we already have this route in our cache
+        const existingRoute = engineerRoutes.get(key);
+        
+        if (existingRoute) {
+          // Parse the optimized_order to get jobs
+          if (existingRoute.optimized_order) {
+            try {
+              const optimizedOrder = typeof existingRoute.optimized_order === 'string' 
+                ? JSON.parse(existingRoute.optimized_order) 
+                : existingRoute.optimized_order;
+              
+              // Transform to RouteJob format
+              const existingRouteJobs: RouteJob[] = [];
+              
+              for (const item of optimizedOrder) {
+                // Fetch the job details
+                try {
+                  const jobResponse = await jobService.getJob(item.job_id);
+                  const job = transformJob(jobResponse);
+                  
+                  existingRouteJobs.push({
+                    ...job,
+                    order: item.sequence_order,
+                    travel_time: item.travel_time_minutes,
+                    arrival_time: item.arrival_time,
+                    departure_time: item.departure_time,
+                    distance_from_previous: item.distance_from_previous,
+                  });
+                } catch (e) {
+                  console.error(`Failed to fetch job ${item.job_id}:`, e);
+                }
+              }
+              
+              setRouteJobs(existingRouteJobs);
+              
+              // Show a toast that we loaded an existing route
+              toast({
+                title: "Existing Route Loaded",
+                description: `This engineer already has ${existingRouteJobs.length} jobs scheduled for this date`,
+              });
+            } catch (e) {
+              console.error('Error parsing route data:', e);
+            }
           }
           
-          // If we have jobs in the route and the route is not empty, load them
-          if (route.jobs && route.jobs.length > 0) {
-            // Transform route jobs to our RouteJob format
-            const existingRouteJobs = route.jobs.map((job: any, index: number) => ({
-              ...job,
-              order: index + 1,
-              travel_time: job.travel_time_minutes,
-              arrival_time: job.arrival_time,
-              departure_time: job.departure_time,
-              distance_from_previous: job.distance_from_previous,
-            }));
-            
-            setRouteJobs(existingRouteJobs);
-            
-            // Remove these jobs from unallocated list
-            const allocatedJobIds = new Set(route.jobs.map((j: any) => j.id));
-            setUnallocatedJobs(prev => prev.filter(job => !allocatedJobIds.has(job.id)));
+          // Load timeline if available
+          if (existingRoute.id && engineerService.getRouteTimeline) {
+            try {
+              const timelineResponse = await engineerService.getRouteTimeline(existingRoute.id);
+              setCurrentRouteTimeline(timelineResponse);
+            } catch (e) {
+              console.error('Failed to load timeline:', e);
+            }
           }
         } else {
+          // No existing route, clear any previous route jobs
+          setRouteJobs([]);
           setCurrentRouteTimeline(null);
         }
       } catch (error) {
@@ -421,7 +670,7 @@ const RouteAllocationPage: React.FC = () => {
     };
 
     loadExistingRoute();
-  }, [selectedEngineer, selectedDate]);
+  }, [selectedEngineer, selectedDate, engineerRoutes]);
 
   const handleAddSelectedToRoute = () => {
     const newRouteJobs = selectedJobs.map((job, index) => ({
@@ -494,7 +743,9 @@ const RouteAllocationPage: React.FC = () => {
       const optimizedRoute = await engineerService.optimizeRoute({
         engineer_id: selectedEngineer.id,
         job_ids: nonStaticJobs.map(job => job.id),
-        date: selectedDate && !isNaN(selectedDate.getTime()) ? selectedDate.toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
+        date: selectedDate && !isNaN(selectedDate.getTime()) 
+          ? format(selectedDate, 'yyyy-MM-dd')
+          : format(new Date(), 'yyyy-MM-dd'),
         start_location: startLocation,
         constraints: {
           max_distance_km: 200,
@@ -538,7 +789,7 @@ const RouteAllocationPage: React.FC = () => {
         
         // Add jobs with lunch break in middle
         const halfPoint = Math.floor(optimizedJobs.length / 2);
-        optimizedJobs.forEach((job, index) => {
+        optimizedJobs.forEach((job: RouteJob, index: number) => {
           if (index === halfPoint) {
             const lunch = staticJobs.find(j => j.static_type === 'lunch');
             if (lunch) {
@@ -601,7 +852,9 @@ const RouteAllocationPage: React.FC = () => {
         // Fall back to saveRouteAllocation
         await engineerService.saveRouteAllocation({
           engineer_id: selectedEngineer.id,
-          date: selectedDate && !isNaN(selectedDate.getTime()) ? selectedDate.toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
+          date: selectedDate && !isNaN(selectedDate.getTime()) 
+            ? format(selectedDate, 'yyyy-MM-dd')
+            : format(new Date(), 'yyyy-MM-dd'),
           jobs: routeJobs,
           start_time: startTime,
           end_time: endTime,
@@ -618,7 +871,9 @@ const RouteAllocationPage: React.FC = () => {
       const response = await engineerService.allocateJobs({
         engineer_id: selectedEngineer.id,
         job_ids: jobIds,
-        date: selectedDate && !isNaN(selectedDate.getTime()) ? selectedDate.toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
+        date: selectedDate && !isNaN(selectedDate.getTime()) 
+          ? format(selectedDate, 'yyyy-MM-dd')
+          : format(new Date(), 'yyyy-MM-dd'),
         override_hours_limit: false,
       });
 
@@ -641,7 +896,9 @@ const RouteAllocationPage: React.FC = () => {
           const overrideResponse = await engineerService.allocateJobs({
             engineer_id: selectedEngineer.id,
             job_ids: jobIds,
-            date: selectedDate && !isNaN(selectedDate.getTime()) ? selectedDate.toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
+            date: selectedDate && !isNaN(selectedDate.getTime()) 
+              ? format(selectedDate, 'yyyy-MM-dd')
+              : format(new Date(), 'yyyy-MM-dd'),
             override_hours_limit: true,
           });
 
@@ -666,10 +923,27 @@ const RouteAllocationPage: React.FC = () => {
   };
 
   const handleAllocationSuccess = async (response: any) => {
-    toast({
-      title: "Success",
-      description: `Successfully allocated ${response.jobs_allocated} jobs${response.weekly_hours_status?.is_overtime ? ' (with overtime)' : ''}`,
-    });
+    // Handle partial success if some jobs were already allocated
+    if (response.status === 'partial' && response.already_allocated) {
+      const allocatedDetails = response.already_allocated
+        .map((item: any) => {
+          if (typeof item === 'object') {
+            return `Job ${item.job_id} (already assigned to ${item.engineer})`;
+          }
+          return `Job ${item}`;
+        })
+        .join(', ');
+      
+      toast({
+        title: "Partial Success",
+        description: `${response.jobs_allocated} of ${response.jobs_requested} jobs allocated. ${allocatedDetails}`,
+      });
+    } else {
+      toast({
+        title: "Success",
+        description: `Successfully allocated ${response.jobs_allocated} jobs${response.weekly_hours_status?.is_overtime ? ' (with overtime)' : ''}`,
+      });
+    }
 
     // Reset the form
     setRouteJobs([]);
@@ -712,7 +986,14 @@ const RouteAllocationPage: React.FC = () => {
           <div className="bg-white border-b p-4">
             <div className="space-y-4">
               <div className="flex justify-between items-center">
-                <h2 className="text-lg font-semibold">Available Jobs</h2>
+                <div>
+                  <h2 className="text-lg font-semibold">Available Jobs</h2>
+                  {allocatedJobIds.size > 0 && (
+                    <p className="text-xs text-gray-500 mt-1">
+                      {allocatedJobIds.size} job{allocatedJobIds.size !== 1 ? 's' : ''} already allocated
+                    </p>
+                  )}
+                </div>
                 <Button
                   size="sm"
                   onClick={handleAddSelectedToRoute}
@@ -724,13 +1005,23 @@ const RouteAllocationPage: React.FC = () => {
               
               <div className="space-y-2">
                 <Label>Job Status</Label>
-                <Select value={selectedStatus} onValueChange={setSelectedStatus}>
+                <Select 
+                  value={selectedStatus} 
+                  onValueChange={(value) => {
+                    // Ensure value is valid before setting
+                    if (value && value !== 'loading') {
+                      setSelectedStatus(value);
+                    }
+                  }}
+                >
                   <SelectTrigger>
                     <SelectValue placeholder={isLoadingStatuses ? "Loading statuses..." : "Select job status"} />
                   </SelectTrigger>
                   <SelectContent>
                     {isLoadingStatuses ? (
                       <SelectItem value="loading" disabled>Loading...</SelectItem>
+                    ) : jobStatuses.length === 0 ? (
+                      <SelectItem value="no-statuses" disabled>No statuses available</SelectItem>
                     ) : (
                       jobStatuses.map(status => {
                         try {
@@ -889,7 +1180,7 @@ const RouteAllocationPage: React.FC = () => {
           {/* Map and Timeline Container */}
           <div className="flex-1 flex flex-col">
             {/* Map Component */}
-            <div className="flex-1 relative" style={{ minHeight: '300px' }}>
+            <div className="flex-1 p-4">
             {googleMapsApiKey && googleMapsApiKey !== '' ? (
               <MapComponent
                 apiKey={googleMapsApiKey}
@@ -931,7 +1222,7 @@ const RouteAllocationPage: React.FC = () => {
                   }))}
                 optimizedRoute={routeJobs.length > 0}
                 optimizationResult={optimizationResult}
-                height="calc(100vh - 300px)"
+                height="600px"
               />
             ) : (
               <div className="flex items-center justify-center h-full bg-gray-100">
@@ -1073,6 +1364,13 @@ const RouteAllocationPage: React.FC = () => {
                             const engineersOnDate = availableEngineers.filter(eng =>
                               eng.availability_dates.some(d => d.date === dateInfo.date)
                             );
+                            
+                            // Check if any engineers are already in the area
+                            const engineersInArea = engineersOnDate.filter(eng => {
+                              const dateData = eng.availability_dates.find(d => d.date === dateInfo.date);
+                              return dateData?.already_in_area;
+                            });
+                            
                             // Ensure we have a valid string key
                             const dateKey = dateInfo.date || `date-${index}`;
                             const dateValue = String(dateInfo.date || '');
@@ -1085,7 +1383,13 @@ const RouteAllocationPage: React.FC = () => {
                                   try {
                                     const dateStr = format(new Date(dateInfo.date), 'EEE, MMM d');
                                     const count = engineersOnDate?.length || 0;
-                                    return `${dateStr} - ${count} engineer${count !== 1 ? 's' : ''} available`;
+                                    const inAreaCount = engineersInArea?.length || 0;
+                                    
+                                    let displayText = `${dateStr} - ${count} engineer${count !== 1 ? 's' : ''} available`;
+                                    if (inAreaCount > 0) {
+                                      displayText += ` (${inAreaCount} already in area 📍)`;
+                                    }
+                                    return displayText;
                                   } catch (e) {
                                     console.error('Error formatting date:', e, dateInfo);
                                     return String(dateInfo.date || 'Invalid date');
@@ -1139,11 +1443,11 @@ const RouteAllocationPage: React.FC = () => {
                         }
                       }
                     }}
-                    disabled={selectedJobs.length === 0 || !selectedDate}
+                    disabled={(selectedJobs.length === 0 && routeJobs.length === 0) || !selectedDate}
                   >
                     <SelectTrigger>
                       <SelectValue placeholder={
-                        selectedJobs.length === 0 ? "Select jobs first" : 
+                        (selectedJobs.length === 0 && routeJobs.length === 0) ? "Select jobs first" : 
                         (!selectedDate || !(selectedDate instanceof Date)) ? "Select date first" : 
                         "Select engineer"
                       } />
@@ -1153,7 +1457,7 @@ const RouteAllocationPage: React.FC = () => {
                         <SelectItem value="loading" disabled>
                           Loading available engineers...
                         </SelectItem>
-                      ) : selectedJobs.length === 0 || !selectedDate ? (
+                      ) : (selectedJobs.length === 0 && routeJobs.length === 0) || !selectedDate ? (
                         <SelectItem value="no-selection" disabled>
                           Please select jobs and date first
                         </SelectItem>
@@ -1195,14 +1499,43 @@ const RouteAllocationPage: React.FC = () => {
                               return null;
                             }
                             
-                            let displayText = `${engineer.name} - ${dateInfo.distance_km.toFixed(1)}km - ${dateInfo.remaining_weekly_hours.toFixed(1)}h available`;
+                            // Build display text with enhanced information
+                            let displayText = engineer.name;
                             
-                            if (dateInfo.would_cause_overtime) {
+                            // Add location info
+                            if (dateInfo.already_in_area) {
+                              displayText = `📍 ${displayText} (IN AREA - ${dateInfo.nearby_jobs_count} nearby jobs)`;
+                            } else {
+                              displayText = `${displayText} - ${dateInfo.distance_km.toFixed(1)}km away`;
+                            }
+                            
+                            // Add capacity info
+                            const dailyCapacity = dateInfo.daily_capacity_percentage || 0;
+                            const weeklyCapacity = ((dateInfo.hours_worked_this_week / engineer.max_weekly_hours) * 100).toFixed(0);
+                            displayText += ` | Day: ${dailyCapacity}% | Week: ${weeklyCapacity}%`;
+                            
+                            // Check if engineer already has a route for this date
+                            const engineerRouteKey = `${engineer.id}-${format(selectedDate, 'yyyy-MM-dd')}`;
+                            const hasExistingRoute = engineerRoutes.has(engineerRouteKey);
+                            
+                            if (hasExistingRoute) {
+                              displayText = `📅 ${displayText}`;
+                            }
+                            
+                            // Add recommendations
+                            if (dateInfo.overbooking_recommended) {
+                              displayText += ' 💡 RECOMMENDED';
+                            } else if (dateInfo.would_cause_overtime) {
                               displayText += ' ⚠️ OVERTIME';
                             }
                             
                             if (!dateInfo.can_accommodate_jobs) {
                               displayText += ' ❌ INSUFFICIENT HOURS';
+                            }
+                            
+                            // Add travel savings if available
+                            if (dateInfo.travel_savings_minutes > 0) {
+                              displayText += ` (Save ${dateInfo.travel_savings_minutes}min travel)`;
                             }
                             
                             return (
@@ -1364,6 +1697,17 @@ const RouteAllocationPage: React.FC = () => {
                 </CardContent>
               </Card>
 
+              {/* Capacity Visualization */}
+              {selectedEngineer && (
+                <EngineerCapacityVisualization
+                  engineerId={selectedEngineer.id}
+                  selectedDate={selectedDate}
+                  jobLocation={jobLocation}
+                  estimatedJobHours={availableEngineers.find(e => e.id === selectedEngineer.id)?.estimated_job_hours || 0}
+                  onDateSelect={(date) => setSelectedDate(date)}
+                />
+              )}
+
               {/* Static Jobs */}
               <Card>
                 <CardHeader className="pb-3">
@@ -1494,6 +1838,28 @@ const RouteAllocationPage: React.FC = () => {
           </div>
         </div>
       </div>
+      
+      {/* Engineers Timeline - Below the main content */}
+      {selectedDate && (
+        <div className="bg-gray-50 border-t">
+          <div className="p-6">
+            <EngineersTimeline
+              date={selectedDate}
+              engineers={allEngineersTimelines}
+              startHour={8}
+              endHour={18}
+              onBlockClick={(engineerId, block) => {
+                if (block.type === 'job' && block.jobId) {
+                  toast({
+                    title: "Job Details",
+                    description: `Job ID: ${block.jobId} - ${block.startTime} to ${block.endTime}`,
+                  });
+                }
+              }}
+            />
+          </div>
+        </div>
+      )}
     </div>
   );
 };

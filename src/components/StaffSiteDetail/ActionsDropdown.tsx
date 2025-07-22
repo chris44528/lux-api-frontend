@@ -18,6 +18,8 @@ const allMenuItems: MenuItem[] = [
   { label: 'Compare Readings', section: 'Site Actions', icon: '📊', permission: 'sites.detail.actions.compare', action: 'compareReadings' },
   { label: 'Add Note', section: 'Site Actions', icon: '📝', permission: 'sites.detail.actions.add_note', action: 'addNote' },
   { label: 'Create Job', section: 'Site Actions', icon: '🔧', permission: 'sites.detail.actions.create_job', action: 'createJob' },
+  { label: 'Temp Removal', section: 'Site Actions', icon: '🚫', permission: 'sites.detail.actions.temp_removal', action: 'tempRemoval' },
+  { label: 'New Home Owner', section: 'Site Actions', icon: '🏠', permission: 'sites.detail.actions.new_home_owner', action: 'newHomeOwner' },
   { label: 'Text Message', section: 'Site Communication', icon: '💬', permission: 'sites.detail.actions.text_landlord', action: 'textMessage' },
   { label: 'Send Email', section: 'Site Communication', icon: '✉️', permission: 'sites.detail.actions.send_email', action: 'sendEmail' },
   { label: 'Add Alert', section: 'Alerts', icon: '🔔', permission: 'sites.detail.actions.alerts', action: 'addAlert' },
@@ -51,6 +53,8 @@ interface ActionsDropdownProps {
   onAdvancedMonitoring?: () => void;
   onCreateJob?: () => void;
   onExportSite?: () => void;
+  onTempRemoval?: () => void;
+  onNewHomeOwner?: () => void;
   siteId?: string;
 }
 
@@ -70,9 +74,12 @@ const ActionsDropdown: React.FC<ActionsDropdownProps> = ({
   onAdvancedMonitoring,
   onCreateJob,
   onExportSite,
+  onTempRemoval,
+  onNewHomeOwner,
   siteId,
 }) => {
   const [open, setOpen] = useState(false);
+  const [processingAction, setProcessingAction] = useState<string | null>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
   
@@ -124,6 +131,8 @@ const ActionsDropdown: React.FC<ActionsDropdownProps> = ({
     exportSite: () => onExportSite?.(),
     meterHistory: () => onMeterHistory?.(),
     advancedMonitoring: () => onAdvancedMonitoring?.(),
+    tempRemoval: () => onTempRemoval?.(),
+    newHomeOwner: () => onNewHomeOwner?.(),
   };
 
   useEffect(() => {
@@ -177,17 +186,33 @@ const ActionsDropdown: React.FC<ActionsDropdownProps> = ({
                     key={item.label}
                     className="w-full text-left px-4 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2 text-gray-700 dark:text-gray-300"
                     onClick={() => {
-                      setOpen(false);
                       const handler = item.action ? actionHandlers[item.action] : null;
                       if (handler) {
+                        // For test meter action, show immediate feedback
+                        if (item.action === 'testMeter') {
+                          setProcessingAction('testMeter');
+                        }
+                        // Call handler immediately
                         handler();
+                        // Close dropdown after a brief delay to allow state updates
+                        setTimeout(() => {
+                          setOpen(false);
+                          setProcessingAction(null);
+                        }, 100);
                       } else {
                         console.warn(`No handler for action: ${item.label}`);
+                        setOpen(false);
                       }
                     }}
+                    disabled={processingAction === 'testMeter' && item.action === 'testMeter'}
                   >
-                    <span className="w-5 text-lg flex-shrink-0">{item.icon}</span>
+                    <span className="w-5 text-lg flex-shrink-0">
+                      {processingAction === 'testMeter' && item.action === 'testMeter' ? '⏳' : item.icon}
+                    </span>
                     {item.label}
+                    {processingAction === 'testMeter' && item.action === 'testMeter' && (
+                      <span className="ml-auto text-xs text-gray-500 dark:text-gray-400">Please wait...</span>
+                    )}
                   </button>
                 ))}
               </div>

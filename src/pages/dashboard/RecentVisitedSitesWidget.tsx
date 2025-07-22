@@ -90,7 +90,7 @@ export function RecentVisitedSitesWidget() {
   };
 
   const handleSiteClick = (siteId: number) => {
-    navigate(`/sites/${siteId}`);
+    navigate(`/site/${siteId}`);
   };
 
   if (loading) {
@@ -115,6 +115,7 @@ export function RecentVisitedSitesWidget() {
       <div className="flex flex-col items-center justify-center h-full text-center p-4">
         <MapPin className="h-8 w-8 text-muted-foreground mb-2" />
         <p className="text-sm text-muted-foreground">No recently visited sites</p>
+        <p className="text-xs text-muted-foreground mt-1">Visit a site to see it here</p>
       </div>
     );
   }

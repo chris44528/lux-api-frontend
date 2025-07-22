@@ -78,6 +78,10 @@ const EcotricityStaffSiteDetailPage: React.FC = () => {
   const [showDetails, setShowDetails] = useState(false);
   const [showResultBar, setShowResultBar] = useState(false);
   const resultTimeoutRef = React.useRef<NodeJS.Timeout | null>(null);
+  
+  // Pagination state for meter tests
+  const [currentPage, setCurrentPage] = useState(1);
+  const testsPerPage = 8;
 
   useEffect(() => {
     async function fetchSiteData() {
@@ -401,21 +405,98 @@ const EcotricityStaffSiteDetailPage: React.FC = () => {
                   </tr>
                 </thead>
                 <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
-                  {siteData.meter_tests && siteData.meter_tests.length > 0 ? (
-                    siteData.meter_tests.map((test, index) => (
+                  {(() => {
+                    if (!siteData.meter_tests || siteData.meter_tests.length === 0) {
+                      return (
+                        <tr>
+                          <td colSpan={3} className="px-2 py-3 text-center dark:text-gray-400">No test history available</td>
+                        </tr>
+                      );
+                    }
+                    
+                    const totalPages = Math.ceil(siteData.meter_tests.length / testsPerPage);
+                    const indexOfLastTest = currentPage * testsPerPage;
+                    const indexOfFirstTest = indexOfLastTest - testsPerPage;
+                    const currentTests = siteData.meter_tests.slice(indexOfFirstTest, indexOfLastTest);
+                    
+                    return currentTests.map((test, index) => (
                       <tr key={test.id || index} className={index % 2 === 0 ? 'bg-white dark:bg-gray-800' : 'bg-gray-50 dark:bg-gray-900'}>
                         <td className="px-2 py-3 whitespace-nowrap dark:text-gray-300">{test.test_reading || '—'}</td>
                         <td className="px-2 py-3 whitespace-nowrap dark:text-gray-300">{test.test_date ? new Date(test.test_date).toLocaleString() : '—'}</td>
                         <td className="px-2 py-3 whitespace-nowrap dark:text-gray-300">{test.signal_level || '—'}</td>
                       </tr>
-                    ))
-                  ) : (
-                    <tr>
-                      <td colSpan={3} className="px-2 py-3 text-center dark:text-gray-400">No test history available</td>
-                    </tr>
-                  )}
+                    ));
+                  })()}
                 </tbody>
               </table>
+              
+              {/* Pagination controls */}
+              {siteData.meter_tests && siteData.meter_tests.length > testsPerPage && (
+                <div className="flex items-center justify-between mt-4 px-2">
+                  <div className="text-sm text-gray-700 dark:text-gray-300">
+                    Showing {((currentPage - 1) * testsPerPage) + 1} to {Math.min(currentPage * testsPerPage, siteData.meter_tests.length)} of {siteData.meter_tests.length} tests
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <button
+                      onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                      disabled={currentPage === 1}
+                      className={`px-3 py-1 text-sm rounded border ${
+                        currentPage === 1
+                          ? 'bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed dark:bg-gray-700 dark:text-gray-500 dark:border-gray-600'
+                          : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50 dark:bg-gray-800 dark:text-gray-300 dark:border-gray-600 dark:hover:bg-gray-700'
+                      }`}
+                    >
+                      Previous
+                    </button>
+                    
+                    {/* Page numbers */}
+                    <div className="flex items-center space-x-1">
+                      {(() => {
+                        const totalPages = Math.ceil(siteData.meter_tests.length / testsPerPage);
+                        return Array.from({ length: totalPages }, (_, i) => i + 1).map(page => {
+                          if (
+                            page === 1 ||
+                            page === totalPages ||
+                            (page >= currentPage - 1 && page <= currentPage + 1)
+                          ) {
+                            return (
+                              <button
+                                key={page}
+                                onClick={() => setCurrentPage(page)}
+                                className={`px-3 py-1 text-sm rounded ${
+                                  page === currentPage
+                                    ? 'bg-blue-500 text-white'
+                                    : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50 dark:bg-gray-800 dark:text-gray-300 dark:border-gray-600 dark:hover:bg-gray-700'
+                                }`}
+                              >
+                                {page}
+                              </button>
+                            );
+                          } else if (
+                            page === currentPage - 2 || 
+                            page === currentPage + 2
+                          ) {
+                            return <span key={page} className="text-gray-500 dark:text-gray-400">...</span>;
+                          }
+                          return null;
+                        });
+                      })()}
+                    </div>
+                    
+                    <button
+                      onClick={() => setCurrentPage(prev => Math.min(prev + 1, Math.ceil(siteData.meter_tests.length / testsPerPage)))}
+                      disabled={currentPage === Math.ceil(siteData.meter_tests.length / testsPerPage)}
+                      className={`px-3 py-1 text-sm rounded border ${
+                        currentPage === Math.ceil(siteData.meter_tests.length / testsPerPage)
+                          ? 'bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed dark:bg-gray-700 dark:text-gray-500 dark:border-gray-600'
+                          : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50 dark:bg-gray-800 dark:text-gray-300 dark:border-gray-600 dark:hover:bg-gray-700'
+                      }`}
+                    >
+                      Next
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
 

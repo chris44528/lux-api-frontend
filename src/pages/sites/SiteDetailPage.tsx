@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import userService from '../../services/userService';
-import { getSiteDetail } from '../../services/api';
+import { getSiteDetail, logSiteVisit } from '../../services/api';
 import StaffSiteDetailView from '../../components/StaffSiteDetailView';
 import EngineerSiteDetailView from '../../components/EngineerSiteDetailView';
 
@@ -28,6 +28,11 @@ function SiteDetailPage() {
           : Promise.reject(new Error('No site ID provided'));
           
         setSiteData(siteResponse);
+        
+        // Log the site visit (don't await to avoid blocking)
+        if (siteId) {
+          logSiteVisit(siteId);
+        }
         
         // Try to get user view type, but don't let it block rendering if it fails
         try {

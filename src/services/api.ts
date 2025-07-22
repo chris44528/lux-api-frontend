@@ -48,11 +48,21 @@ const meterTestApi = axios.create({
 // Add request interceptor to include auth token
 api.interceptors.request.use(
   (config) => {
-    const token = localStorage.getItem("access_token");
-    if (token && config.headers) {
-      config.headers.Authorization = `Token ${token}`;
-    } else {
-      // Don't redirect here, let the response interceptor handle it
+    // Check if this is a public transfer endpoint
+    const isPublicTransferEndpoint = config.url && (
+      config.url.includes('/transfers/validate/') ||
+      config.url.includes('/transfers/submit/') ||
+      config.url.includes('/transfers/upload/')
+    );
+    
+    // Only add auth token if it's not a public endpoint
+    if (!isPublicTransferEndpoint) {
+      const token = localStorage.getItem("access_token");
+      if (token && config.headers) {
+        config.headers.Authorization = `Token ${token}`;
+      } else {
+        // Don't redirect here, let the response interceptor handle it
+      }
     }
     return config;
   },
@@ -71,9 +81,17 @@ api.interceptors.response.use(
       // Network error - please check if the backend server is running
     }
 
+    // Check if this is a public transfer endpoint
+    const isPublicTransferEndpoint = error.config?.url && (
+      error.config.url.includes('/transfers/validate/') ||
+      error.config.url.includes('/transfers/submit/') ||
+      error.config.url.includes('/transfers/upload/')
+    );
+
     // Handle 401 Unauthorized
-    if (error.response?.status === 401) {
+    if (error.response?.status === 401 && !isPublicTransferEndpoint) {
       // Only clear token and redirect if we're not already on the login page
+      // and it's not a public endpoint
       if (window.location.pathname !== "/login") {
         localStorage.removeItem("access_token");
         localStorage.removeItem("username");
@@ -170,6 +188,16 @@ export const updateSite = async (
     return response.data;
   } catch (error) {
     throw error;
+  }
+};
+
+// Log a site visit for the current user
+export const logSiteVisit = async (siteId: string | number): Promise<void> => {
+  try {
+    await api.post(`/sites/${siteId}/visit/`);
+  } catch (error) {
+    // Don't throw error for visit logging - we don't want to break the page if logging fails
+    console.error('Failed to log site visit:', error);
   }
 };
 
@@ -611,6 +639,7 @@ interface MeterTestRequest {
   model: string;
   password: string;
   site_id: number;
+  port?: number;
 }
 
 interface MeterTestResponse {
@@ -722,7 +751,25 @@ export const fetchTableSchema = async () => {
     // Use absolute URL to ensure we're hitting the backend server
     const baseUrl =
       import.meta.env.VITE_API_URL || "http://127.0.0.1:8000/api/v1";
-    const response = await axios.get(`${baseUrl}/report-builder/schema`, {
+    const response = await axios.get(`${baseUrl}/report-builder/schema/`, {
+      headers: {
+        Authorization: `Token ${localStorage.getItem("access_token") || ""}`,
+        "Content-Type": "application/json",
+        Accept: "application/json",
+      },
+    });
+    return response.data;
+  } catch (error) {
+    throw error;
+  }
+};
+
+// Enhanced Report Builder Schema - v2
+export const fetchTableSchemaV2 = async () => {
+  try {
+    const baseUrl =
+      import.meta.env.VITE_API_URL || "http://127.0.0.1:8000/api/v1";
+    const response = await axios.get(`${baseUrl}/report-builder/v2/schema/`, {
       headers: {
         Authorization: `Token ${localStorage.getItem("access_token") || ""}`,
         "Content-Type": "application/json",
@@ -754,7 +801,7 @@ export const executeReportQuery = async (params: {
     // Use absolute URL to ensure we're hitting the backend server
     const baseUrl =
       import.meta.env.VITE_API_URL || "http://127.0.0.1:8000/api/v1";
-    const fullUrl = `${baseUrl}/report-builder/query`;
+    const fullUrl = `${baseUrl}/report-builder/query/`;
 
     const response = await axios.post(fullUrl, params, {
       headers: {
@@ -789,7 +836,7 @@ export const exportToExcel = async (params: {
     const baseUrl =
       import.meta.env.VITE_API_URL || "http://127.0.0.1:8000/api/v1";
     const response = await axios.post(
-      `${baseUrl}/report-builder/export`,
+      `${baseUrl}/report-builder/export/`,
       params,
       {
         headers: {
@@ -817,6 +864,180 @@ export const exportToExcel = async (params: {
     link.remove();
 
     return true;
+  } catch (error) {
+    throw error;
+  }
+};
+
+// Enhanced Report Builder API functions
+export const executeReportQueryV2 = async (params: {
+  tables: string[];
+  columns: string[];
+  aggregations?: Array<{
+    function: string;
+    column: string;
+    alias?: string;
+  }>;
+  groupBy?: string[];
+  filters: Array<{
+    column: string;
+    operator: string;
+    value: string;
+  }>;
+  dateRange?: {
+    startDate: string | null;
+    endDate: string | null;
+  };
+  orderBy?: Array<{
+    column: string;
+    direction: 'ASC' | 'DESC';
+  }>;
+  page?: number;
+  pageSize?: number;
+}, useV2: boolean = true) => {
+  try {
+    const baseUrl = import.meta.env.VITE_API_URL || "http://127.0.0.1:8000/api/v1";
+    const endpoint = useV2 ? "/report-builder/v2/query/" : "/report-builder/query/";
+    const response = await axios.post(`${baseUrl}${endpoint}`, params, {
+      headers: {
+        Authorization: `Token ${localStorage.getItem("access_token") || ""}`,
+        "Content-Type": "application/json",
+        Accept: "application/json",
+      },
+    });
+    return response.data;
+  } catch (error) {
+    throw error;
+  }
+};
+
+export const exportToExcelV2 = async (params: {
+  tables: string[];
+  columns: string[];
+  aggregations?: Array<{
+    function: string;
+    column: string;
+    alias?: string;
+  }>;
+  groupBy?: string[];
+  filters: Array<{
+    column: string;
+    operator: string;
+    value: string;
+  }>;
+  dateRange?: {
+    startDate: string | null;
+    endDate: string | null;
+  };
+  orderBy?: Array<{
+    column: string;
+    direction: 'ASC' | 'DESC';
+  }>;
+  format?: 'xlsx' | 'csv';
+  filename?: string;
+}, useV2: boolean = true) => {
+  try {
+    const baseUrl = import.meta.env.VITE_API_URL || "http://127.0.0.1:8000/api/v1";
+    const endpoint = useV2 ? "/report-builder/v2/export/" : "/report-builder/export/";
+    const response = await axios.post(`${baseUrl}${endpoint}`, params, {
+      headers: {
+        Authorization: `Token ${localStorage.getItem("access_token") || ""}`,
+        "Content-Type": "application/json",
+        Accept: "application/json",
+      },
+      responseType: "blob",
+    });
+
+    const url = window.URL.createObjectURL(new Blob([response.data]));
+    const link = document.createElement("a");
+    link.href = url;
+    const filename = params.filename || `report-${new Date().toISOString().split("T")[0]}.${params.format || 'xlsx'}`;
+    link.setAttribute("download", filename);
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    return true;
+  } catch (error) {
+    throw error;
+  }
+};
+
+// Report Template API functions
+export const fetchReportTemplates = async () => {
+  try {
+    const baseUrl = import.meta.env.VITE_API_URL || "http://127.0.0.1:8000/api/v1";
+    const response = await axios.get(`${baseUrl}/report-builder/v2/templates/`, {
+      headers: {
+        Authorization: `Token ${localStorage.getItem("access_token") || ""}`,
+        "Content-Type": "application/json",
+        Accept: "application/json",
+      },
+    });
+    return response.data.templates;
+  } catch (error) {
+    throw error;
+  }
+};
+
+export const loadReportTemplate = async (templateId: number) => {
+  try {
+    const baseUrl = import.meta.env.VITE_API_URL || "http://127.0.0.1:8000/api/v1";
+    const response = await axios.get(`${baseUrl}/report-builder/v2/templates/${templateId}/`, {
+      headers: {
+        Authorization: `Token ${localStorage.getItem("access_token") || ""}`,
+        "Content-Type": "application/json",
+        Accept: "application/json",
+      },
+    });
+    return response.data;
+  } catch (error) {
+    throw error;
+  }
+};
+
+export const saveReportTemplate = async (templateData: any) => {
+  try {
+    const baseUrl = import.meta.env.VITE_API_URL || "http://127.0.0.1:8000/api/v1";
+    const response = await axios.post(`${baseUrl}/report-builder/v2/templates/`, templateData, {
+      headers: {
+        Authorization: `Token ${localStorage.getItem("access_token") || ""}`,
+        "Content-Type": "application/json",
+        Accept: "application/json",
+      },
+    });
+    return response.data;
+  } catch (error) {
+    throw error;
+  }
+};
+
+export const updateReportTemplate = async (templateId: number, templateData: any) => {
+  try {
+    const baseUrl = import.meta.env.VITE_API_URL || "http://127.0.0.1:8000/api/v1";
+    const response = await axios.put(`${baseUrl}/report-builder/v2/templates/${templateId}/`, templateData, {
+      headers: {
+        Authorization: `Token ${localStorage.getItem("access_token") || ""}`,
+        "Content-Type": "application/json",
+        Accept: "application/json",
+      },
+    });
+    return response.data;
+  } catch (error) {
+    throw error;
+  }
+};
+
+export const deleteReportTemplate = async (templateId: number) => {
+  try {
+    const baseUrl = import.meta.env.VITE_API_URL || "http://127.0.0.1:8000/api/v1";
+    const response = await axios.delete(`${baseUrl}/report-builder/v2/templates/${templateId}/`, {
+      headers: {
+        Authorization: `Token ${localStorage.getItem("access_token") || ""}`,
+        "Content-Type": "application/json",
+        Accept: "application/json",
+      },
+    });
+    return response.data;
   } catch (error) {
     throw error;
   }
@@ -1328,6 +1549,7 @@ export const getSystemStatusSummary = async (): Promise<{
     activeSites: number;
     sitesWithIssues: number;
     offlineSites: number;
+    zeroReads?: number;
   };
 }> => {
   try {
